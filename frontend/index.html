@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <div class="logo">
+        <div class="logo-icon">
+          <i data-lucide="shield-alert"></i>
+        </div>
+        <h1>Barangay DRRM</h1>
+        <p class="subtitle">Barangay Linao, Ormoc City<br>Disaster Risk Reduction &amp; Management</p>
+      </div>
+
+      <form id="login-form" novalidate>
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-icon-wrap">
+            <i data-lucide="user"></i>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              autocomplete="username"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-icon-wrap input-icon-wrap-right">
+            <i data-lucide="lock"></i>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="input-toggle-btn" id="toggle-password" title="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <p class="error-msg" id="login-error"></p>
+
+        <button type="submit" class="btn btn-primary" id="login-btn" style="margin-top: 0.75rem;">
+          <i data-lucide="log-in"></i> Sign In
+        </button>
+
+      </form>
+
+      <p class="auth-note">
+        <i data-lucide="info" style="width:13px;height:13px;"></i>
+        Default login: <strong>admin</strong> / <strong>admin1234</strong>
+      </p>
+
+    </div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    lucide.createIcons();
+
+    // Show/hide password toggle
+    document.getElementById("toggle-password").addEventListener("click", function () {
+      const input = document.getElementById("password");
+      const isHidden = input.type === "password";
+      input.type = isHidden ? "text" : "password";
+      this.innerHTML = isHidden
+        ? '<i data-lucide="eye-off"></i>'
+        : '<i data-lucide="eye"></i>';
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

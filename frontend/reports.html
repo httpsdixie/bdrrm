@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports & Summary — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* Side-by-side Grid for Resolved and Today's Incidents */
+    .reports-side-by-side-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .reports-side-by-side-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Reports summary cards */
+    .report-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .report-stat {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1rem;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.75) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: transform 0.22s ease;
+    }
+    .report-stat:hover {
+      transform: translateY(-2px);
+    }
+    .report-stat-num {
+      font-size: 1.95rem; font-weight: 800; color: #60a5fa; line-height: 1.1;
+      text-shadow: 0 0 16px rgba(96, 165, 250, 0.35);
+    }
+    .report-stat-num.red    { color: #f87171; text-shadow: 0 0 16px rgba(248, 113, 113, 0.35); }
+    .report-stat-num.orange { color: #fb923c; text-shadow: 0 0 16px rgba(251, 146, 60, 0.35); }
+    .report-stat-num.green  { color: #34d399; text-shadow: 0 0 16px rgba(52, 211, 153, 0.35); }
+    .report-stat-num.blue   { color: #60a5fa; text-shadow: 0 0 16px rgba(96, 165, 250, 0.35); }
+    .report-stat-label { font-size: .74rem; color: #94a3b8; margin-top: .35rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Section container */
+    .report-section {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(11, 15, 25, 0.95) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      margin-bottom: 1.25rem; overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .report-section-header {
+      padding: 1.1rem 1.35rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .report-section-header h3 {
+      font-size: .95rem; font-weight: 700; color: #ffffff;
+      display: flex; align-items: center; gap: .55rem; margin: 0;
+    }
+    .report-section-header h3 svg { width: 18px; height: 18px; color: #60a5fa; filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4)); }
+    .report-section-body { padding: 1.35rem; }
+
+    /* Breakdown bars */
+    .type-bars { display: flex; flex-direction: column; gap: .75rem; }
+    .type-bar-row { display: flex; align-items: center; gap: .75rem; font-size: .82rem; }
+    .type-bar-label { width: 110px; flex-shrink: 0; color: var(--text-main); font-weight: 600; }
+    .type-bar-track { flex: 1; height: 20px; background: rgba(255, 255, 255, 0.06); border-radius: 99px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .type-bar-fill {
+      height: 100%; border-radius: 99px;
+      transition: width .5s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex; align-items: center; padding-left: .5rem;
+      font-size: .7rem; color: #fff; font-weight: 700;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    .type-bar-count { font-size: .82rem; color: #94a3b8; width: 24px; text-align: right; flex-shrink: 0; font-weight: 700; }
+
+    /* Mini map for affected zones */
+    #affected-map { height: 280px; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+
+    /* Dispatch log table in reports */
+    .report-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .report-table th {
+      background: rgba(15, 23, 42, 0.6); padding: .75rem 1rem;
+      text-align: left; font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em;
+      color: var(--text-muted); border-bottom: 1px solid var(--border-color);
+    }
+    .report-table td {
+      padding: .75rem 1rem; border-bottom: 1px solid var(--border-color);
+      color: var(--text-main); vertical-align: middle;
+    }
+    .report-table tbody tr:last-child td { border-bottom: none; }
+    .report-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+
+    /* Ongoing operations card grid */
+    .ops-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .ops-card {
+      border: 1px solid var(--border-color); border-radius: var(--radius-md);
+      padding: 1rem; background: var(--bg-card);
+    }
+    .ops-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .75rem; }
+    .ops-card-title { font-size: .88rem; font-weight: 700; color: var(--text-main); }
+    .ops-card-meta { font-size: .75rem; color: var(--text-muted); margin-top: .1rem; }
+    .ops-card-body { font-size: .8rem; color: var(--text-main); }
+    .ops-field { margin-bottom: .4rem; }
+    .ops-field-label { font-size: .7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .ops-field-val { color: var(--text-main); }
+    .ops-resources { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--border-color); }
+    .ops-resource-chip {
+      display: inline-flex; align-items: center; gap: .25rem;
+      background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 99px; padding: .15rem .55rem;
+      font-size: .72rem; font-weight: 600; margin: .15rem .1rem 0 0;
+    }
+
+    /* Resource type bars */
+    .res-type-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: .75rem;
+    }
+    .res-type-card {
+      border: 1px solid var(--border-color); border-radius: var(--radius-md);
+      padding: .85rem 1rem; background: var(--bg-card);
+    }
+    .res-type-name { font-size: .78rem; font-weight: 700; color: var(--text-main); margin-bottom: .4rem; }
+    .res-type-row { display: flex; justify-content: space-between; font-size: .75rem; color: var(--text-muted); margin-bottom: .2rem; }
+    .res-type-row span:last-child { font-weight: 700; color: var(--text-main); }
+
+    .form-divider { height: 1px; background: var(--border-color); margin: 1rem 0; }
+
+    /* High-Contrast Print Styles (PDF & Print Export) */
+    @media print {
+      *, *::before, *::after {
+        box-shadow: none !important;
+        text-shadow: none !important;
+        filter: none !important;
+        -webkit-filter: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      body, html {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+      }
+      
+      .sidebar, .topbar, .no-print, .user-profile-wrapper, .tab-bar {
+        display: none !important;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      
+      .page-body { padding: 0 !important; }
+
+      .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 2px solid #0f172a;
+      }
+
+      .print-header h1 {
+        font-size: 1.25rem; font-weight: 800;
+        color: #0f172a !important; text-transform: uppercase;
+        margin: 0; letter-spacing: 0.04em;
+      }
+
+      .print-header h2 {
+        font-size: 0.95rem; font-weight: 700;
+        color: #2563eb !important; margin: 0.25rem 0;
+        text-transform: uppercase;
+      }
+
+      .print-header p { font-size: 0.78rem; color: #475569 !important; margin: 0; }
+
+      .report-section {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        margin-bottom: 1.25rem !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+      }
+
+      .report-section-header {
+        background: #f1f5f9 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        padding: 0.6rem 1rem !important;
+      }
+
+      .report-section-header h3 { color: #0f172a !important; font-size: 0.9rem !important; }
+      .report-section-header h3 svg { display: none !important; }
+
+      .report-stat {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+      }
+
+      .report-stat-num { color: #0f172a !important; text-shadow: none !important; }
+      .report-stat-label { color: #475569 !important; }
+
+      .type-bar-track {
+        background: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .type-bar-fill {
+        box-shadow: none !important;
+      }
+
+      .report-table th {
+        background: #f1f5f9 !important;
+        color: #334155 !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+      }
+
+      .report-table td {
+        color: #0f172a !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+      }
+
+      .reports-side-by-side-grid { display: block !important; }
+
+      .ops-card, .res-type-card {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .ops-card-title, .res-type-name { color: #0f172a !important; }
+      .ops-card-meta, .ops-field-label, .res-type-row { color: #475569 !important; }
+      .ops-field-val, .res-type-row span:last-child { color: #0f172a !important; }
+
+      .badge-green { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #86efac !important; }
+      .badge-blue  { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #93c5fd !important; }
+      .badge-orange{ background: #ffedd5 !important; color: #9a3412 !important; border: 1px solid #fdba74 !important; }
+      .badge-red   { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fca5a5 !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-lucide="shield-alert" class="brand-icon"></i>
+      <div>
+        <h2>Barangay DRRM</h2>
+        <span>Linao, Ormoc City</span>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
+      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
+      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
+      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
+      <a href="reports.html" class="active"><i data-lucide="file-bar-chart"></i> Reports</a>
+      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
+      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+    </nav>
+    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Reports &amp; Summary</h2>
+        <span class="dash-timestamp">Generated: <span id="report-timestamp">—</span></span>
+      </div>
+      <div class="user-info">
+        <button class="btn btn-outline-sm no-print" onclick="exportIncidentsCSV()" style="gap:.4rem;" title="Export incidents to CSV">
+          <i data-lucide="download"></i> CSV
+        </button>
+        <button class="btn btn-outline-sm no-print" onclick="openImportModal()" style="gap:.4rem;" title="Import incidents from CSV">
+          <i data-lucide="upload"></i> Import
+        </button>
+        <button class="btn btn-outline-sm no-print" onclick="triggerPrint()" style="gap:.4rem;">
+          <i data-lucide="printer"></i> Print
+        </button>
+        <button class="btn-icon-sm no-print" id="refresh-btn" onclick="loadReports(this)" title="Refresh Reports">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+
+        <!-- User Profile Dropdown Avatar -->
+        <div class="user-profile-wrapper">
+          <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)" title="Account Profile">
+            <i data-lucide="user"></i>
+          </button>
+
+          <div class="profile-dropdown-card" id="profile-dropdown-card">
+            <div class="profile-dropdown-header">
+              <div class="profile-avatar-lg">
+                <i data-lucide="user"></i>
+              </div>
+              <div class="profile-info-text">
+                <strong id="user-display-name">—</strong>
+                <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">Admin</span></div>
+              </div>
+            </div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item danger" onclick="logout()">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Printable Official Header (Visible ONLY on print/PDF export) -->
+      <div class="print-header" style="display:none;">
+        <h1>Republic of the Philippines — Ormoc City</h1>
+        <h2>BARANGAY LINAO DRRM COUNCIL</h2>
+        <p>Disaster Risk Reduction &amp; Management Official Summary Report</p>
+        <p style="margin-top:.35rem;font-weight:700;">Date Generated: <span id="print-timestamp">—</span></p>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="tab-bar no-print" style="margin-bottom:1.5rem;">
+        <button class="tab-btn active" id="tab-incident" onclick="switchReportTab('incident')">
+          <i data-lucide="triangle-alert"></i> Incident Report
+        </button>
+        <button class="tab-btn" id="tab-resource" onclick="switchReportTab('resource')">
+          <i data-lucide="truck"></i> Resource Report
+        </button>
+        <button class="tab-btn" id="tab-history" onclick="switchReportTab('history')">
+          <i data-lucide="history"></i> Incident History
+        </button>
+      </div>
+
+      <!-- ============================= -->
+      <!-- INCIDENT SUMMARY REPORT       -->
+      <!-- ============================= -->
+      <div id="pane-incident">
+
+        <!-- Summary stats -->
+        <div class="report-stats" id="inc-summary-stats">
+          <div class="report-stat"><div class="report-stat-num blue" id="r-total">—</div><div class="report-stat-label">Total Incidents</div></div>
+          <div class="report-stat"><div class="report-stat-num" id="r-today">—</div><div class="report-stat-label">Today</div></div>
+          <div class="report-stat"><div class="report-stat-num red" id="r-active">—</div><div class="report-stat-label">Active</div></div>
+          <div class="report-stat"><div class="report-stat-num orange" id="r-responding">—</div><div class="report-stat-label">Responding</div></div>
+          <div class="report-stat"><div class="report-stat-num green" id="r-resolved">—</div><div class="report-stat-label">Resolved</div></div>
+          <div class="report-stat"><div class="report-stat-num blue" id="r-people">—</div><div class="report-stat-label">People Involved</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+
+          <!-- Incidents by type -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <h3><i data-lucide="pie-chart"></i> Incidents by Type</h3>
+            </div>
+            <div class="report-section-body">
+              <div class="type-bars" id="inc-type-bars">
+                <div class="skeleton skeleton-title" style="width:70%;margin-bottom:8px;"></div>
+                <div class="skeleton skeleton-text" style="width:90%;margin-bottom:6px;"></div>
+                <div class="skeleton skeleton-text" style="width:50%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rescue items dispatched -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <h3><i data-lucide="package"></i> Rescue Items Dispatched</h3>
+            </div>
+            <div class="report-section-body">
+              <div class="type-bars" id="rescue-items-bars">
+                <div class="skeleton skeleton-title" style="width:65%;margin-bottom:8px;"></div>
+                <div class="skeleton skeleton-text" style="width:85%;margin-bottom:6px;"></div>
+                <div class="skeleton skeleton-text" style="width:55%;"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Ongoing operations -->
+        <div class="report-section">
+          <div class="report-section-header">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <h3><i data-lucide="zap"></i> Ongoing Operations</h3>
+              <span class="badge badge-orange" id="ops-count">—</span>
+            </div>
+            <button class="btn btn-outline-sm no-print" onclick="openIncidentsModal('ongoing')">
+              <i data-lucide="maximize-2"></i> View All
+            </button>
+          </div>
+          <div class="report-section-body">
+            <div class="ops-grid" id="ongoing-ops">
+              <p style="color:var(--text-muted);font-size:.85rem;">No ongoing operations.</p>
+            </div>
+            <div id="ongoing-ops-pagination" style="display:none;justify-content:space-between;align-items:center;padding:.75rem 0 .25rem;border-top:1px solid rgba(255,255,255,0.07);margin-top:.75rem;">
+              <span id="ongoing-ops-info" style="font-size:.78rem;color:var(--text-muted);"></span>
+              <div style="display:flex;gap:.35rem;align-items:center;">
+                <button class="page-btn" id="ops-btn-prev" onclick="changeOpsPage(-1)"><i data-lucide="chevron-left"></i></button>
+                <span id="ops-page-num" style="font-size:.78rem;font-weight:600;color:var(--text-main);min-width:60px;text-align:center;"></span>
+                <button class="page-btn" id="ops-btn-next" onclick="changeOpsPage(1)"><i data-lucide="chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SIDE BY SIDE GRID: Resolved Incidents & Today's Incidents -->
+        <div class="reports-side-by-side-grid">
+          
+          <!-- Left Column: Resolved Incidents -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <h3><i data-lucide="check-circle"></i> Resolved Incidents</h3>
+                <span class="badge badge-green" id="resolved-count">0</span>
+              </div>
+              <button class="btn btn-outline-sm no-print" onclick="openIncidentsModal('resolved')">
+                <i data-lucide="maximize-2"></i> View All
+              </button>
+            </div>
+            <div class="report-section-body" style="padding:0;">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>People</th>
+                    <th>Resolved At</th>
+                  </tr>
+                </thead>
+                <tbody id="resolved-tbody">
+                  <tr>
+                    <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                    <td><span class="skeleton skeleton-badge"></span></td>
+                    <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
+                    <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right Column: Today's Incidents -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <h3><i data-lucide="calendar"></i> Today's Incidents</h3>
+                <span class="badge badge-blue" id="today-count">0</span>
+              </div>
+              <button class="btn btn-outline-sm no-print" onclick="openIncidentsModal('today')">
+                <i data-lucide="maximize-2"></i> View All
+              </button>
+            </div>
+            <div class="report-section-body" style="padding:0;">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="today-tbody">
+                  <tr>
+                    <td><span class="skeleton skeleton-title" style="width:65%;"></span></td>
+                    <td><span class="skeleton skeleton-badge"></span></td>
+                    <td><span class="skeleton skeleton-badge"></span></td>
+                    <td><span class="skeleton skeleton-text" style="width:50px;"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ============================= -->
+      <!-- RESOURCE SUMMARY REPORT       -->
+      <!-- ============================= -->
+      <div id="pane-resource" style="display:none;">
+
+        <!-- Resource summary stats -->
+        <div class="report-stats" id="res-summary-stats">
+          <div class="report-stat"><div class="report-stat-num blue" id="res-total-items">—</div><div class="report-stat-label">Total Unique Items</div></div>
+          <div class="report-stat"><div class="report-stat-num green" id="res-available">—</div><div class="report-stat-label">Available Units</div></div>
+          <div class="report-stat"><div class="report-stat-num orange" id="res-deployed">—</div><div class="report-stat-label">Deployed Units</div></div>
+          <div class="report-stat"><div class="report-stat-num" id="res-deployed-items">—</div><div class="report-stat-label">Deployed Item Types</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+
+          <!-- Resources by type -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <h3><i data-lucide="grid"></i> Inventory by Type</h3>
+              <button class="btn btn-outline-sm no-print" onclick="openResourceModal('type')">
+                <i data-lucide="maximize-2"></i> View All
+              </button>
+            </div>
+            <div class="report-section-body">
+              <div class="res-type-grid" id="res-type-grid">
+                <div class="res-type-card"><div class="skeleton skeleton-title" style="width:60%;margin-bottom:8px;"></div><div class="skeleton skeleton-text" style="width:100%;height:14px;"></div></div>
+                <div class="res-type-card"><div class="skeleton skeleton-title" style="width:70%;margin-bottom:8px;"></div><div class="skeleton skeleton-text" style="width:100%;height:14px;"></div></div>
+              </div>
+              <div id="res-type-pagination" style="display:none;justify-content:space-between;align-items:center;padding:.75rem 0 .25rem;border-top:1px solid rgba(255,255,255,0.07);margin-top:.75rem;">
+                <span id="res-type-info" style="font-size:.78rem;color:var(--text-muted);"></span>
+                <div style="display:flex;gap:.35rem;align-items:center;">
+                  <button class="page-btn" id="res-type-btn-prev" onclick="changeResTypePage(-1)"><i data-lucide="chevron-left"></i></button>
+                  <span id="res-type-page-num" style="font-size:.78rem;font-weight:600;color:var(--text-main);min-width:60px;text-align:center;"></span>
+                  <button class="page-btn" id="res-type-btn-next" onclick="changeResTypePage(1)"><i data-lucide="chevron-right"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Currently deployed -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <h3><i data-lucide="send"></i> Currently Deployed</h3>
+                <span class="badge badge-orange" id="deployed-count">—</span>
+              </div>
+              <button class="btn btn-outline-sm no-print" onclick="openResourceModal('deployed')">
+                <i data-lucide="maximize-2"></i> View All
+              </button>
+            </div>
+            <div class="report-section-body" style="padding:0;">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Resource</th>
+                    <th>Type</th>
+                    <th>Qty</th>
+                    <th>Incident</th>
+                  </tr>
+                </thead>
+                <tbody id="deployed-tbody">
+                  <tr>
+                    <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                    <td><span class="skeleton skeleton-badge"></span></td>
+                    <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
+                    <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div id="deployed-pagination" style="display:none;justify-content:space-between;align-items:center;padding:.6rem 1rem;border-top:1px solid rgba(255,255,255,0.07);">
+                <span id="deployed-info" style="font-size:.78rem;color:var(--text-muted);"></span>
+                <div style="display:flex;gap:.35rem;align-items:center;">
+                  <button class="page-btn" id="deployed-btn-prev" onclick="changeDeployedPage(-1)"><i data-lucide="chevron-left"></i></button>
+                  <span id="deployed-page-num" style="font-size:.78rem;font-weight:600;color:var(--text-main);min-width:60px;text-align:center;"></span>
+                  <button class="page-btn" id="deployed-btn-next" onclick="changeDeployedPage(1)"><i data-lucide="chevron-right"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Affected zones mini-map -->
+        <div class="report-section">
+          <div class="report-section-header">
+            <h3><i data-lucide="map-pin"></i> Active Incidents &amp; Risk Overlay Map</h3>
+          </div>
+          <div class="report-section-body" style="padding:.75rem;">
+            <div id="affected-map"></div>
+          </div>
+        </div>
+
+        <!-- Dispatch log -->
+        <div class="report-section">
+          <div class="report-section-header">
+            <h3><i data-lucide="list"></i> Dispatch Log</h3>
+            <button class="btn btn-outline-sm no-print" onclick="openResourceModal('dispatch')">
+              <i data-lucide="maximize-2"></i> View All
+            </button>
+          </div>
+          <div class="report-section-body" style="padding:0;">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Resource</th>
+                  <th>Type</th>
+                  <th>Qty</th>
+                  <th>Incident</th>
+                  <th>Dispatched By</th>
+                  <th>Dispatched At</th>
+                  <th>Returned</th>
+                </tr>
+              </thead>
+              <tbody id="dispatch-log-tbody">
+                <tr>
+                  <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="dispatch-log-pagination" style="display:none;justify-content:space-between;align-items:center;padding:.6rem 1rem;border-top:1px solid rgba(255,255,255,0.07);">
+              <span id="dispatch-log-info" style="font-size:.78rem;color:var(--text-muted);"></span>
+              <div style="display:flex;gap:.35rem;align-items:center;">
+                <button class="page-btn" id="dispatch-log-btn-prev" onclick="changeDispatchLogPage(-1)"><i data-lucide="chevron-left"></i></button>
+                <span id="dispatch-log-page-num" style="font-size:.78rem;font-weight:600;color:var(--text-main);min-width:60px;text-align:center;"></span>
+                <button class="page-btn" id="dispatch-log-btn-next" onclick="changeDispatchLogPage(1)"><i data-lucide="chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================= -->
+      <!-- INCIDENT HISTORY              -->
+      <!-- ============================= -->
+      <div id="pane-history" style="display:none;">
+
+        <!-- Filter bar -->
+        <div class="filter-bar-card no-print" style="margin-bottom:1.25rem;">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="hist-search" placeholder="Search title, description, location..." oninput="filterHistory()" />
+          </div>
+          <div class="filter-group">
+            <select id="hist-type" onchange="filterHistory()" class="filter-select">
+              <option value="">All Types</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="fallen_tree">Fallen Tree</option>
+              <option value="earthquake">Earthquake</option>
+              <option value="typhoon">Typhoon Damage</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="assistance">Emergency Assistance</option>
+              <option value="other">Other</option>
+            </select>
+            <select id="hist-severity" onchange="filterHistory()" class="filter-select">
+              <option value="">All Severities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+            <select id="hist-date" onchange="handleHistoryDatePresetChange()" onclick="if(this.value==='custom') handleHistoryDatePresetChange()" class="filter-select">
+              <option value="">All Dates</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range...</option>
+            </select>
+            <input type="hidden" id="hist-date-from" />
+            <input type="hidden" id="hist-date-to" />
+            <select id="hist-status" onchange="filterHistory()" class="filter-select">
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="responding">Responding</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <button class="btn btn-outline no-print" onclick="clearHistoryFilters()" style="gap:.35rem;">
+              <i data-lucide="rotate-ccw"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Print-only header (hidden on screen) -->
+        <div class="print-only" style="display:none;margin-bottom:1.5rem;">
+          <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:.25rem;">Barangay Linao DRRM</h2>
+          <h3 style="font-size:1rem;font-weight:600;color:#5f6368;">Incident Reports History</h3>
+          <p style="font-size:.82rem;color:#5f6368;margin-top:.2rem;">Generated: <span id="hist-print-date"></span></p>
+          <hr style="margin:.75rem 0;border:none;border-top:1px solid #dadce0;" />
+        </div>
+
+        <!-- History table -->
+        <div class="table-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;gap:.75rem;">
+            <h3 style="font-size:1rem;font-weight:700;color:var(--text-main);margin:0;display:flex;align-items:center;gap:.5rem;">
+              <i data-lucide="history"></i> All Incident Reports
+            </h3>
+            <span id="hist-count" class="badge badge-blue" style="font-size:.82rem;font-weight:600;padding:.45rem .75rem;">0 records</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="hist-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title &amp; Location</th>
+                  <th>Type</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>People</th>
+                  <th>Reporter</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="hist-tbody">
+                <tr>
+                  <td><span class="skeleton skeleton-text" style="width:15px;"></span></td>
+                  <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:25px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:70px;"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-text" style="width:15px;"></span></td>
+                  <td><span class="skeleton skeleton-title" style="width:60%;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:25px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:70px;"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pagination no-print" id="hist-pagination" style="display:none;">
+            <div class="pagination-info" id="hist-page-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+                <select id="hist-page-size" onchange="changeHistoryPageSize(this.value)" class="pagination-select">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                </select>
+              </div>
+              <button class="page-btn" id="hist-btn-prev" onclick="changeHistoryPage(-1)"><i data-lucide="chevron-left"></i></button>
+              <div id="hist-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="hist-btn-next" onclick="changeHistoryPage(1)"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== Custom Date Range Modal for History Filter ===== -->
+<div class="modal-overlay" id="history-custom-date-modal-overlay" onclick="closeHistoryCustomDateModalOutside(event)">
+  <div class="modal" style="max-width:520px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(59,130,246,0.2);">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.35),rgba(37,99,235,0.2));border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="calendar-range" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;">Custom Date Filter</h3>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Specify exact start and end date boundaries</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeHistoryCustomDateModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="font-size:.88rem;padding:1.5rem;background:rgba(15,23,42,0.75);">
+      <div style="margin-bottom:1.2rem;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Quick Select Presets</div>
+        <div style="display:flex;gap:.45rem;flex-wrap:wrap;">
+          <button type="button" class="modal-preset-btn" onclick="setHistoryModalQuickDate('today')">Today</button>
+          <button type="button" class="modal-preset-btn" onclick="setHistoryModalQuickDate('7days')">Last 7 Days</button>
+          <button type="button" class="modal-preset-btn" onclick="setHistoryModalQuickDate('30days')">Last 30 Days</button>
+          <button type="button" class="modal-preset-btn" onclick="setHistoryModalQuickDate('clear')">Clear</button>
+        </div>
+      </div>
+      <form id="history-custom-date-form" onsubmit="applyHistoryCustomDateFilter(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
+              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> Start Date
+            </label>
+            <input type="date" id="history-modal-date-from" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateHistoryModalRangeText()" />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
+              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> End Date
+            </label>
+            <input type="date" id="history-modal-date-to" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateHistoryModalRangeText()" />
+          </div>
+        </div>
+        <div id="history-modal-date-range-preview" style="font-size:.78rem;color:#60a5fa;background:rgba(59,130,246,0.12);padding:.6rem .85rem;border-radius:10px;border:1px dashed rgba(59,130,246,0.35);display:flex;align-items:center;gap:.5rem;">
+          <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;"></i>
+          <span id="history-modal-date-range-text">Select start and end dates to filter history.</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="button" class="btn btn-ghost" onclick="closeHistoryCustomDateModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="box-shadow:0 0 18px rgba(59,130,246,0.45);"><i data-lucide="filter"></i> Apply Date Filter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FULL INCIDENTS DETAIL MODAL (With 10-Item Pagination) ===== -->
+<div class="modal-overlay" id="report-modal-overlay" onclick="closeReportModalOutside(event)">
+  <div class="modal" style="max-width:980px;width:95%;border-radius:var(--radius-lg);overflow:hidden;">
+
+    <!-- Header -->
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.9);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;flex-shrink:0;">
+          <i data-lucide="list" style="width:20px;height:20px;"></i>
+        </div>
+        <h3 id="report-modal-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;"></h3>
+      </div>
+      <button class="modal-close" onclick="closeReportModal()"><i data-lucide="x"></i></button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar-card" style="border-radius:0;border-left:0;border-right:0;border-top:0;margin-bottom:0;">
+      <div class="search-wrap">
+        <i data-lucide="search"></i>
+        <input type="text" id="report-modal-search" placeholder="Search title, reporter, action..." oninput="filterModalItems()" />
+      </div>
+      <div class="filter-group">
+        <select id="report-modal-filter-type" onchange="filterModalItems()" class="filter-select">
+          <option value="">Type: All</option>
+          <option value="flood">Flood</option>
+          <option value="fire">Fire</option>
+          <option value="landslide">Landslide</option>
+          <option value="typhoon">Typhoon</option>
+          <option value="medical">Medical</option>
+          <option value="road_accident">Road Accident</option>
+          <option value="fallen_tree">Fallen Tree</option>
+          <option value="assistance">Assistance</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="report-modal-filter-severity" onchange="filterModalItems()" class="filter-select">
+          <option value="">Severity: All</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="modal-body" style="padding:0;overflow-x:auto;max-height:55vh;">
+      <table class="report-table" id="report-modal-table" style="width:100%;">
+        <thead id="report-modal-thead"></thead>
+        <tbody id="report-modal-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Footer Pagination -->
+    <div class="modal-footer" style="padding:.85rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:.78rem;color:var(--text-muted);" id="report-modal-page-info">Showing items</span>
+      <div style="display:flex;gap:.35rem;align-items:center;">
+        <button class="page-btn" id="btn-modal-prev" onclick="changeModalPage(-1)">
+          <i data-lucide="chevron-left"></i>
+        </button>
+        <span style="font-size:.78rem;font-weight:700;color:var(--text-main);min-width:54px;text-align:center;" id="report-modal-page-num">1 / 1</span>
+        <button class="page-btn" id="btn-modal-next" onclick="changeModalPage(1)">
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- scripts only below — no more duplicate pane-history blocks -->
+
+<!-- ===== Resource Detail Modal (Type / Deployed / Dispatch) ===== -->
+<div class="modal-overlay" id="resource-modal-overlay" onclick="closeResourceReportModalOutside(event)">
+  <div class="modal" style="max-width:860px;width:95%;border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.9);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;flex-shrink:0;">
+          <i id="resource-modal-icon" data-lucide="package" style="width:20px;height:20px;"></i>
+        </div>
+        <h3 id="resource-modal-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;"></h3>
+      </div>
+      <button class="modal-close" onclick="closeResourceReportModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:0;overflow-x:auto;max-height:55vh;">
+      <table class="report-table" id="resource-modal-table" style="width:100%;">
+        <thead id="resource-modal-thead"></thead>
+        <tbody id="resource-modal-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="padding:.85rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:.78rem;color:var(--text-muted);" id="resource-modal-info">Showing items</span>
+      <div style="display:flex;gap:.35rem;align-items:center;">
+        <button class="page-btn" id="resource-modal-btn-prev" onclick="changeResourceModalPage(-1)"><i data-lucide="chevron-left"></i></button>
+        <span style="font-size:.78rem;font-weight:700;color:var(--text-main);min-width:54px;text-align:center;" id="resource-modal-page-num">1 / 1</span>
+        <button class="page-btn" id="resource-modal-btn-next" onclick="changeResourceModalPage(1)"><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CSV Import Modal ===== -->
+<div class="modal-overlay" id="import-modal-overlay" onclick="closeImportModalOutside(event)">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3><i data-lucide="upload"></i> Import Incidents from CSV</h3>
+      <button class="modal-close" onclick="closeImportModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Instructions -->
+      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--text-main);line-height:1.6;">
+        <div style="font-weight:700;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;">
+          <i data-lucide="info" style="width:14px;height:14px;color:#60a5fa;"></i> CSV Format Guide
+        </div>
+        Required columns: <code>title, description, type, severity, latitude, longitude</code><br>
+        Optional: <code>location_address, people_involved, action_taken, reporter_name, reporter_contact, status, casualty_count, casualty_status</code><br><br>
+        Valid <strong>type</strong> values: <code>flood, landslide, fire, road_accident, fallen_tree, earthquake, typhoon, medical, assistance, other</code><br>
+        Valid <strong>severity</strong>: <code>low, medium, high, critical</code><br>
+        Valid <strong>status</strong>: <code>active, responding, resolved</code>
+      </div>
+
+      <!-- Download template -->
+      <div style="margin-bottom:1rem;">
+        <button class="btn btn-ghost" onclick="downloadCSVTemplate()" style="font-size:.8rem;gap:.4rem;padding:.45rem .85rem;border:1px solid var(--border-color);">
+          <i data-lucide="file-down"></i> Download CSV Template
+        </button>
+      </div>
+
+      <!-- File drop zone -->
+      <div id="import-drop-zone"
+        style="border:2px dashed var(--border-color);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg-input);position:relative;"
+        ondragover="event.preventDefault();this.style.borderColor='var(--primary)';"
+        ondragleave="this.style.borderColor='var(--border-color)';"
+        ondrop="handleImportDrop(event)">
+        <input type="file" id="import-file-input" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" onchange="handleImportFileSelect(event)" />
+        <i data-lucide="file-spreadsheet" style="width:32px;height:32px;color:var(--text-muted);margin-bottom:.5rem;"></i>
+        <div style="font-size:.85rem;font-weight:600;color:var(--text-main);margin-bottom:.25rem;">Drop CSV file here or click to browse</div>
+        <div style="font-size:.75rem;color:var(--text-muted);">Maximum 500 rows per import</div>
+      </div>
+
+      <!-- Preview table -->
+      <div id="import-preview" style="display:none;margin-top:1rem;">
+        <div style="font-size:.8rem;font-weight:700;color:var(--text-main);margin-bottom:.5rem;" id="import-preview-label"></div>
+        <div style="overflow-x:auto;max-height:200px;border:1px solid var(--border-color);border-radius:6px;">
+          <table class="report-table" style="font-size:.72rem;" id="import-preview-table">
+            <thead id="import-preview-thead"></thead>
+            <tbody id="import-preview-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Error display -->
+      <div id="import-errors" style="display:none;margin-top:.75rem;background:rgba(217,48,37,.08);border:1px solid rgba(217,48,37,.25);border-radius:6px;padding:.75rem 1rem;font-size:.78rem;color:#f87171;line-height:1.6;max-height:120px;overflow-y:auto;"></div>
+
+      <p class="error-msg" id="import-error-msg" style="margin-top:.5rem;"></p>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <div style="font-size:.78rem;color:var(--text-muted);" id="import-status-label"></div>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
+        <button class="btn btn-primary" id="import-submit-btn" onclick="submitImport()" disabled style="gap:.4rem;">
+          <i data-lucide="upload"></i> Import Records
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CSV Import Modal ===== -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/reports.js"></script>
+<script>
+  requireAuth();
+  const user = getUser();
+  if (user) {
+    document.getElementById("user-display-name").textContent = user.full_name || user.username;
+    if (document.getElementById("user-role-badge")) document.getElementById("user-role-badge").textContent = user.role;
+  }
+  lucide.createIcons();
+  loadReports();
+
+  function triggerPrint() {
+    const ts = new Date().toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+    if (document.getElementById('print-timestamp')) {
+      document.getElementById('print-timestamp').textContent = ts;
+    }
+    window.print();
+  }
+</script>
+</body>
+</html>

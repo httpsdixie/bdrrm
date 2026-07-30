@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-lucide="shield-alert" class="brand-icon"></i>
+      <div>
+        <h2>Barangay DRRM</h2>
+        <span>Linao, Ormoc City</span>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
+      <a href="dashboard.html" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
+      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
+      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
+      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
+      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
+      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
+      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+    </nav>
+    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Dashboard Overview</h2>
+        <span class="dash-timestamp">Last updated: <span id="last-updated">—</span></span>
+      </div>
+      <div class="user-info">
+        <button class="btn-icon-sm" onclick="loadDashboard(this)" id="refresh-btn" title="Refresh">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+
+        <!-- User Profile Dropdown Avatar -->
+        <div class="user-profile-wrapper">
+          <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)" title="Account Profile">
+            <i data-lucide="user"></i>
+          </button>
+
+          <div class="profile-dropdown-card" id="profile-dropdown-card">
+            <div class="profile-dropdown-header">
+              <div class="profile-avatar-lg">
+                <i data-lucide="user"></i>
+              </div>
+              <div class="profile-info-text">
+                <strong id="user-display-name">—</strong>
+                <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">Admin</span></div>
+              </div>
+            </div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item danger" onclick="logout()">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- ===== Stat Cards ===== -->
+      <div class="stats-grid">
+
+        <a href="incidents.html" class="stat-card stat-card-link">
+          <div class="stat-icon red"><i data-lucide="triangle-alert"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-active-incidents"><span class="skeleton skeleton-stat-num"></span></h3>
+            <p>Active Incidents</p>
+          </div>
+          <div class="stat-sub" id="stat-critical-sub"><span class="skeleton skeleton-text" style="width:70px;"></span></div>
+        </a>
+
+        <a href="evacuation.html" class="stat-card stat-card-link">
+          <div class="stat-icon blue"><i data-lucide="house"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-evac-centers"><span class="skeleton skeleton-stat-num"></span></h3>
+            <p>Evacuation Centers</p>
+          </div>
+          <div class="stat-sub" id="stat-evac-sub"><span class="skeleton skeleton-text" style="width:90px;"></span></div>
+        </a>
+
+        <a href="evacuation.html" class="stat-card stat-card-link">
+          <div class="stat-icon green"><i data-lucide="users"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-evacuees"><span class="skeleton skeleton-stat-num"></span></h3>
+            <p>Total Evacuees</p>
+          </div>
+          <div class="stat-sub" id="stat-evacuees-sub"><span class="skeleton skeleton-text" style="width:80px;"></span></div>
+        </a>
+
+        <a href="resources.html" class="stat-card stat-card-link">
+          <div class="stat-icon orange"><i data-lucide="truck"></i></div>
+          <div class="stat-info">
+            <h3 id="stat-resources"><span class="skeleton skeleton-stat-num"></span></h3>
+            <p>Resources Deployed</p>
+          </div>
+          <div class="stat-sub" id="stat-resources-sub"><span class="skeleton skeleton-text" style="width:75px;"></span></div>
+        </a>
+
+      </div>
+
+      <!-- ===== Main panels ===== -->
+      <div class="dash-panels">
+
+        <!-- Recent Incidents -->
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <h3><i data-lucide="triangle-alert"></i> Recent Incidents</h3>
+            <a href="incidents.html" class="dash-panel-link">View all <i data-lucide="arrow-right"></i></a>
+          </div>
+          <div id="recent-incidents-list" class="dash-feed">
+            <div class="skeleton-card" style="padding:0.75rem 1rem;">
+              <div class="skeleton-table-row">
+                <div class="skeleton skeleton-circle"></div>
+                <div style="flex:1;">
+                  <div class="skeleton skeleton-title" style="width:55%;margin-bottom:6px;"></div>
+                  <div class="skeleton skeleton-text" style="width:35%;"></div>
+                </div>
+                <div class="skeleton skeleton-badge"></div>
+              </div>
+              <div class="skeleton-table-row">
+                <div class="skeleton skeleton-circle"></div>
+                <div style="flex:1;">
+                  <div class="skeleton skeleton-title" style="width:65%;margin-bottom:6px;"></div>
+                  <div class="skeleton skeleton-text" style="width:40%;"></div>
+                </div>
+                <div class="skeleton skeleton-badge"></div>
+              </div>
+            </div>
+          </div>
+          <div id="recent-incidents-pagination" class="widget-pagination" style="display:none;"></div>
+        </div>
+
+        <!-- Evacuation Center Status -->
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <h3><i data-lucide="house"></i> Evacuation Centers</h3>
+            <a href="evacuation.html" class="dash-panel-link">View all <i data-lucide="arrow-right"></i></a>
+          </div>
+          <div id="evac-status-list" class="dash-feed">
+            <div class="skeleton-card" style="padding:0.75rem 1rem;">
+              <div class="skeleton-table-row">
+                <div class="skeleton skeleton-circle"></div>
+                <div style="flex:1;">
+                  <div class="skeleton skeleton-title" style="width:50%;margin-bottom:6px;"></div>
+                  <div class="skeleton skeleton-text" style="width:45%;"></div>
+                </div>
+                <div class="skeleton skeleton-badge"></div>
+              </div>
+              <div class="skeleton-table-row">
+                <div class="skeleton skeleton-circle"></div>
+                <div style="flex:1;">
+                  <div class="skeleton skeleton-title" style="width:60%;margin-bottom:6px;"></div>
+                  <div class="skeleton skeleton-text" style="width:30%;"></div>
+                </div>
+                <div class="skeleton skeleton-badge"></div>
+              </div>
+            </div>
+          </div>
+          <div id="evac-status-pagination" class="widget-pagination" style="display:none;"></div>
+        </div>
+
+      </div>
+
+      <!-- ===== Proactive Risk Widget ===== -->
+      <div style="margin-bottom:1.25rem;">
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <h3><i data-lucide="shield-alert"></i> Proactive Risk Analysis</h3>
+            <span id="risk-summary-badge" class="badge badge-blue">Analyzing...</span>
+          </div>
+          <div id="risk-widget-body" class="dash-feed" style="padding:.75rem 1.25rem;">
+            <div class="skeleton-card" style="padding:0.5rem 0;">
+              <div class="skeleton skeleton-title" style="width:65%;margin-bottom:8px;"></div>
+              <div class="skeleton skeleton-text" style="width:85%;margin-bottom:6px;"></div>
+              <div class="skeleton skeleton-text" style="width:45%;"></div>
+            </div>
+          </div>
+          <div id="risk-widget-pagination" class="widget-pagination" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- ===== Quick actions ===== -->
+      <div class="dash-quick-actions" style="margin-top:1.25rem;">
+        <h3 class="dash-section-title">Quick Actions</h3>
+        <div class="quick-actions-grid">
+          <a href="incidents.html" class="quick-action-card" onclick="sessionStorage.setItem('openIncidentModal','1')">
+            <div class="qa-icon red"><i data-lucide="plus-circle"></i></div>
+            <span>Report Incident</span>
+          </a>
+          <a href="evacuation.html" class="quick-action-card">
+            <div class="qa-icon blue"><i data-lucide="users"></i></div>
+            <span>Update Occupancy</span>
+          </a>
+          <a href="resources.html" class="quick-action-card">
+            <div class="qa-icon orange"><i data-lucide="send"></i></div>
+            <span>Dispatch Resource</span>
+          </a>
+          <a href="map.html" class="quick-action-card">
+            <div class="qa-icon green"><i data-lucide="map-pin"></i></div>
+            <span>Open GIS Map</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- ===== Emergency Hotlines Widget ===== -->
+      <div style="margin-top:1.25rem;">
+        <div class="dash-panel">
+          <div class="dash-panel-header">
+            <h3><i data-lucide="phone-call"></i> Emergency Hotlines</h3>
+            <a href="directory.html" class="dash-panel-link">Full Directory <i data-lucide="arrow-right"></i></a>
+          </div>
+          <div id="hotlines-widget-body" class="dash-feed" style="padding: 1rem;">
+            <!-- skeleton -->
+          </div>
+          <div id="hotlines-widget-pagination" class="widget-pagination" style="display:none;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/dashboard.js"></script>
+<script>
+  requireAuth();
+  const user = getUser();
+  if (user) {
+    document.getElementById("user-display-name").textContent = user.full_name || user.username;
+    document.getElementById("user-role-badge").textContent = user.role;
+  }
+  lucide.createIcons();
+  loadDashboard();
+
+  // Auto-refresh every 60 seconds
+  setInterval(loadDashboard, 60000);
+
+  // Open incident modal if redirected from quick action
+  if (sessionStorage.getItem('openIncidentModal')) {
+    sessionStorage.removeItem('openIncidentModal');
+  }
+</script>
+</body>
+</html>

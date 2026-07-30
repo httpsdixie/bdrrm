@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GIS Map — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ---- Map layout ---- */
+    .map-page { display:flex; flex-direction:column; height:calc(100vh - var(--topbar-height)); overflow:hidden; }
+    #map { flex:1; width:100%; min-height:0; border-radius:0; border:none; box-shadow:none; }
+    .map-wrapper { position:relative; flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    /* ---- Floating Map Layer Control Card ---- */
+    .layer-panel {
+      position: absolute; top: 1rem; right: 1rem; z-index: 1000;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(11, 15, 25, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 18px; width: 256px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      overflow: hidden;
+      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .layer-panel.shift-left { right: 376px !important; }
+    .layer-panel-header {
+      padding: 0.8rem 1.1rem; font-size: 0.78rem; font-weight: 800;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #ffffff;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      background: rgba(15, 23, 42, 0.7);
+      cursor: pointer; user-select: none;
+      transition: background 0.2s ease;
+    }
+    .layer-panel-header:hover {
+      background: rgba(30, 41, 59, 0.8);
+    }
+    .layer-panel.collapsed .layer-panel-body { display: none; }
+    .layer-panel.collapsed .layer-panel-header { border-bottom: none; }
+    .layer-panel.collapsed #layer-panel-chevron { transform: rotate(180deg); }
+
+    /* Ultra-compact icon pill whenever collapsed */
+    .layer-panel.collapsed {
+      width: auto !important;
+    }
+    .layer-panel.collapsed .layer-panel-title-text,
+    .layer-panel.collapsed #active-layer-count-admin {
+      display: none !important;
+    }
+    .layer-group-label {
+      padding: 0.6rem 1.1rem 0.3rem;
+      font-size: 0.65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: #60a5fa;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex; align-items: center; gap: 0.45rem;
+    }
+    .layer-group-sep {
+      height: 1px; background: rgba(255, 255, 255, 0.08);
+    }
+    .layer-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.55rem 1.1rem; font-size: 0.82rem; font-weight: 600; color: #ffffff;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      background: transparent;
+      transition: all 0.18s ease; cursor: pointer;
+    }
+    .layer-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .layer-toggle-left { display: flex; align-items: center; gap: 0.6rem; font-weight: 600; color: #ffffff; }
+    .layer-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .layer-dot-pulse {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      animation: dotPulse 1.8s infinite;
+    }
+    @keyframes dotPulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .layer-poly { width: 16px; height: 10px; border-radius: 3px; flex-shrink: 0; opacity: .9; }
+
+    /* ---- Map action buttons ---- */
+    .map-actions {
+      position: absolute; top: 1.1rem; left: 1.1rem; z-index: 1000;
+      display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center;
+    }
+    .map-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1.1rem; border-radius: 99px; font-size: 0.8rem;
+      font-weight: 700; color: #ffffff; cursor: pointer;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.86) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-top: 1px solid rgba(255, 255, 255, 0.24);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .map-btn svg { width: 15px; height: 15px; transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease; }
+
+    .map-btn-layers svg { color: #60a5fa; filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.5)); }
+    .map-btn-road svg { color: #fbbf24; filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5)); }
+    .map-btn-heatmap svg { color: #f87171; filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.5)); }
+
+    .map-btn:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.96) 100%);
+      border-color: rgba(96, 165, 250, 0.45);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65), 0 0 18px rgba(59, 130, 246, 0.3);
+      color: #ffffff;
+    }
+    .map-btn:hover svg { transform: scale(1.1); }
+
+    .map-btn.active, .map-btn:active {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      border-color: rgba(96, 165, 250, 0.6);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+
+    /* ---- Toggle switch ---- */
+    .toggle-switch { position: relative; width: 34px; height: 18px; flex-shrink: 0; cursor: pointer; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; border-radius: 99px;
+      background: rgba(255, 255, 255, 0.18); cursor: pointer; transition: .2s;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute; width: 12px; height: 12px;
+      left: 2px; bottom: 2px; border-radius: 50%; background: #ffffff; transition: .2s;
+    }
+    input:checked + .toggle-slider { background: var(--primary); border-color: var(--primary); }
+    input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+    /* ---- Info Side Panel ---- */
+    .info-panel {
+      position: absolute; top: 0; right: 0; bottom: 0;
+      width: 350px; background: var(--bg-card-solid);
+      border-left: 1px solid var(--border-color);
+      box-shadow: -4px 0 25px rgba(0,0,0,.5);
+      z-index: 1100; display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    .info-panel.open { transform: translateX(0); }
+
+    .info-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);
+      background: rgba(15, 23, 42, 0.6);
+      flex-shrink: 0;
+    }
+    .info-panel-type {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; padding: .25rem .65rem;
+      border-radius: 99px; margin-bottom: .35rem;
+    }
+    .info-panel-type svg { width: 12px; height: 12px; }
+    .info-panel-title { font-size: 1.05rem; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+    .info-panel-close {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      display: flex; align-items: center; padding: .4rem; border-radius: var(--radius-sm);
+      transition: all .15s ease; flex-shrink: 0;
+    }
+    .info-panel-close:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-main); }
+    .info-panel-close svg { width: 18px; height: 18px; }
+
+    .info-panel-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+
+    .info-field { margin-bottom: .9rem; }
+    .info-field-label {
+      font-size: .72rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .05em; margin-bottom: .25rem;
+    }
+    .info-field-value { font-size: .88rem; color: var(--text-main); }
+
+    .info-divider { height: 1px; background: var(--border-color); margin: 1rem 0; }
+
+    .info-panel-actions {
+      padding: 1rem 1.25rem; border-top: 1px solid var(--border-color);
+      display: flex; gap: .6rem; flex-wrap: wrap; flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .info-panel-actions .btn { flex: 1; font-size: .82rem; padding: .55rem .75rem; }
+
+    /* Cap bar inside panel */
+    .panel-cap-bar { margin-top: .4rem; }
+    .panel-cap-track { height: 6px; background: rgba(15, 23, 42, 0.6); border-radius: 99px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+    .panel-cap-fill  { height: 100%; border-radius: 99px; transition: width .3s; }
+    .panel-cap-label { font-size: .72rem; color: var(--text-muted); margin-top: .25rem; }
+
+    /* Heatmap toggle glow */
+    .map-btn.heatmap-on { background: var(--danger); color: #ffffff; border-color: var(--danger); box-shadow: 0 0 14px var(--danger-glow); }
+
+    /* ---- Layer group labels & separators ---- */
+    .layer-group-label {
+      padding: .45rem 1rem .25rem;
+      font-size: .65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--primary); opacity: .85;
+    }
+    .layer-group-sep {
+      height: 1px; background: var(--border-color);
+      margin: .25rem 0;
+      opacity: .5;
+    }
+    .layer-panel-footer {
+      display: flex; gap: .4rem;
+      padding: .6rem 1rem;
+      border-top: 1px solid var(--border-color);
+      background: rgba(15,23,42,.5);
+    }
+    .layer-footer-btn {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center;
+      gap: .3rem; padding: .35rem; border-radius: var(--radius-sm);
+      font-size: .72rem; font-weight: 600; border: 1px solid var(--border-color);
+      background: transparent; color: var(--text-muted); cursor: pointer;
+      transition: all .15s;
+    }
+    .layer-footer-btn svg { width: 12px; height: 12px; }
+    .layer-footer-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* ---- Weather widget ---- */
+    .weather-widget {
+      position: absolute; top: calc(1rem + 280px + .75rem); right: 1rem;
+      z-index: 1000; width: 230px;
+      background: var(--bg-card-solid);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      transition: right .25s cubic-bezier(.4,0,.2,1);
+    }
+    .weather-header {
+      display: flex; align-items: center; gap: .45rem;
+      padding: .6rem 1rem; border-bottom: 1px solid var(--border-color);
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--text-main);
+      background: rgba(15,23,42,.85);
+    }
+    .weather-header svg { width: 13px; height: 13px; color: #f9a825; }
+    .weather-refresh {
+      margin-left: auto; background: none; border: none; cursor: pointer;
+      color: var(--text-muted); display: flex; align-items: center;
+      padding: .15rem; border-radius: 4px; transition: color .15s;
+    }
+    .weather-refresh:hover { color: var(--primary); }
+    .weather-refresh svg { width: 12px; height: 12px; }
+    .weather-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem; color: var(--text-muted);
+    }
+    .weather-body { padding: .75rem 1rem; }
+    .weather-main {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: .6rem;
+    }
+    .weather-temp {
+      font-size: 1.6rem; font-weight: 800; color: var(--text-main); line-height: 1;
+    }
+    .weather-temp span { font-size: .85rem; font-weight: 500; color: var(--text-muted); }
+    .weather-desc { font-size: .78rem; color: var(--text-muted); margin-top: .1rem; }
+    .weather-icon-emoji { font-size: 2rem; line-height: 1; }
+    .weather-stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .4rem;
+    }
+    .weather-stat {
+      background: rgba(255,255,255,.04); border-radius: 6px;
+      padding: .4rem .6rem;
+    }
+    .weather-stat-label {
+      font-size: .65rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .05em; margin-bottom: .1rem;
+    }
+    .weather-stat-value {
+      font-size: .82rem; font-weight: 700; color: var(--text-main);
+    }
+    .weather-alert {
+      margin-top: .6rem; padding: .4rem .6rem;
+      background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3);
+      border-radius: 6px; font-size: .72rem; color: #fca5a5;
+      display: flex; align-items: center; gap: .35rem;
+    }
+    .weather-alert svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* ---- Layer Management Panel (left slide-in) ---- */
+    .manage-panel {
+      position: absolute; top: 0; left: 0; bottom: 0;
+      width: 360px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(11, 15, 25, 0.98) 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 12px 0 40px rgba(0, 0, 0, 0.65), inset -1px 0 0 rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      z-index: 1500 !important; display: flex; flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    .manage-panel.open { transform: translateX(0); }
+
+    .manage-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.35rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: .92rem; font-weight: 800; color: #ffffff;
+      background: rgba(15, 23, 42, 0.7);
+      flex-shrink: 0;
+    }
+    .manage-panel-header span {
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .manage-panel-header svg { width: 16px; height: 16px; color: #60a5fa; filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4)); }
+
+    .manage-tabs {
+      display: flex; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.5);
+      flex-shrink: 0; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .manage-tabs::-webkit-scrollbar { display: none; }
+    .manage-tab {
+      padding: .75rem .85rem; font-size: .78rem; font-weight: 700;
+      border: none; background: transparent; cursor: pointer;
+      color: #94a3b8; border-bottom: 2px solid transparent;
+      transition: all .2s ease; white-space: nowrap; flex-shrink: 0;
+    }
+    .manage-tab:hover { color: #ffffff; }
+    .manage-tab.active { color: #60a5fa; border-bottom-color: #3b82f6; text-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+
+    .manage-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .manage-pane-toolbar {
+      display: flex; gap: .6rem; padding: .85rem 1.1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06); flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.3);
+    }
+
+    .manage-search {
+      flex: 1; height: 38px; padding: 0 0.95rem; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px; font-size: .84rem; font-weight: 500; background: rgba(15, 23, 42, 0.7);
+      color: #ffffff; transition: all 0.2s ease;
+    }
+    .manage-search:focus { outline: none; border-color: #60a5fa; background: rgba(15, 23, 42, 0.95); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
+
+    .manage-list {
+      flex: 1; overflow-y: auto; padding: .5rem 0;
+      scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+
+    .manage-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 2rem; color: var(--text-muted);
+    }
+
+    .manage-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .85rem 1.1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all .2s ease;
+    }
+    .manage-item:last-child { border-bottom: none; }
+    .manage-item:hover { background: rgba(255, 255, 255, 0.04); }
+
+    .manage-item-left { display: flex; align-items: center; gap: .7rem; flex: 1; min-width: 0; }
+    .manage-item-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+    .manage-item-info { min-width: 0; }
+    .manage-item-name { font-size: .84rem; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .manage-item-sub  { font-size: .74rem; color: #94a3b8; margin-top: .15rem; }
+    .manage-item-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+
+    .manage-form-overlay {
+      position: absolute; inset: 0; background: var(--bg-card-solid);
+      z-index: 1600 !important; display: flex; flex-direction: column;
+    }
+    .manage-form-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .85rem 1.25rem; border-bottom: 1px solid var(--border-color);
+      font-size: .88rem; font-weight: 700; color: var(--text-main); flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .manage-form-body { flex: 1; overflow-y: auto; padding: 1rem; }
+    .manage-form-body .form-group { margin-bottom: .85rem; }
+    .manage-form-body label { display: block; font-size: .78rem; font-weight: 600; margin-bottom: .3rem; color: var(--text-muted); }
+    .manage-form-body input,
+    .manage-form-body select,
+    .manage-form-body textarea {
+      width: 100%; padding: .5rem .75rem; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); font-size: .85rem; font-family: inherit;
+      background: var(--bg-input); color: var(--text-main);
+    }
+    .manage-form-body input:focus,
+    .manage-form-body select:focus,
+    .manage-form-body textarea:focus { outline: none; border-color: var(--primary); }
+    .manage-form-body .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    .manage-form-footer {
+      display: flex; justify-content: flex-end; gap: .6rem;
+      padding: .85rem 1rem; border-top: 1px solid var(--border-color); flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .manage-form-footer .btn { font-size: .82rem; padding: .5rem .9rem; }
+
+    /* Shift layer toggle panel left when manage panel is open */
+    .manage-panel.open ~ .layer-panel { right: 1rem; }
+
+    /* Shift action buttons and map controls right when manage panel is open so they do not overlap */
+    .map-controls-stack,
+    .map-actions,
+    .basemap-picker-wrapper {
+      transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .map-wrapper.manage-open .map-controls-stack {
+      left: 376px !important;
+    }
+
+    .map-wrapper.manage-open .map-actions {
+      left: 420px !important;
+    }
+
+    .map-wrapper.manage-open .basemap-picker-wrapper {
+      left: 376px !important;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-lucide="shield-alert" class="brand-icon"></i>
+      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
+    </div>
+    <nav>
+      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="map.html" class="active"><i data-lucide="map"></i> GIS Map</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
+      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
+      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
+      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
+      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
+      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
+      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+    </nav>
+    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+  </aside>
+
+  <div class="main-content map-page">
+    <div class="topbar">
+      <h2>GIS Map — Barangay Linao</h2>
+      <div class="user-info">
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="pub-badge weather-pill" onclick="toggleWeatherDropdown()" title="Click for Ormoc City Weather Details">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-header">
+              <i data-lucide="cloud-sun"></i>
+              <span>Ormoc City Weather</span>
+              <button class="weather-refresh" onclick="loadWeather(event)" title="Refresh Weather">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-body" id="weather-body">
+              <div class="weather-loading"><i data-lucide="loader" class="spin"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-icon-sm" id="refresh-btn" onclick="this.classList.add('spinning'); setTimeout(() => location.reload(), 400);" title="Refresh Map">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <a href="public.html" target="_blank" class="btn-icon-sm" style="text-decoration:none;" title="Public View Map">
+          <i data-lucide="globe"></i>
+        </a>
+
+        <!-- User Profile Dropdown Avatar -->
+        <div class="user-profile-wrapper">
+          <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)" title="Account Profile">
+            <i data-lucide="user"></i>
+          </button>
+
+          <div class="profile-dropdown-card" id="profile-dropdown-card">
+            <div class="profile-dropdown-header">
+              <div class="profile-avatar-lg">
+                <i data-lucide="user"></i>
+              </div>
+              <div class="profile-info-text">
+                <strong id="user-display-name">—</strong>
+                <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">Admin</span></div>
+              </div>
+            </div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item danger" onclick="logout()">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-wrapper">
+
+      <!-- Action buttons -->
+      <div class="map-actions">
+        <button class="map-btn" onclick="toggleManagePanel()">
+          <i data-lucide="layers"></i> Manage Layers
+        </button>
+        <button class="map-btn" onclick="openRoadClosureModal()">
+          <i data-lucide="road"></i> Road Closure
+        </button>
+        <button class="map-btn" id="heatmap-btn" onclick="toggleHeatmap()">
+          <i data-lucide="flame"></i> Incident Heatmap
+        </button>
+        <span id="risk-badge" style="display:none;align-items:center;gap:.3rem;padding:.35rem .75rem;background:#d93025;color:#fff;border-radius:6px;font-size:.75rem;font-weight:700;box-shadow:0 2px 8px rgba(217,48,37,.4);">
+          <i data-lucide="shield-alert" style="width:13px;height:13px;"></i>
+          <span></span>
+        </span>
+      </div>
+
+      <!-- Layer panel -->
+      <div class="layer-panel" id="layer-panel">
+        <div class="layer-panel-header" onclick="toggleLayerPanel()" title="Click to expand / collapse">
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <div style="width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="layers" style="width:12px;height:12px;color:var(--primary);"></i>
+            </div>
+            <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LAYERS</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">8/8</span>
+            <i data-lucide="chevron-up" id="layer-panel-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
+          </div>
+        </div>
+        <div class="layer-panel-body" id="layer-panel-body">
+
+          <!-- Section: Incidents & Response -->
+          <div class="layer-group-label">
+            <i data-lucide="alert-triangle" style="width:12px;height:12px;color:#ef4444;"></i> Emergency & Incidents
+          </div>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span>
+              <span>Active Incidents</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-incidents" checked onchange="toggleLayer('incidents')"><span class="toggle-slider"></span></label>
+          </label>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot" style="background:#eab308;box-shadow:0 0 5px rgba(234,179,8,.4);"></span>
+              <span>Road Closures</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-roads" checked onchange="toggleLayer('roads')"><span class="toggle-slider"></span></label>
+          </label>
+
+          <div class="layer-group-sep"></div>
+
+          <!-- Section: Hazard & Risk Zones -->
+          <div class="layer-group-label">
+            <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard & Risk Zones
+          </div>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span>
+              <span>Flood Hazard Zones</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')"><span class="toggle-slider"></span></label>
+          </label>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-poly" style="background:#f97316;border:1px solid #fb923c;"></span>
+              <span>Landslide Zones</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')"><span class="toggle-slider"></span></label>
+          </label>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span>
+              <span>High Risk Overlay</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-risk" checked onchange="toggleLayer('risk')"><span class="toggle-slider"></span></label>
+          </label>
+
+          <div class="layer-group-sep"></div>
+
+          <!-- Section: Key Infrastructure -->
+          <div class="layer-group-label">
+            <i data-lucide="building-2" style="width:12px;height:12px;color:#10b981;"></i> Infrastructure & Services
+          </div>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot" style="background:#3b82f6;box-shadow:0 0 5px rgba(59,130,246,.4);"></span>
+              <span>Evacuation Centers</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-evac" checked onchange="toggleLayer('evac')"><span class="toggle-slider"></span></label>
+          </label>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot" style="background:#10b981;box-shadow:0 0 5px rgba(16,185,129,.4);"></span>
+              <span>Hospitals & BHS</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-hospitals" checked onchange="toggleLayer('hospitals')"><span class="toggle-slider"></span></label>
+          </label>
+          <label class="layer-toggle">
+            <div class="layer-toggle-left">
+              <span class="layer-dot" style="background:#8b5cf6;box-shadow:0 0 5px rgba(139,92,246,.4);"></span>
+              <span>Responder Stations</span>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-stations" checked onchange="toggleLayer('stations')"><span class="toggle-slider"></span></label>
+          </label>
+
+          <!-- Single Toggle All Layers Button -->
+          <div class="layer-panel-footer">
+            <button class="layer-footer-btn" id="toggle-all-layers-btn" onclick="toggleAllLayers()" style="width:100%;justify-content:center;background:rgba(239, 68, 68, 0.15);border-color:rgba(239, 68, 68, 0.3);color:#fca5a5;">
+              <i data-lucide="eye-off"></i> Hide All Layers
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Unified Map Navigation & Geolocation Controls -->
+      <div class="map-controls-stack">
+        <button class="map-ctrl-btn" onclick="locateUser()" id="locate-btn" title="Pinpoint My Location">
+          <i data-lucide="crosshair" style="width:17px;height:17px;"></i>
+        </button>
+        <div class="map-ctrl-divider"></div>
+        <button class="map-ctrl-btn" onclick="map.zoomIn()" title="Zoom In">
+          <i data-lucide="plus" style="width:17px;height:17px;"></i>
+        </button>
+        <div class="map-ctrl-divider"></div>
+        <button class="map-ctrl-btn" onclick="map.zoomOut()" title="Zoom Out">
+          <i data-lucide="minus" style="width:17px;height:17px;"></i>
+        </button>
+      </div>
+
+      <!-- Custom Google Maps Style Basemap Picker (Bottom Left) -->
+      <div class="basemap-picker-wrapper" id="basemap-picker">
+        <button class="basemap-trigger" onclick="toggleBasemapPicker()" id="basemap-trigger" title="Change Basemap">
+          <div class="basemap-trigger-thumb thumb-streets" id="basemap-trigger-thumb"></div>
+          <span id="basemap-trigger-label">Google Streets</span>
+          <i data-lucide="layers" style="width:14px;height:14px;color:var(--primary);margin-left:2px;"></i>
+        </button>
+
+        <div class="basemap-options-card" id="basemap-options">
+          <div class="basemap-options-header">
+            <span><i data-lucide="map" style="width:14px;height:14px;color:var(--primary);"></i> Select Basemap</span>
+            <button class="action-btn" onclick="toggleBasemapPicker()" style="padding:2px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+          </div>
+          <div class="basemap-grid">
+            <div class="basemap-card active" data-key="streets" onclick="switchBaseMap('streets')">
+              <div class="basemap-thumb thumb-streets"></div>
+              <span>Google Streets</span>
+            </div>
+            <div class="basemap-card" data-key="satellite" onclick="switchBaseMap('satellite')">
+              <div class="basemap-thumb thumb-satellite"></div>
+              <span>Google Satellite</span>
+            </div>
+            <div class="basemap-card" data-key="osm" onclick="switchBaseMap('osm')">
+              <div class="basemap-thumb thumb-osm"></div>
+              <span>OpenStreetMap</span>
+            </div>
+            <div class="basemap-card" data-key="topo" onclick="switchBaseMap('topo')">
+              <div class="basemap-thumb thumb-topo"></div>
+              <span>OpenTopoMap</span>
+            </div>
+            <div class="basemap-card" data-key="cyclosm" onclick="switchBaseMap('cyclosm')">
+              <div class="basemap-thumb thumb-cyclosm"></div>
+              <span>CyclOSM</span>
+            </div>
+            <div class="basemap-card" data-key="bing" onclick="switchBaseMap('bing')">
+              <div class="basemap-thumb thumb-bing"></div>
+              <span>Bing Aerial</span>
+            </div>
+            <div class="basemap-card" data-key="dark" onclick="switchBaseMap('dark')">
+              <div class="basemap-thumb thumb-dark"></div>
+              <span>Dark Mode</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info side panel -->
+      <div class="info-panel" id="info-panel">
+        <div class="info-panel-header">
+          <div>
+            <div class="info-panel-type" id="panel-type-badge"></div>
+            <div class="info-panel-title" id="panel-title">—</div>
+          </div>
+          <button class="info-panel-close" onclick="closeInfoPanel()"><i data-lucide="x"></i></button>
+        </div>
+        <div class="info-panel-body" id="panel-body"></div>
+        <div class="info-panel-actions" id="panel-actions"></div>
+      </div>
+
+      <!-- ===== Layer Management Panel (left slide-in) ===== -->
+      <div class="manage-panel" id="manage-panel">
+        <div class="manage-panel-header">
+          <span><i data-lucide="layers"></i> Layer Management</span>
+          <button class="info-panel-close" onclick="toggleManagePanel()"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="manage-tabs">
+          <button class="manage-tab active" id="mtab-hazard"    onclick="switchManageTab('hazard')">Hazard Zones</button>
+          <button class="manage-tab"        id="mtab-evac"      onclick="switchManageTab('evac')">Evacuation</button>
+          <button class="manage-tab"        id="mtab-incidents" onclick="switchManageTab('incidents')">Incidents</button>
+          <button class="manage-tab"        id="mtab-hospitals"  onclick="switchManageTab('hospitals')">Hospitals</button>
+          <button class="manage-tab"        id="mtab-stations"   onclick="switchManageTab('stations')">Stations</button>
+          <button class="manage-tab"        id="mtab-roads"      onclick="switchManageTab('roads')">Road Closures</button>
+        </div>
+
+        <!-- ---- Hazard Zones ---- -->
+        <div id="mpane-hazard" class="manage-pane">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="mhz-search" placeholder="Search hazard zones..." oninput="mFilterHazard()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenHazardForm()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="mhz-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ---- Evacuation Centers ---- -->
+        <div id="mpane-evac" class="manage-pane" style="display:none;">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="mev-search" placeholder="Search evacuation centers..." oninput="mFilterEvac()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenEvacForm()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="mevac-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ---- Incidents ---- -->
+        <div id="mpane-incidents" class="manage-pane" style="display:none;">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="minc-search" placeholder="Search incidents..." oninput="mFilterIncidents()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenIncidentForm()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="minc-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ---- Hospitals ---- -->
+        <div id="mpane-hospitals" class="manage-pane" style="display:none;">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="mhosp-search" placeholder="Search hospitals..." oninput="mFilterHospitals()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenHospitalForm()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="mhosp-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ---- Stations ---- -->
+        <div id="mpane-stations" class="manage-pane" style="display:none;">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="msta-search" placeholder="Search stations..." oninput="mFilterStations()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenStationForm()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="msta-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ---- Road Closures ---- -->
+        <div id="mpane-roads" class="manage-pane" style="display:none;">
+          <div class="manage-pane-toolbar">
+            <input type="text" class="manage-search" id="mrd-search" placeholder="Search road closures..." oninput="mFilterRoads()" />
+            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="openRoadClosureModal()">
+              <i data-lucide="plus"></i> Add
+            </button>
+          </div>
+          <div id="mrd-list" class="manage-list">
+            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
+          </div>
+        </div>
+
+        <!-- ===== Inline forms (slide over manage panel) ===== -->
+        <div class="manage-form-overlay" id="manage-form-overlay" style="display:none;">
+          <div class="manage-form-header">
+            <span id="mform-title">Add Zone</span>
+            <button class="info-panel-close" onclick="closeManageForm()"><i data-lucide="x"></i></button>
+          </div>
+          <div class="manage-form-body" id="mform-body"></div>
+          <div class="manage-form-footer">
+            <button class="btn btn-ghost" onclick="closeManageForm()">Cancel</button>
+            <button class="btn btn-primary" id="mform-submit-btn" onclick="submitManageForm()">
+              <i data-lucide="save"></i> Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Road Closure Modal -->
+<div class="modal-overlay" id="road-modal-overlay" onclick="closeRoadModalOutside(event)">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3><i data-lucide="road"></i> Report Road Closure</h3>
+      <button class="modal-close" onclick="closeRoadModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Title / Location <span class="required">*</span></label>
+        <input type="text" id="road-title" placeholder="e.g. Main Road near Sitio 2 flooded" />
+      </div>
+      <div class="form-group">
+        <label>Reason <span class="required">*</span></label>
+        <select id="road-reason">
+          <option value="flood">Flood</option>
+          <option value="landslide">Landslide</option>
+          <option value="road_work">Road Work</option>
+          <option value="accident">Accident</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Latitude <span class="required">*</span></label>
+          <input type="number" id="road-lat" step="any" placeholder="Click map to set" />
+        </div>
+        <div class="form-group">
+          <label>Longitude <span class="required">*</span></label>
+          <input type="number" id="road-lng" step="any" placeholder="Click map to set" />
+        </div>
+      </div>
+      <button type="button" class="btn" onclick="if(typeof startPinOnMap==='function')startPinOnMap();" style="width:100%;margin-bottom:.6rem;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.35);color:#60a5fa;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.45rem;border-radius:6px;">
+        <i data-lucide="map-pin" style="width:14px;height:14px;"></i> Pin on Map (Click Anywhere)
+      </button>
+      <p class="error-msg" id="road-error"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeRoadModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitRoadClosure()"><i data-lucide="send"></i> Report</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet.heat for incident heatmap -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/map-manage.js"></script>
+<script src="assets/js/weather.js"></script>
+<script>
+  requireAuth();
+  const user = getUser();
+  if (user) {
+    document.getElementById("user-display-name").textContent = user.full_name || user.username;
+    if (document.getElementById("user-role-badge")) document.getElementById("user-role-badge").textContent = user.role;
+  }
+  lucide.createIcons();
+  initMap(true);
+  loadWeather();
+
+  function updateAdminActiveLayerCount() {
+    const all = document.querySelectorAll('#layer-panel-body input[type=checkbox]');
+    const active = document.querySelectorAll('#layer-panel-body input[type=checkbox]:checked').length;
+    const badge = document.getElementById('active-layer-count-admin');
+    if (badge) badge.textContent = `${active}/${all.length}`;
+  }
+
+  const origToggleLayer = window.toggleLayer;
+  window.toggleLayer = function(name) {
+    if (typeof origToggleLayer === 'function') origToggleLayer(name);
+    updateAdminActiveLayerCount();
+  };
+
+  const origToggleAllLayers = window.toggleAllLayers;
+  window.toggleAllLayers = function() {
+    if (typeof origToggleAllLayers === 'function') origToggleAllLayers();
+    updateAdminActiveLayerCount();
+  };
+  updateAdminActiveLayerCount();
+
+  // Auto open manage panel if query param exists
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('panel') === 'manage' || params.get('manage') === 'true') {
+    toggleManagePanel();
+  }
+</script>
+</body>
+</html>

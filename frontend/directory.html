@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emergency Directory — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* Category color map for sleek dark theme */
+    .cat-disaster  { --cat-color:#60a5fa; --cat-bg:rgba(59,130,246,0.15); --cat-border:rgba(59,130,246,0.35); }
+    .cat-fire      { --cat-color:#f87171; --cat-bg:rgba(239,68,68,0.15); --cat-border:rgba(239,68,68,0.35); }
+    .cat-police    { --cat-color:#818cf8; --cat-bg:rgba(99,102,241,0.15); --cat-border:rgba(99,102,241,0.35); }
+    .cat-medical   { --cat-color:#34d399; --cat-bg:rgba(16,185,129,0.15); --cat-border:rgba(16,185,129,0.35); }
+    .cat-emergency { --cat-color:#fb923c; --cat-bg:rgba(249,115,22,0.15); --cat-border:rgba(249,115,22,0.35); }
+    .cat-other     { --cat-color:#94a3b8; --cat-bg:rgba(148,163,184,0.15); --cat-border:rgba(148,163,184,0.35); }
+
+    .dir-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .dir-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.78) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .dir-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--cat-color);
+      box-shadow: 0 0 12px var(--cat-color);
+    }
+    .dir-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 24px var(--cat-bg);
+      border-color: var(--cat-border);
+    }
+
+    .dir-card-top {
+      padding: 1.1rem 1.25rem 0.85rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+    }
+
+    .dir-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      background: var(--cat-bg);
+      border: 1px solid var(--cat-border);
+      color: var(--cat-color);
+      box-shadow: inset 0 0 12px var(--cat-bg);
+    }
+    .dir-icon svg { width: 22px; height: 22px; }
+
+    .dir-name {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text-main, #f8fafc);
+      line-height: 1.35;
+    }
+    .dir-agency {
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text-muted, #94a3b8);
+      margin-top: 0.15rem;
+    }
+
+    .dir-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--cat-bg);
+      color: var(--cat-color);
+      border: 1px solid var(--cat-border);
+      margin-top: 0.4rem;
+    }
+
+    .dir-card-numbers {
+      padding: 0.8rem 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .dir-number-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+    .dir-number-row svg {
+      width: 14px; height: 14px;
+      color: var(--cat-color);
+      flex-shrink: 0;
+    }
+    .dir-number {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.03em;
+      font-family: inherit;
+    }
+    .dir-number-secondary {
+      font-size: 0.82rem;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .dir-card-footer {
+      padding: 0.65rem 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .dir-address {
+      font-size: 0.76rem;
+      color: var(--text-muted, #94a3b8);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .dir-address svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--text-muted); }
+    .dir-address span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .dir-24h {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.18rem 0.55rem;
+      border-radius: 99px;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    .dir-card-actions {
+      padding: 0.75rem 1.25rem 0.95rem;
+      display: flex;
+      gap: 0.6rem;
+      background: rgba(15, 23, 42, 0.6);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .dir-call-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.55rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-decoration: none;
+      background: var(--cat-bg);
+      color: var(--cat-color);
+      border: 1px solid var(--cat-border);
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .dir-call-btn svg { width: 14px; height: 14px; }
+    .dir-call-btn:hover {
+      background: var(--cat-color);
+      color: #0f172a;
+      box-shadow: 0 0 16px var(--cat-color);
+      border-color: var(--cat-color);
+    }
+
+    /* Category filter tabs */
+    .cat-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .cat-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.95rem;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.6);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted, #94a3b8);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .cat-filter-btn svg { width: 14px; height: 14px; }
+    .cat-filter-btn.active, .cat-filter-btn:hover {
+      background: var(--primary, #3b82f6);
+      color: #ffffff;
+      border-color: var(--primary, #3b82f6);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+    }
+
+    /* Empty state */
+    .dir-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.9rem;
+    }
+
+    /* Spacious Contact Modal & 2-Step Wizard Styles */
+    #contact-modal-overlay .modal {
+      max-width: 820px !important;
+      width: 92vw !important;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(59, 130, 246, 0.2);
+    }
+
+    #contact-modal-overlay input[type="text"],
+    #contact-modal-overlay input[type="number"],
+    #contact-modal-overlay input[type="email"],
+    #contact-modal-overlay select,
+    #contact-modal-overlay textarea {
+      font-size: 0.92rem;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      min-height: 44px;
+    }
+
+    #contact-modal-overlay label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .wizard-progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.75rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .wizard-step-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .wizard-step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.25s ease;
+    }
+
+    .wizard-step-item.active {
+      color: var(--primary, #3b82f6);
+    }
+    .wizard-step-item.active .wizard-step-circle {
+      background: var(--primary, #3b82f6);
+      border-color: var(--primary, #3b82f6);
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+    .wizard-step-item.completed {
+      color: #34d399;
+    }
+    .wizard-step-item.completed .wizard-step-circle {
+      background: rgba(52, 211, 153, 0.2);
+      border-color: #34d399;
+      color: #34d399;
+    }
+
+    .wizard-step-line {
+      flex: 1;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0 1rem;
+      transition: all 0.25s ease;
+    }
+    .wizard-step-line.active {
+      background: var(--primary, #3b82f6);
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    }
+
+    .wizard-step-pane {
+      display: none;
+    }
+    .wizard-step-pane.active {
+      display: block;
+      animation: fadeInStep 0.25s ease-in-out;
+    }
+
+    @keyframes fadeInStep {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-section-header {
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .step-section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .step-section-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .contact-summary-card {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.1rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-lucide="shield-alert" class="brand-icon"></i>
+      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
+    </div>
+    <nav>
+      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
+      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
+      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
+      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
+      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
+      <a href="directory.html" class="active"><i data-lucide="phone-call"></i> Directory</a>
+      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+    </nav>
+    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Emergency Directory</h2>
+        <span class="dash-timestamp">Centralized Hotlines &amp; Contacts</span>
+      </div>
+      <div class="user-info">
+        <button class="btn-icon-sm" onclick="loadDirectory(this)" id="refresh-btn" title="Refresh">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+
+        <!-- User Profile Dropdown Avatar -->
+        <div class="user-profile-wrapper">
+          <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)" title="Account Profile">
+            <i data-lucide="user"></i>
+          </button>
+
+          <div class="profile-dropdown-card" id="profile-dropdown-card">
+            <div class="profile-dropdown-header">
+              <div class="profile-avatar-lg">
+                <i data-lucide="user"></i>
+              </div>
+              <div class="profile-info-text">
+                <strong id="user-display-name">—</strong>
+                <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">Admin</span></div>
+              </div>
+            </div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item danger" onclick="logout()">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Header Bar: Category Filters + Add Contact -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+        <div class="tab-bar" style="margin-bottom:0;">
+          <button class="tab-btn active" data-cat="" onclick="setCatFilter('', this)">
+            <i data-lucide="list"></i> All
+          </button>
+          <button class="tab-btn" data-cat="disaster" onclick="setCatFilter('disaster', this)">
+            <i data-lucide="cloud-lightning"></i> Disaster
+          </button>
+          <button class="tab-btn" data-cat="fire" onclick="setCatFilter('fire', this)">
+            <i data-lucide="flame"></i> Fire
+          </button>
+          <button class="tab-btn" data-cat="police" onclick="setCatFilter('police', this)">
+            <i data-lucide="shield"></i> Police
+          </button>
+          <button class="tab-btn" data-cat="medical" onclick="setCatFilter('medical', this)">
+            <i data-lucide="cross"></i> Medical
+          </button>
+          <button class="tab-btn" data-cat="emergency" onclick="setCatFilter('emergency', this)">
+            <i data-lucide="siren"></i> Emergency
+          </button>
+          <button class="tab-btn" data-cat="other" onclick="setCatFilter('other', this)">
+            <i data-lucide="more-horizontal"></i> Other
+          </button>
+        </div>
+        <button class="btn btn-primary" id="btn-add-contact" onclick="openContactModal()">
+          <i data-lucide="plus"></i> Add Contact
+        </button>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar-card">
+        <div class="search-wrap">
+          <i data-lucide="search"></i>
+          <input type="text" id="dir-search" placeholder="Search contacts, agency, hotline..." oninput="filterDirectory()" />
+        </div>
+      </div>
+
+      <!-- Directory grid -->
+      <div class="dir-grid" id="dir-grid">
+        <div class="dir-card cat-disaster">
+          <div class="skeleton-card">
+            <div style="display:flex;gap:0.85rem;align-items:center;">
+              <div class="skeleton skeleton-circle" style="width:44px;height:44px;border-radius:12px;"></div>
+              <div style="flex:1;">
+                <div class="skeleton skeleton-title" style="width:70%;margin-bottom:6px;"></div>
+                <div class="skeleton skeleton-text" style="width:40%;"></div>
+              </div>
+            </div>
+            <div class="skeleton skeleton-text" style="width:80%;margin-top:0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width:50%;"></div>
+          </div>
+        </div>
+        <div class="dir-card cat-fire">
+          <div class="skeleton-card">
+            <div style="display:flex;gap:0.85rem;align-items:center;">
+              <div class="skeleton skeleton-circle" style="width:44px;height:44px;border-radius:12px;"></div>
+              <div style="flex:1;">
+                <div class="skeleton skeleton-title" style="width:65%;margin-bottom:6px;"></div>
+                <div class="skeleton skeleton-text" style="width:45%;"></div>
+              </div>
+            </div>
+            <div class="skeleton skeleton-text" style="width:75%;margin-top:0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width:55%;"></div>
+          </div>
+        </div>
+        <div class="dir-card cat-police">
+          <div class="skeleton-card">
+            <div style="display:flex;gap:0.85rem;align-items:center;">
+              <div class="skeleton skeleton-circle" style="width:44px;height:44px;border-radius:12px;"></div>
+              <div style="flex:1;">
+                <div class="skeleton skeleton-title" style="width:75%;margin-bottom:6px;"></div>
+                <div class="skeleton skeleton-text" style="width:50%;"></div>
+              </div>
+            </div>
+            <div class="skeleton skeleton-text" style="width:85%;margin-top:0.5rem;"></div>
+            <div class="skeleton skeleton-text" style="width:40%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Directory pagination bar -->
+      <div class="table-pagination" id="dir-pagination" style="margin-top:1.5rem;border-radius:var(--radius-md);border:1px solid var(--border-color);display:none;">
+        <div class="pagination-info" id="dir-pagination-info">Showing 0 of 0 contacts</div>
+        <div class="pagination-controls">
+          <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+            <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+            <select id="dir-page-size" onchange="changeDirPageSize(this.value)" class="pagination-select">
+              <option value="6" selected>6</option>
+              <option value="12">12</option>
+              <option value="24">24</option>
+              <option value="48">48</option>
+            </select>
+          </div>
+          <button class="page-btn" id="dir-btn-prev" onclick="prevDirPage()"><i data-lucide="chevron-left"></i></button>
+          <div id="dir-page-numbers" style="display:flex;gap:.25rem;"></div>
+          <button class="page-btn" id="dir-btn-next" onclick="nextDirPage()"><i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== Add/Edit Contact Modal (Spacious 2-Step Wizard) ===== -->
+<div class="modal-overlay" id="contact-modal-overlay" onclick="closeContactModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="contact-modal-title" style="display:flex;align-items:center;gap:.6rem;">
+        <i data-lucide="phone-call" style="color:var(--primary);width:22px;height:22px;"></i> Add Emergency Contact
+      </h3>
+      <button class="modal-close" onclick="closeContactModal()"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+      <!-- Step Progress Bar -->
+      <div class="wizard-progress-bar" style="margin-bottom: 1.25rem;">
+        <div class="wizard-step-item active" id="contact-wizard-indicator-1" onclick="goToContactWizardStep(1)">
+          <div class="wizard-step-circle">1</div>
+          <span>Agency & Hotlines</span>
+        </div>
+        <div class="wizard-step-line" id="contact-wizard-line-1"></div>
+        <div class="wizard-step-item" id="contact-wizard-indicator-2" onclick="goToContactWizardStep(2)">
+          <div class="wizard-step-circle">2</div>
+          <span>Address & Summary</span>
+        </div>
+      </div>
+
+      <form id="contact-form" novalidate onsubmit="return false;">
+        <input type="hidden" id="contact-id" />
+
+        <!-- STEP 1: Agency & Hotline Identification -->
+        <div class="wizard-step-pane active" id="contact-pane-1">
+          <div class="step-section-header">
+            <div class="step-section-title">
+              <i data-lucide="shield" style="color:var(--primary);"></i> Step 1 of 2: Agency & Emergency Numbers
+            </div>
+            <div class="step-section-desc">Specify office title, responding government agency, emergency category, and phone lines.</div>
+          </div>
+
+          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
+            <div class="form-group">
+              <label style="font-size:.9rem;">Name / Office Title <span class="required">*</span></label>
+              <input type="text" id="c-name" placeholder="e.g. Ormoc City Fire Station" required oninput="updateContactCardPreview()" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.9rem;">Government Agency <span class="required">*</span></label>
+              <input type="text" id="c-agency" placeholder="e.g. BFP, PNP, CDRRMO, BHS" required oninput="updateContactCardPreview()" />
+            </div>
+          </div>
+
+          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
+            <div class="form-group">
+              <label style="font-size:.9rem;">Emergency Category <span class="required">*</span></label>
+              <select id="c-category" onchange="updateContactCardPreview()">
+                <option value="disaster">Disaster Response</option>
+                <option value="fire">Fire Protection</option>
+                <option value="police">Police & Security</option>
+                <option value="medical">Medical & Health</option>
+                <option value="emergency">General Emergency</option>
+                <option value="other">Other Services</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.9rem;">Available 24/7 Service</label>
+              <select id="c-24h" onchange="updateContactCardPreview()">
+                <option value="true">Yes — 24 Hours / 7 Days</option>
+                <option value="false">No — Regular Office Hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="gap:1rem;">
+            <div class="form-group">
+              <label style="font-size:.9rem;">Primary Hotline Number <span class="required">*</span></label>
+              <input type="text" id="c-hotline" placeholder="e.g. (053) 255-2830 / 0917-123-4567" required oninput="updateContactCardPreview()" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.9rem;">Secondary / Alt Number</label>
+              <input type="text" id="c-secondary" placeholder="e.g. (053) 561-0000 or 911" oninput="updateContactCardPreview()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Address, Email & Live Confirmation Card -->
+        <div class="wizard-step-pane" id="contact-pane-2">
+          <div class="step-section-header">
+            <div class="step-section-title">
+              <i data-lucide="map-pin" style="color:var(--primary);"></i> Step 2 of 2: Physical Location & Directory Preview
+            </div>
+            <div class="step-section-desc">Enter office street address, official email, and review live hotline card layout.</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label style="font-size:.9rem;">Physical Address / Station Location</label>
+            <input type="text" id="c-address" placeholder="e.g. National Highway Junction, Brgy Linao, Ormoc City" oninput="updateContactCardPreview()" />
+          </div>
+
+          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
+            <div class="form-group">
+              <label style="font-size:.9rem;">Official Email Address</label>
+              <input type="email" id="c-email" placeholder="e.g. station@ormoc.gov.ph" oninput="updateContactCardPreview()" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.9rem;">Directory Display Priority (Sort Order)</label>
+              <input type="number" id="c-order" value="0" min="0" oninput="updateContactCardPreview()" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label style="font-size:.9rem;">Additional Officer Notes</label>
+            <textarea id="c-notes" rows="2" placeholder="e.g. Station Commander: Capt. R. Santos. Contact via radio Ch. 4 during typhoons." oninput="updateContactCardPreview()"></textarea>
+          </div>
+
+          <!-- Live Contact Card Summary -->
+          <div class="contact-summary-card" id="contact-summary-card">
+            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
+              <i data-lucide="eye" style="width:14px;height:14px;"></i> Live Directory Card Preview
+            </div>
+            <div id="contact-summary-content">
+              <!-- Rendered live by JS -->
+            </div>
+          </div>
+        </div>
+
+        <p class="error-msg" id="contact-error" style="margin-top:1rem;display:none;"></p>
+      </form>
+    </div>
+
+    <!-- Wizard Navigation Footer -->
+    <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:space-between; align-items:center; background:rgba(15, 23, 42, 0.9);">
+      <button type="button" class="btn btn-ghost" id="contact-btn-prev" onclick="prevContactWizardStep()" style="visibility:hidden;">
+        <i data-lucide="arrow-left"></i> Previous Step
+      </button>
+
+      <div style="display:flex;gap:.75rem;">
+        <button type="button" class="btn btn-ghost" onclick="closeContactModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="contact-btn-next" onclick="nextContactWizardStep()">
+          Next Step <i data-lucide="arrow-right"></i>
+        </button>
+        <button type="button" class="btn btn-primary" id="contact-submit-btn" onclick="submitContact()" style="display:none;">
+          <i data-lucide="save"></i> <span id="contact-submit-label">Save Contact</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/directory.js"></script>
+<script>
+  requireAuth();
+  const user = getUser();
+  if (user) {
+    document.getElementById("user-display-name").textContent = user.full_name || user.username;
+    document.getElementById("user-role-badge").textContent = user.role;
+    if (!['admin','officer'].includes(user.role)) {
+      document.getElementById("btn-add-contact").style.display = "none";
+    }
+  }
+  lucide.createIcons();
+  loadDirectory();
+</script>
+</body>
+</html>

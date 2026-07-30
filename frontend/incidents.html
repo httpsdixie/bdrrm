@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incidents — Barangay DRRM</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ---- Pin placement mini-map ---- */
+    #pin-map {
+      width: 100%; height: 260px;
+      border-radius: 8px;
+      border: 2px dashed var(--border-color);
+      cursor: crosshair;
+      transition: border-color .2s;
+    }
+    #pin-map.active-pin {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    .pin-map-hint {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: .78rem; color: var(--text-muted);
+      margin-bottom: .5rem;
+    }
+    .pin-map-hint svg { width: 14px; height: 14px; color: var(--primary); }
+    .pin-coords-row {
+      display: flex; gap: .75rem; margin-top: .5rem;
+    }
+    .pin-coord-chip {
+      flex: 1; padding: .4rem .75rem;
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: 6px; font-size: .8rem; font-family: monospace;
+      color: var(--text-main);
+    }
+
+    /* ---- Casualty section ---- */
+    .casualty-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: .65rem; margin-top: .5rem;
+    }
+    .casualty-input-wrap label {
+      font-size: .72rem !important;
+      color: var(--text-muted) !important;
+      margin-bottom: .2rem !important;
+    }
+
+    /* ---- Photo upload ---- */
+    .photo-drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--bg-input);
+      position: relative;
+    }
+    .photo-drop-zone:hover,
+    .photo-drop-zone.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .photo-drop-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .photo-preview {
+      width: 100%; max-height: 140px;
+      object-fit: cover; border-radius: 6px;
+      margin-top: .5rem; display: none;
+    }
+    .photo-preview.visible { display: block; }
+
+    /* ---- Triage severity visual ---- */
+    .triage-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem;
+    }
+    .triage-btn {
+      padding: .5rem .3rem; border-radius: 6px; border: 2px solid transparent;
+      text-align: center; cursor: pointer; transition: all .15s; font-size: .75rem; font-weight: 700;
+      background: var(--bg-input);
+    }
+    .triage-btn.active-low      { border-color: #2e7d32; background: rgba(46,125,50,.15); color: #4caf50; }
+    .triage-btn.active-medium   { border-color: #1a73e8; background: rgba(26,115,232,.15); color: #60a5fa; }
+    .triage-btn.active-high     { border-color: #e65100; background: rgba(230,81,0,.15);  color: #fb923c; }
+    .triage-btn.active-critical { border-color: #d93025; background: rgba(217,48,37,.15); color: #ef4444; }
+    .triage-dot {
+      width: 10px; height: 10px; border-radius: 50%; margin: 0 auto .3rem;
+    }
+
+    /* Section dividers */
+    .form-section-title {
+      font-size: .72rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--primary); opacity: .85;
+      margin: 1.25rem 0 .6rem; display: flex; align-items: center; gap: .4rem;
+    }
+    .form-section-title svg { width: 13px; height: 13px; }
+
+    /* Incident detail view */
+    .inc-detail-photo {
+      width: 100%; border-radius: 8px; max-height: 200px;
+      object-fit: cover; margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-lucide="shield-alert" class="brand-icon"></i>
+      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
+    </div>
+    <nav>
+      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
+      <a href="incidents.html" class="active"><i data-lucide="triangle-alert"></i> Incidents</a>
+      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
+      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
+
+      <div class="nav-section-divider"></div>
+
+      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
+      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
+      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
+      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+    </nav>
+    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <h2>Incident Tracking</h2>
+      <div class="user-info">
+        <button class="btn-icon-sm" id="refresh-btn" onclick="loadIncidents(this)" title="Refresh">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <div class="user-profile-wrapper">
+          <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)">
+            <i data-lucide="user"></i>
+          </button>
+          <div class="profile-dropdown-card" id="profile-dropdown-card">
+            <div class="profile-dropdown-header">
+              <div class="profile-avatar-lg"><i data-lucide="user"></i></div>
+              <div class="profile-info-text">
+                <strong id="user-display-name">—</strong>
+                <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">—</span></div>
+              </div>
+            </div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item danger" onclick="logout()">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Interactive Incident Summary Tally Bar -->
+      <div class="evac-summary" id="inc-summary" style="margin-bottom: 1.25rem;">
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('')" style="cursor: pointer;" title="Show all incidents">
+          <i data-lucide="triangle-alert" style="width: 18px; height: 18px; color: #60a5fa; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(96,165,250,0.5));"></i>
+          <div class="evac-summary-num blue" id="inc-sum-total">—</div>
+          <div class="evac-summary-label">Total Incidents</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('active')" style="cursor: pointer;" title="Filter by Active status">
+          <i data-lucide="radio" style="width: 18px; height: 18px; color: #f87171; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(248,113,113,0.5));"></i>
+          <div class="evac-summary-num red" id="inc-sum-active">—</div>
+          <div class="evac-summary-label">Active</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('responding')" style="cursor: pointer;" title="Filter by Responding status">
+          <i data-lucide="navigation" style="width: 18px; height: 18px; color: #fb923c; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(251,146,60,0.5));"></i>
+          <div class="evac-summary-num orange" id="inc-sum-responding">—</div>
+          <div class="evac-summary-label">Responding</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('resolved')" style="cursor: pointer;" title="Filter by Resolved status">
+          <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: #34d399; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(52,211,153,0.5));"></i>
+          <div class="evac-summary-num green" id="inc-sum-resolved">—</div>
+          <div class="evac-summary-label">Resolved</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentValidation('pending')" style="cursor: pointer;" title="Filter by Pending Review">
+          <i data-lucide="clock" style="width: 18px; height: 18px; color: #facc15; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(250,204,21,0.5));"></i>
+          <div class="evac-summary-num yellow" id="inc-sum-pending">—</div>
+          <div class="evac-summary-label">Pending Review</div>
+        </div>
+      </div>
+
+      <!-- Header Bar with Tabs & Report Action -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+        <div class="tab-bar" style="margin-bottom:0;">
+          <button class="tab-btn active" id="tab-all" onclick="switchIncidentTab('all')">
+            <i data-lucide="list"></i> All Incidents
+          </button>
+          <button class="tab-btn" id="tab-pending" onclick="switchIncidentTab('pending')">
+            <i data-lucide="clock"></i> Pending Review
+            <span class="badge badge-orange" id="pending-count" style="margin-left:.3rem;font-size:.65rem;"></span>
+          </button>
+          <button class="tab-btn" id="tab-audit" onclick="switchIncidentTab('audit')">
+            <i data-lucide="shield-alert"></i> Audit Log &amp; QA
+          </button>
+          <button class="tab-btn" id="tab-archived" onclick="switchIncidentTab('archived')">
+            <i data-lucide="archive"></i> Archived Incidents
+            <span class="badge badge-gray" id="archived-count" style="margin-left:.3rem;font-size:.65rem;"></span>
+          </button>
+        </div>
+        <button class="btn btn-primary" onclick="openModal()">
+          <i data-lucide="map-pin"></i> Pin &amp; Report Incident
+        </button>
+      </div>
+
+      <!-- All Incidents table -->
+      <div id="pane-all">
+
+        <div class="filter-bar-card">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search title, location, ticket..." oninput="filterIncidents()" />
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-status" onchange="filterIncidents()" class="filter-select">
+              <option value="">Status: All</option>
+              <option value="active">Active</option>
+              <option value="responding">Responding</option>
+              <option value="resolved">Resolved</option>
+            </select>
+
+            <select id="filter-type" onchange="filterIncidents()" class="filter-select">
+              <option value="">Type: All</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="fallen_tree">Fallen Tree</option>
+              <option value="earthquake">Earthquake</option>
+              <option value="typhoon">Typhoon Damage</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="assistance">Emergency Assistance</option>
+              <option value="other">Other</option>
+            </select>
+
+            <select id="filter-validation" onchange="filterIncidents()" class="filter-select">
+              <option value="">Validation: All</option>
+              <option value="validated">Validated Only</option>
+              <option value="pending">Pending Only</option>
+              <option value="invalidated">Invalidated Only</option>
+            </select>
+
+            <select id="filter-date" onchange="handleIncidentsDatePresetChange()" onclick="if(this.value==='custom') handleIncidentsDatePresetChange()" class="filter-select">
+              <option value="">Date: All Time</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range...</option>
+            </select>
+            <input type="hidden" id="inc-date-from" />
+            <input type="hidden" id="inc-date-to" />
+
+            <button class="btn btn-outline" onclick="clearFilters()">
+              <i data-lucide="rotate-ccw"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Incident</th>
+                  <th>Type</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="incidents-tbody">
+                <tr>
+                  <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-badge"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pagination" id="all-pagination">
+            <div class="pagination-info" id="all-pagination-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+                <select id="all-page-size" onchange="changeIncidentsPageSize(this.value)" class="pagination-select">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                </select>
+              </div>
+              <button class="page-btn" id="all-btn-prev" onclick="prevIncidentsPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="all-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="all-btn-next" onclick="nextIncidentsPage()"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Validation table -->
+      <div id="pane-pending" style="display:none;">
+        <div class="filter-bar-card" style="margin-bottom:1rem;">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="pending-search-input" placeholder="Search pending reports..." oninput="filterPendingIncidents()" />
+          </div>
+
+          <div class="filter-group">
+            <select id="pending-filter-type" onchange="filterPendingIncidents()" class="filter-select">
+              <option value="">Type: All</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="fallen_tree">Fallen Tree</option>
+              <option value="earthquake">Earthquake</option>
+              <option value="typhoon">Typhoon Damage</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="assistance">Emergency Assistance</option>
+              <option value="other">Other</option>
+            </select>
+
+            <select id="pending-filter-date" onchange="handlePendingDatePresetChange()" onclick="if(this.value==='custom') handlePendingDatePresetChange()" class="filter-select">
+              <option value="">Date: All Time</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range...</option>
+            </select>
+            <input type="hidden" id="pending-date-from" />
+            <input type="hidden" id="pending-date-to" />
+
+            <button class="btn btn-outline" onclick="resetPendingFilters()">
+              <i data-lucide="rotate-ccw"></i> Reset
+            </button>
+          </div>
+        </div>
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Incident</th>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Reporter</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pending-tbody">
+              <tr>
+                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:50px;"></span></td>
+              </tr>
+              <tr>
+                <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:50px;"></span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="table-pagination" id="pending-pagination">
+            <div class="pagination-info" id="pending-pagination-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <button class="page-btn" id="pending-btn-prev" onclick="prevPendingPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="pending-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="pending-btn-next" onclick="nextPendingPage()"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Log table -->
+      <div id="pane-audit" style="display:none;">
+        <div class="filter-bar-card" style="margin-bottom:1rem;">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="audit-search-input" placeholder="Search audit logs & QA records..." oninput="filterAuditIncidents()" />
+          </div>
+
+          <div class="filter-group">
+            <select id="audit-filter-type" onchange="filterAuditIncidents()" class="filter-select">
+              <option value="">Type: All</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="fallen_tree">Fallen Tree</option>
+              <option value="earthquake">Earthquake</option>
+              <option value="typhoon">Typhoon Damage</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="assistance">Emergency Assistance</option>
+              <option value="other">Other</option>
+            </select>
+
+            <select id="audit-filter-date" onchange="handleAuditDatePresetChange()" onclick="if(this.value==='custom') handleAuditDatePresetChange()" class="filter-select">
+              <option value="">Date: All Time</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range...</option>
+            </select>
+            <input type="hidden" id="audit-date-from" />
+            <input type="hidden" id="audit-date-to" />
+
+            <button class="btn btn-outline" onclick="resetAuditFilters()">
+              <i data-lucide="rotate-ccw"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Incident</th>
+                <th>Type</th>
+                <th>Reason</th>
+                <th>Notes</th>
+                <th>Invalidated By</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <tr>
+                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:100px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+              </tr>
+              <tr>
+                <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:100px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="table-pagination" id="audit-pagination">
+            <div class="pagination-info" id="audit-pagination-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <button class="page-btn" id="audit-btn-prev" onclick="prevAuditPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="audit-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="audit-btn-next" onclick="nextAuditPage()"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Archived Incidents table -->
+      <div id="pane-archived" style="display:none;">
+        <div class="filter-bar-card" style="margin-bottom:1rem;">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="archived-search-input" placeholder="Search archived incidents..." oninput="filterArchivedIncidents()" />
+          </div>
+
+          <div class="filter-group">
+            <select id="archived-filter-type" onchange="filterArchivedIncidents()" class="filter-select">
+              <option value="">Type: All</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="fallen_tree">Fallen Tree</option>
+              <option value="earthquake">Earthquake</option>
+              <option value="typhoon">Typhoon Damage</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="assistance">Emergency Assistance</option>
+              <option value="other">Other</option>
+            </select>
+
+            <select id="archived-filter-date" onchange="handleArchivedDatePresetChange()" onclick="if(this.value==='custom') handleArchivedDatePresetChange()" class="filter-select">
+              <option value="">Date: All Time</option>
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range...</option>
+            </select>
+            <input type="hidden" id="archived-date-from" />
+            <input type="hidden" id="archived-date-to" />
+
+            <button class="btn btn-outline" onclick="resetArchivedFilters()">
+              <i data-lucide="rotate-ccw"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Incident</th>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="archived-tbody">
+              <tr>
+                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-badge"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
+                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="table-pagination" id="archived-pagination">
+            <div class="pagination-info" id="archived-pagination-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <button class="page-btn" id="archived-btn-prev" onclick="prevArchivedPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="archived-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="archived-btn-next" onclick="nextArchivedPage()"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Report Incident Modal ===== -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" style="max-width:920px;width:92vw;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
+      <div>
+        <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.15rem;color:var(--text-main);">
+          <i data-lucide="triangle-alert" style="color:var(--primary);width:22px;height:22px;"></i> Report Incident Intake
+        </h3>
+        <p style="margin:.25rem 0 0;font-size:.78rem;color:var(--text-muted);">Guided Administrative &amp; Emergency Intake Form</p>
+      </div>
+      <button class="modal-close" onclick="closeModal()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:.4rem;">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+
+    <!-- Stepper Navigation Header -->
+    <div class="wizard-stepper" style="padding:.85rem 1.5rem;background:rgba(15, 23, 42, 0.4);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+      <div class="wizard-step-item active" id="step-nav-1" onclick="goToStep(1)">
+        <div class="wizard-step-badge">1</div>
+        <span class="wizard-step-title">Location</span>
+      </div>
+      <div class="wizard-step-line" id="step-line-1"></div>
+
+      <div class="wizard-step-item" id="step-nav-2" onclick="goToStep(2)">
+        <div class="wizard-step-badge">2</div>
+        <span class="wizard-step-title">Type &amp; Severity</span>
+      </div>
+      <div class="wizard-step-line" id="step-line-2"></div>
+
+      <div class="wizard-step-item" id="step-nav-3" onclick="goToStep(3)">
+        <div class="wizard-step-badge">3</div>
+        <span class="wizard-step-title">Casualties</span>
+      </div>
+      <div class="wizard-step-line" id="step-line-3"></div>
+
+      <div class="wizard-step-item" id="step-nav-4" onclick="goToStep(4)">
+        <div class="wizard-step-badge">4</div>
+        <span class="wizard-step-title">Review</span>
+      </div>
+    </div>
+
+    <div class="modal-body" style="padding:1.25rem 1.75rem;max-height:75vh;overflow-y:auto;">
+      <form id="incident-form" novalidate onsubmit="return false;">
+
+        <!-- STEP 1: Geolocation & Address -->
+        <div class="wizard-pane active" id="wizard-pane-1">
+          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">
+            <span><i data-lucide="map-pin" style="color:var(--primary);"></i> 1. Pin Incident Location</span>
+            <button type="button" class="btn btn-ghost" id="manual-loc-toggle" onclick="toggleManualLocation()" style="font-size:.75rem;padding:.2rem .5rem;color:var(--primary);gap:.3rem;">
+              <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Manual Input Mode
+            </button>
+          </div>
+
+          <div id="map-mode-container">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.55rem;flex-wrap:wrap;gap:.4rem;">
+              <p class="pin-map-hint" style="margin-bottom:0;font-size:.78rem;color:var(--text-muted);">
+                <i data-lucide="mouse-pointer-click"></i> Click on map or drag pin to adjust coordinates.
+              </p>
+              <div style="display:flex;gap:.4rem;align-items:center;">
+                <button type="button" class="btn btn-outline-sm" id="toggle-expand-map-btn" onclick="openBigMapModal()"
+                  style="font-size:.75rem;padding:.35rem .65rem;gap:.4rem;border-color:var(--primary);color:var(--primary);">
+                  <i data-lucide="maximize-2" style="width:14px;height:14px;"></i> <span>Expand Map Popup</span>
+                </button>
+                <button type="button" class="btn btn-outline-sm" id="locate-me-btn" onclick="useCurrentLocation()"
+                  style="font-size:.75rem;padding:.35rem .65rem;gap:.4rem;">
+                  <i data-lucide="locate-fixed" style="width:14px;height:14px;"></i> Locate Me (GPS)
+                </button>
+              </div>
+            </div>
+
+            <div id="pin-map" style="height:320px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-color);margin-bottom:.65rem;transition:height 0.3s ease;"></div>
+
+            <div class="pin-coords-row" style="display:flex;gap:.5rem;margin-bottom:.65rem;">
+              <div class="pin-coord-chip" id="pin-lat-display" style="font-size:.75rem;">Latitude: —</div>
+              <div class="pin-coord-chip" id="pin-lng-display" style="font-size:.75rem;">Longitude: —</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:.8rem;font-weight:600;color:var(--text-main);display:flex;justify-content:space-between;">
+              <span>Location Address <span class="required" style="color:var(--danger);">*</span></span>
+              <span id="address-mode-label" style="font-size:.72rem;color:var(--text-muted);">(auto-fills from map pin)</span>
+            </label>
+            <input type="text" id="inc-address" placeholder="Auto-fills when pin is placed..." readonly
+              style="background:var(--bg-input);font-size:.84rem;" />
+          </div>
+
+          <!-- Manual Coordinates Container (shown when manual mode enabled) -->
+          <div id="manual-coords-container" style="display:none;margin-top:.5rem;">
+            <div class="form-row">
+              <div class="form-group">
+                <label style="font-size:.78rem;font-weight:600;">Manual Latitude</label>
+                <input type="number" step="any" id="inc-manual-lat" placeholder="11.0167" oninput="syncManualCoords()" />
+              </div>
+              <div class="form-group">
+                <label style="font-size:.78rem;font-weight:600;">Manual Longitude</label>
+                <input type="number" step="any" id="inc-manual-lng" placeholder="124.5915" oninput="syncManualCoords()" />
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" id="inc-lat" />
+          <input type="hidden" id="inc-lng" />
+        </div>
+
+        <!-- STEP 2: Incident Type & Severity Triage -->
+        <div class="wizard-pane" id="wizard-pane-2">
+          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
+            <i data-lucide="shield-alert" style="color:var(--primary);"></i> 2. Incident Category &amp; Severity
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:.8rem;font-weight:600;">Incident Title <span class="required" style="color:var(--danger);">*</span></label>
+            <input type="text" id="inc-title" placeholder="e.g. Flash Flooding along Coastal Sitio 2" required />
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:.8rem;font-weight:600;margin-bottom:.4rem;display:block;">
+              Select Incident Type <span class="required" style="color:var(--danger);">*</span>
+            </label>
+            <select id="inc-type" required style="display:none;">
+              <option value="">Select type...</option>
+              <option value="flood">Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="other">Other Emergency</option>
+            </select>
+
+            <!-- Visual Type Cards -->
+            <div class="type-card-grid">
+              <div class="type-card-item" data-val="flood" onclick="selectTypeCard('flood')">
+                <i data-lucide="waves" class="type-card-icon"></i>
+                <span class="type-card-label">Flooding</span>
+              </div>
+              <div class="type-card-item" data-val="landslide" onclick="selectTypeCard('landslide')">
+                <i data-lucide="mountain" class="type-card-icon"></i>
+                <span class="type-card-label">Landslide</span>
+              </div>
+              <div class="type-card-item" data-val="fire" onclick="selectTypeCard('fire')">
+                <i data-lucide="flame" class="type-card-icon"></i>
+                <span class="type-card-label">Fire</span>
+              </div>
+              <div class="type-card-item" data-val="road_accident" onclick="selectTypeCard('road_accident')">
+                <i data-lucide="car" class="type-card-icon"></i>
+                <span class="type-card-label">Road Accident</span>
+              </div>
+              <div class="type-card-item" data-val="medical" onclick="selectTypeCard('medical')">
+                <i data-lucide="ambulance" class="type-card-icon"></i>
+                <span class="type-card-label">Medical</span>
+              </div>
+              <div class="type-card-item" data-val="other" onclick="selectTypeCard('other')">
+                <i data-lucide="help-circle" class="type-card-icon"></i>
+                <span class="type-card-label">Other</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label style="font-size:.8rem;font-weight:600;">Root Cause Category <span class="required" style="color:var(--danger);">*</span></label>
+              <select id="inc-root-cause" required onchange="checkPillar4()">
+                <option value="">Select cause...</option>
+                <option value="natural_hazard">Natural Hazard</option>
+                <option value="human_induced">Human-Induced</option>
+                <option value="infrastructure_failure">Infrastructure Failure</option>
+                <option value="animal_related">Animal-Related</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.8rem;font-weight:600;">Consciousness Level</label>
+              <select id="inc-consciousness">
+                <option value="unknown">Unknown / Not Evaluated</option>
+                <option value="conscious">Conscious &amp; Alert</option>
+                <option value="unconscious">Unconscious</option>
+                <option value="mixed">Mixed Status</option>
+                <option value="not_applicable">N/A</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:.4rem;">
+            <label style="font-size:.8rem;font-weight:600;">Severity Level <span class="required" style="color:var(--danger);">*</span></label>
+            <div class="triage-grid" id="triage-grid">
+              <div class="triage-btn" data-val="low" onclick="selectSeverity('low')">
+                <div class="triage-dot" style="background:#2e7d32;box-shadow:0 0 5px #2e7d32;"></div> Minor
+              </div>
+              <div class="triage-btn active-medium" data-val="medium" onclick="selectSeverity('medium')">
+                <div class="triage-dot" style="background:#1a73e8;box-shadow:0 0 5px #1a73e8;"></div> Moderate
+              </div>
+              <div class="triage-btn" data-val="high" onclick="selectSeverity('high')">
+                <div class="triage-dot" style="background:#e65100;box-shadow:0 0 5px #e65100;"></div> Serious
+              </div>
+              <div class="triage-btn" data-val="critical" onclick="selectSeverity('critical')">
+                <div class="triage-dot" style="background:#d93025;box-shadow:0 0 8px #d93025;"></div> Critical
+              </div>
+            </div>
+            <input type="hidden" id="inc-severity" value="medium" />
+          </div>
+
+          <div class="form-group" style="margin-top:.6rem;">
+            <label style="font-size:.8rem;font-weight:600;">Detailed Description <span class="required" style="color:var(--danger);">*</span></label>
+            <textarea id="inc-description" rows="3" placeholder="Describe the current situation and urgency..." required></textarea>
+          </div>
+        </div>
+
+        <!-- STEP 3: Casualties & Impact -->
+        <div class="wizard-pane" id="wizard-pane-3">
+          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
+            <i data-lucide="users" style="color:var(--primary);"></i> 3. Scene Casualties &amp; Impact Assessment
+          </div>
+
+          <div class="form-group">
+            <label style="font-size:.8rem;font-weight:600;">Total People Involved <span class="required" style="color:var(--danger);">*</span></label>
+            <input type="number" id="inc-people" min="0" placeholder="e.g. 5 people affected" oninput="checkPillar3()" required />
+          </div>
+
+          <div class="casualty-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.6rem;">
+            <div class="casualty-input-wrap form-group" style="margin:0;">
+              <label style="color:#ef4444;font-size:.78rem;font-weight:700;">Fatalities (Dead)</label>
+              <input type="number" id="inc-dead" min="0" value="0" oninput="updateCasualtyTotal()"
+                style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);text-align:center;font-weight:700;" />
+            </div>
+            <div class="casualty-input-wrap form-group" style="margin:0;">
+              <label style="color:#f59e0b;font-size:.78rem;font-weight:700;">Injured</label>
+              <input type="number" id="inc-injured" min="0" value="0" oninput="updateCasualtyTotal()"
+                style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);text-align:center;font-weight:700;" />
+            </div>
+            <div class="casualty-input-wrap form-group" style="margin:0;">
+              <label style="color:#8b5cf6;font-size:.78rem;font-weight:700;">Missing</label>
+              <input type="number" id="inc-missing" min="0" value="0" oninput="updateCasualtyTotal()"
+                style="background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.3);text-align:center;font-weight:700;" />
+            </div>
+          </div>
+          <div id="casualty-summary" style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem;"></div>
+
+          <div class="form-group" style="margin-top:.75rem;">
+            <label style="font-size:.8rem;font-weight:600;">Affected Households / Vehicles</label>
+            <input type="text" id="inc-parties" placeholder="e.g. 3 households, 2 passenger tricycles" />
+          </div>
+
+          <div class="form-group" style="margin-top:.6rem;">
+            <label style="font-size:.8rem;font-weight:600;">Initial Responders &amp; Actions Taken</label>
+            <textarea id="inc-action" rows="2" placeholder="e.g. 4 BDRRMC responders deployed, first aid administered."></textarea>
+          </div>
+
+          <input type="hidden" id="inc-casualty-status" value="none" />
+          <input type="hidden" id="inc-root-cause-hidden" value="" />
+        </div>
+
+        <!-- STEP 4: Reporter Info & Review Summary -->
+        <div class="wizard-pane" id="wizard-pane-4">
+          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
+            <i data-lucide="check-circle-2" style="color:var(--primary);"></i> 4. Intake Review &amp; Reporter Info
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label style="font-size:.8rem;font-weight:600;">Reporter Name</label>
+              <input type="text" id="inc-reporter-name" placeholder="Name of reporting officer/citizen" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.8rem;font-weight:600;">Reporter Contact / Radio</label>
+              <input type="text" id="inc-reporter-contact" placeholder="Phone or radio channel" />
+            </div>
+          </div>
+
+          <!-- Photo Upload Box -->
+          <div class="form-group" style="margin-top:.4rem;">
+            <label style="font-size:.8rem;font-weight:600;">Attach Incident Photo <span style="font-size:.72rem;color:var(--text-muted);">(optional)</span></label>
+            <div class="photo-drop-zone" id="photo-drop-zone"
+              ondragover="event.preventDefault();this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="handlePhotoDrop(event)"
+              style="padding:1rem;border-radius:var(--radius-md);">
+              <input type="file" id="inc-photo" accept="image/jpeg,image/png,image/webp" onchange="handlePhotoSelect(event)" />
+              <i data-lucide="camera" style="width:22px;height:22px;color:var(--primary);margin-bottom:.3rem;"></i>
+              <div style="font-size:.78rem;color:var(--text-muted);">Drag &amp; drop or click to attach image (JPEG/PNG/WebP, max 5MB)</div>
+              <img id="photo-preview" class="photo-preview" alt="Preview" />
+            </div>
+            <div id="photo-filename" style="font-size:.72rem;color:var(--text-muted);margin-top:.25rem;"></div>
+          </div>
+
+          <!-- Summary Review Card -->
+          <div class="wizard-review-box">
+            <div style="font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;">
+              <i data-lucide="file-check" style="width:16px;height:16px;"></i> Summary Verification
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">Title</span>
+              <span class="wizard-review-val" id="rev-title">—</span>
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">Incident Type</span>
+              <span class="wizard-review-val" id="rev-type">—</span>
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">Location Address</span>
+              <span class="wizard-review-val" id="rev-location">—</span>
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">Severity Level</span>
+              <span class="wizard-review-val" id="rev-severity">—</span>
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">People Involved</span>
+              <span class="wizard-review-val" id="rev-people">—</span>
+            </div>
+            <div class="wizard-review-row">
+              <span class="wizard-review-label">Reporter</span>
+              <span class="wizard-review-val" id="rev-reporter">—</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="error-msg" id="incident-error" style="margin-top:.75rem;display:none;padding:.6rem;border-radius:var(--radius-sm);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:.82rem;"></p>
+      </form>
+    </div>
+
+    <!-- Modal Footer Controls -->
+    <div class="modal-footer" style="padding:1rem 1.5rem;background:var(--bg-card);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+      <button type="button" class="btn btn-outline" id="wizard-prev-btn" onclick="prevStep()" style="visibility:hidden;">
+        <i data-lucide="arrow-left"></i> Back
+      </button>
+
+      <span id="wizard-step-indicator" style="font-size:.78rem;color:var(--text-muted);font-weight:600;">Step 1 of 4</span>
+
+      <div>
+        <button type="button" class="btn btn-primary" id="wizard-next-btn" onclick="nextStep()">
+          Next <i data-lucide="arrow-right"></i>
+        </button>
+        <button type="button" class="btn btn-primary" id="submit-btn" onclick="submitIncident()" style="display:none;background:var(--success);border-color:var(--success);">
+          <i data-lucide="send"></i> Submit Incident Report
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Validation Modal ===== -->
+<div class="modal-overlay" id="validation-modal-overlay" onclick="if(event.target===this)closeValidationModal()">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 id="validation-modal-title"><i data-lucide="shield-check"></i> Validate Incident</h3>
+      <button class="modal-close" onclick="closeValidationModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="val-incident-id" />
+      <input type="hidden" id="val-action" />
+
+      <div id="val-invalidate-section" style="display:none;">
+        <div class="form-group">
+          <label>Reason for Invalidation <span class="required">*</span></label>
+          <select id="val-reason">
+            <option value="">Select reason...</option>
+            <option value="duplicate">Duplicate — already logged</option>
+            <option value="misinformation">Misinformation — inaccurate or false</option>
+            <option value="test_entry">Test Entry — submitted for testing</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Additional Notes <span style="font-size:.72rem;color:var(--text-muted);">(optional)</span></label>
+          <textarea id="val-notes" rows="2" placeholder="Optional details about why this report was invalidated..."></textarea>
+        </div>
+      </div>
+
+      <div id="val-validate-section">
+        <p style="font-size:.88rem;color:var(--text-muted);line-height:1.5;">
+          Mark this incident as <strong style="color:var(--success);">Validated</strong>. It will be included in the active dataset and reports.
+        </p>
+      </div>
+
+      <p class="error-msg" id="val-error"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeValidationModal()">Cancel</button>
+      <button class="btn btn-primary" id="val-submit-btn" onclick="submitValidation()">
+        <i data-lucide="check"></i> Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Update Status Modal ===== -->
+<div class="modal-overlay" id="status-modal-overlay" onclick="closeStatusModalOutside(event)">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3><i data-lucide="edit-3"></i> Update Incident Status</h3>
+      <button class="modal-close" onclick="closeStatusModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="status-incident-id" />
+      <div class="form-group">
+        <label>New Status</label>
+        <select id="new-status" onchange="toggleResolutionField()">
+          <option value="active">Active</option>
+          <option value="responding">Responding</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Action Taken / Update</label>
+        <textarea id="status-action" rows="2" placeholder="What actions were taken?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Human Resources</label>
+        <input type="text" id="status-human" placeholder="e.g. 4 BDRRMC responders deployed" />
+      </div>
+      <div class="form-group" id="resolution-field" style="display:none;">
+        <label>Resolution / Last Action <span class="required">*</span></label>
+        <textarea id="status-resolution" rows="2"
+          placeholder="e.g. Turned over to CDRRMO, all residents safely evacuated..."></textarea>
+      </div>
+      <p class="error-msg" id="status-error"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitStatusUpdate()">
+        <i data-lucide="check"></i> Update
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Incident Detail Modal ===== -->
+<div class="modal-overlay" id="detail-modal-overlay" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal" style="max-width:700px; width:100%; border-radius:var(--radius-lg); overflow:hidden;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem; align-items:flex-start; gap:1rem;">
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem; flex-wrap:wrap;">
+          <span id="detail-modal-ticket" style="font-family:monospace; font-size:.78rem; background:rgba(59,130,246,.18); color:#60a5fa; border:1px solid rgba(59,130,246,.3); padding:.18rem .6rem; border-radius:6px; font-weight:700; white-space:nowrap;"></span>
+          <span id="detail-modal-validation"></span>
+        </div>
+        <h3 id="detail-modal-header-title" style="margin:0; font-size:1.18rem; font-weight:700; color:var(--text-main); line-height:1.35; word-break:break-word;">
+          Incident Report
+        </h3>
+      </div>
+      <button class="modal-close" onclick="closeDetailModal()" style="margin-top:-.25rem;"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" id="detail-modal-body" style="font-size:.88rem; padding:1.25rem 1.5rem;"></div>
+    <div class="modal-footer" id="detail-modal-footer" style="padding:1rem 1.5rem; display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    </div>
+  </div>
+</div>
+
+<!-- ===== Large Map Picker Popup Modal ===== -->
+<div class="modal-overlay" id="big-map-modal-overlay" style="z-index:99999;" onclick="if(event.target===this)closeBigMapModal()">
+  <div class="modal" style="max-width:92vw;width:1150px;padding:0;overflow:hidden;border-radius:var(--radius-xl);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);box-shadow:0 30px 70px rgba(0,0,0,0.75);">
+    <div class="modal-header" style="padding:1.1rem 1.5rem;background:rgba(15, 23, 42, 0.85);border-bottom:1px solid rgba(255, 255, 255, 0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.12rem;color:#ffffff;font-weight:700;">
+          <i data-lucide="crosshair" style="color:#60a5fa;width:20px;height:20px;filter:drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));"></i> Precise GIS Location Picker (Full View)
+        </h3>
+        <p style="margin:.25rem 0 0;font-size:.78rem;color:#94a3b8;">Click anywhere on the high-resolution map to place or adjust the exact incident pin.</p>
+      </div>
+      <button class="modal-close" onclick="closeBigMapModal()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;cursor:pointer;padding:.45rem;border-radius:8px;transition:all 0.2s;">
+        <i data-lucide="x" style="width:18px;height:18px;"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:0;position:relative;">
+      <div id="big-picker-map" style="height:72vh;width:100%;background:#0b0f19;"></div>
+      <div style="position:absolute;bottom:1.35rem;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:1.25rem;align-items:center;background:linear-gradient(135deg, rgba(15,23,42,0.94) 0%, rgba(30,41,59,0.88) 100%);padding:.65rem 1.4rem;border-radius:99px;border:1px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 16px 40px rgba(0,0,0,0.65), 0 0 25px rgba(59, 130, 246, 0.2);">
+        <div style="font-size:.82rem;color:#cbd5e1;display:flex;gap:1.25rem;font-family:monospace;font-weight:600;">
+          <span>Lat: <strong id="big-map-lat" style="color:#38bdf8;text-shadow:0 0 8px rgba(56, 189, 248, 0.4);">—</strong></span>
+          <span>Lng: <strong id="big-map-lng" style="color:#38bdf8;text-shadow:0 0 8px rgba(56, 189, 248, 0.4);">—</strong></span>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="confirmBigMapPin()" style="font-size:.82rem;padding:.45rem 1.15rem;border-radius:99px;gap:.45rem;background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);box-shadow:0 4px 18px rgba(59, 130, 246, 0.5);font-weight:700;border:none;">
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Confirm &amp; Set Location
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Custom Date Range Filter Modal ===== -->
+<div class="modal-overlay" id="custom-date-modal-overlay" onclick="closeCustomDateModalOutside(event)">
+  <div class="modal" style="max-width:460px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(59,130,246,0.2);">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.35),rgba(37,99,235,0.2));border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="calendar-range" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;">Custom Date Filter</h3>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Specify exact start and end date boundaries</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeCustomDateModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="font-size:.88rem;padding:1.5rem;background:rgba(15,23,42,0.75);">
+      
+      <!-- Quick Range Selection Chips -->
+      <div style="margin-bottom:1.2rem;">
+        <div style="font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Quick Select Presets</div>
+        <div style="display:flex;gap:.45rem;flex-wrap:wrap;">
+          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('today', this)">Today</button>
+          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('7days', this)">Last 7 Days</button>
+          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('30days', this)">Last 30 Days</button>
+          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('clear', this)">Clear</button>
+        </div>
+      </div>
+
+      <form id="custom-date-form" onsubmit="applyCustomDateFilter(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
+              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> Start Date
+            </label>
+            <input type="date" id="modal-date-from" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateModalRangeText()" required />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
+              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> End Date
+            </label>
+            <input type="date" id="modal-date-to" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateModalRangeText()" required />
+          </div>
+        </div>
+
+        <!-- Live Selected Date Range Indicator -->
+        <div id="modal-date-range-preview" style="font-size:.78rem;color:#60a5fa;background:rgba(59,130,246,0.12);padding:.6rem .85rem;border-radius:10px;border:1px dashed rgba(59,130,246,0.35);display:flex;align-items:center;gap:.5rem;">
+          <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;"></i>
+          <span id="modal-date-range-text">Select start &amp; end dates to filter records</span>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="button" class="btn btn-ghost" onclick="closeCustomDateModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="box-shadow:0 0 18px rgba(59,130,246,0.45);"><i data-lucide="filter"></i> Apply Date Filter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/incidents.js"></script>
+<script>
+  requireAuth();
+  const user = getUser();
+  if (user) {
+    document.getElementById("user-display-name").textContent = user.full_name || user.username;
+    document.getElementById("user-role-badge").textContent = user.role;
+  }
+  lucide.createIcons();
+  loadIncidents();
+  loadPendingCount();
+</script>
+</body>
+</html>
