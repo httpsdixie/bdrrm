@@ -625,7 +625,7 @@ function changeIncidentsPage(delta) {
 // ---- Evacuation center status panel ----
 
 function renderEvacStatus(centers, resetPage = true) {
-  if (centers) evacCentersData = centers.filter(c => (c.current_occupancy || 0) > 0);
+  if (centers) evacCentersData = centers;
   if (resetPage) evacCentersPage = 1;
 
   const el = document.getElementById('evac-status-list');
@@ -639,8 +639,8 @@ function renderEvacStatus(centers, resetPage = true) {
           <i data-lucide="house-plug"></i>
         </div>
         <div class="dash-feed-empty-text">
-          <p class="dash-feed-empty-title">No Evacuation Shelters Recorded</p>
-          <span class="dash-feed-empty-sub">Shelter capacity and live occupancy logs will appear here once registered.</span>
+          <p class="dash-feed-empty-title">No Evacuation Facilities Recorded</p>
+          <span class="dash-feed-empty-sub">Registered evacuation facilities will appear here once added.</span>
         </div>
       </div>`;
     if (pagEl) pagEl.style.display = 'none';
@@ -649,10 +649,9 @@ function renderEvacStatus(centers, resetPage = true) {
   }
 
   const STATUS_BADGES_MAP = {
-    available:     '<span class="badge badge-green">Available</span>',
-    near_capacity: '<span class="badge badge-orange">Near Capacity</span>',
-    full:          '<span class="badge badge-red">Full</span>',
-    closed:        '<span class="badge badge-blue">Closed</span>',
+    available: '<span class="badge badge-green">Available</span>',
+    closed:    '<span class="badge badge-blue">Closed</span>',
+    active:    '<span class="badge badge-orange">Active</span>',
   };
 
   const totalPages = Math.ceil(evacCentersData.length / WIDGET_PAGE_SIZE);
@@ -663,33 +662,21 @@ function renderEvacStatus(centers, resetPage = true) {
   const pageItems = evacCentersData.slice(startIdx, startIdx + WIDGET_PAGE_SIZE);
 
   el.innerHTML = pageItems.map((c, i) => {
-    const occ = c.current_occupancy || 0;
     const cap = c.capacity || 0;
-    const pct = capacityPct(occ, cap);
-
-    let effStatus = c.status || 'available';
-    if (cap > 0 && occ >= cap) effStatus = 'full';
-    else if (cap > 0 && pct >= 80 && effStatus !== 'closed') effStatus = 'near_capacity';
-
-    let barColor = 'linear-gradient(90deg, #10b981, #34d399)';
-    if (pct >= 90) barColor = 'linear-gradient(90deg, #ef4444, #f87171)';
-    else if (pct >= 75) barColor = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-
-    const badgeHtml = STATUS_BADGES_MAP[effStatus] || `<span class="badge badge-green">${effStatus}</span>`;
+    const statusKey = (c.status || 'available').toLowerCase();
+    const badgeHtml = STATUS_BADGES_MAP[statusKey] || `<span class="badge badge-green">${escHtml(c.status || 'Available')}</span>`;
     const evacKey = c.id !== undefined ? JSON.stringify(c.id) : startIdx + i;
+
+    const typeLabel = c.type ? escHtml(c.type) : null;
 
     return `
     <div class="evac-feed-item" onclick="openEvacDetailModal(${evacKey})" style="cursor:pointer; padding:1rem 1.15rem;" title="Click to view shelter status">
-      <div class="evac-feed-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-        <span class="evac-feed-name" style="font-size:0.92rem; font-weight:700; color:#ffffff;">${escHtml(c.name)}</span>
-        <span class="evac-feed-count" style="font-size:0.88rem; font-weight:800; color:#60a5fa;">${occ} / ${cap} <span style="font-size:0.75rem; color:#94a3b8; font-weight:500;">Evacuees</span></span>
-      </div>
-      <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden; margin:0.4rem 0;">
-        <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:6px; transition:width 0.4s ease;"></div>
-      </div>
-      <div class="evac-feed-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
-        <span style="font-size:0.78rem; color:#cbd5e1; font-weight:600;">${pct}% Capacity Occupied</span>
-        ${badgeHtml}
+      <div class="evac-feed-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="evac-feed-name" style="font-size:0.92rem; font-weight:700; color:#ffffff;">${escHtml(c.name)}</div>
+          ${typeLabel ? `<div style="font-size:0.75rem; color:#64748b; font-weight:500; margin-top:0.15rem;">${typeLabel}</div>` : ''}
+        </div>
+        <span style="font-size:0.8rem; color:#94a3b8; font-weight:500; flex-shrink:0;">Capacity: <span style="color:#60a5fa; font-weight:700;">${cap}</span></span>
       </div>
     </div>`;
   }).join('');
@@ -885,103 +872,81 @@ function openIncidentDetailModal(idx) {
       </div>
     </div>
   `;
-  modal.classList.add('active');
+  modal.classList.add('active', 'open');
+  modal.style.display = 'flex';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeIncidentDetailModal() {
   const modal = document.getElementById('incident-detail-modal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active', 'open');
+    modal.style.display = 'none';
+  }
 }
 
 function openEvacDetailModal(id) {
   let c = evacCentersData.find(item => item.id == id || item.id === id);
   if (!c && typeof id === 'number') c = evacCentersData[id];
-  if (!c) c = evacCentersData[0];
-  if (!c) {
-    c = {
-      name: 'Evacuation Center Shelter',
-      location: 'Barangay Linao Multi-Purpose Hall',
-      capacity: 150,
-      current_occupancy: 45,
-      status: 'available'
-    };
-  }
+  if (!c) return;
 
   const modal = document.getElementById('evac-detail-modal');
   const content = document.getElementById('evac-modal-content');
   if (!modal || !content) return;
 
-  const occ = c.current_occupancy || 0;
-  const cap = c.capacity || 0;
-  const pct = capacityPct(occ, cap);
-  const avail = Math.max(0, cap - occ);
-
-  let effStatus = c.status || 'available';
-  if (cap > 0 && occ >= cap) effStatus = 'full';
-  else if (cap > 0 && pct >= 80 && effStatus !== 'closed') effStatus = 'near_capacity';
-
-  const STATUS_COLOR_MAP = { available: '#34d399', near_capacity: '#fbbf24', full: '#f87171', closed: '#60a5fa' };
-  const color = STATUS_COLOR_MAP[effStatus] || '#3b82f6';
-
-  let barColor = 'linear-gradient(90deg, #10b981, #34d399)';
-  if (pct >= 90) barColor = 'linear-gradient(90deg, #ef4444, #f87171)';
-  else if (pct >= 75) barColor = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+  const statusKey = (c.status || 'available').toLowerCase();
+  const STATUS_LABEL = { available: 'Available', closed: 'Closed', active: 'Active', full: 'Full' };
+  const STATUS_COLOR = { available: '#34d399', closed: '#60a5fa', active: '#fbbf24', full: '#f87171' };
+  const statusLabel = STATUS_LABEL[statusKey] || c.status || 'Available';
+  const statusColor = STATUS_COLOR[statusKey] || '#34d399';
 
   content.innerHTML = `
-    <div style="margin-bottom: 1.2rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-        <h4 style="font-size:1.15rem; font-weight:800; color:#ffffff; margin:0;">${escHtml(c.name || 'Evacuation Center')}</h4>
-        <span style="font-size:0.78rem; font-weight:800; color:${color}; text-transform:uppercase; letter-spacing:0.04em;">${effStatus.replace('_', ' ')}</span>
+    <div style="margin-bottom:1.2rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:0.5rem;">
+        <h4 style="font-size:1.1rem; font-weight:800; color:#ffffff; margin:0; line-height:1.3;">${escHtml(c.name || 'Evacuation Center')}</h4>
+        <span style="font-size:0.75rem; font-weight:800; color:${statusColor}; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; margin-top:0.2rem;">${statusLabel}</span>
       </div>
-      <div style="font-size:0.82rem; color:#94a3b8; display:flex; align-items:center; gap:0.35rem;">
-        <i data-lucide="map-pin" style="width:14px; height:14px; color:#60a5fa;"></i>
-        ${escHtml(c.location || 'Barangay Linao Center')}
-      </div>
+      ${c.type ? `<div style="font-size:0.8rem; color:#64748b; font-weight:500; display:flex; align-items:center; gap:0.35rem;"><i data-lucide="building-2" style="width:13px;height:13px;color:#475569;"></i> ${escHtml(c.type)}</div>` : ''}
     </div>
 
-    <!-- Live Shelter Occupancy & Capacity Gauge Card -->
-    <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.1rem; margin-bottom:1.2rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
-        <span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">Live Shelter Occupancy</span>
-        <span style="font-size:0.95rem; font-weight:800; color:#60a5fa;">${occ} / ${cap} <span style="font-size:0.78rem; color:#94a3b8; font-weight:500;">Persons</span></span>
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <i data-lucide="users" style="width:16px;height:16px;color:#60a5fa;"></i>
+        <span style="font-size:0.8rem; color:#94a3b8; font-weight:600;">Capacity</span>
       </div>
-      
-      <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:6px; overflow:hidden; margin-bottom:0.6rem;">
-        <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:6px; transition:width 0.4s ease;"></div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:#94a3b8;">
-        <span>${pct}% Capacity Occupied</span>
-        <span style="color:#34d399; font-weight:700;">${avail} Available Space</span>
-      </div>
+      <span style="font-size:1.1rem; font-weight:900; color:#60a5fa;">${c.capacity || 0} <span style="font-size:0.75rem; color:#94a3b8; font-weight:500;">persons</span></span>
     </div>
 
-    <!-- Amenities Grid -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-      <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:0.8rem; display:flex; align-items:center; gap:0.65rem;">
-        <i data-lucide="droplet" style="color:#60a5fa; width:18px; height:18px;"></i>
-        <div>
-          <div style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Potable Water</div>
-          <div style="font-size:0.82rem; font-weight:700; color:#ffffff;">Operational</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem; background:rgba(255,255,255,0.02); border-radius:12px; padding:1rem; border:1px solid rgba(255,255,255,0.05);">
+      <div>
+        <div style="font-size:0.72rem; color:#94a3b8; font-weight:600; text-transform:uppercase; margin-bottom:0.25rem;">Location / Address</div>
+        <div style="font-weight:600; color:#e2e8f0; font-size:0.85rem; display:flex; align-items:flex-start; gap:0.35rem;">
+          <i data-lucide="map-pin" style="width:13px;height:13px;color:#60a5fa;margin-top:2px;flex-shrink:0;"></i>
+          ${escHtml(c.address || 'Barangay Linao, Ormoc City')}
         </div>
       </div>
-      <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:0.8rem; display:flex; align-items:center; gap:0.65rem;">
-        <i data-lucide="zap" style="color:#fbbf24; width:18px; height:18px;"></i>
-        <div>
-          <div style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Power Backup</div>
-          <div style="font-size:0.82rem; font-weight:700; color:#ffffff;">Generator Ready</div>
+      <div>
+        <div style="font-size:0.72rem; color:#94a3b8; font-weight:600; text-transform:uppercase; margin-bottom:0.25rem;">Contact Person</div>
+        <div style="font-weight:700; color:#ffffff; font-size:0.85rem; display:flex; align-items:center; gap:0.35rem;">
+          <i data-lucide="user" style="width:13px;height:13px;color:#4ade80;flex-shrink:0;"></i>
+          ${escHtml(c.contact_person || '—')}
         </div>
+        ${c.contact_number ? `<div style="font-size:0.78rem; color:#60a5fa; font-weight:600; margin-top:0.2rem;">${escHtml(c.contact_number)}</div>` : ''}
       </div>
     </div>
   `;
-  modal.classList.add('active');
+
+  modal.classList.add('active', 'open');
+  modal.style.display = 'flex';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeEvacDetailModal() {
   const modal = document.getElementById('evac-detail-modal');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active', 'open');
+    modal.style.display = 'none';
+  }
 }
 
 

@@ -281,7 +281,7 @@
           <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;">
-          <span id="active-layer-count" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">7/7</span>
+          <span id="active-layer-count" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">5/5</span>
           <i data-lucide="chevron-up" id="pub-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
         </div>
       </div>
@@ -289,14 +289,10 @@
       <div id="pub-toggles-body">
         <!-- Section: Disasters & Evacuation -->
         <div class="layer-group-label">
-          <i data-lucide="siren" style="width:12px;height:12px;color:#ef4444;"></i> Emergencies & Shelters
-        </div>
-        <div class="pub-layer-row" title="Shows active disaster reports and emergency calls">
-          <div class="pub-layer-left"><span class="legend-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span> Active Emergencies</div>
-          <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('incidents',this)"><span class="toggle-slider"></span></label>
+          <i data-lucide="house" style="width:12px;height:12px;color:#3b82f6;"></i> Shelters
         </div>
         <div class="pub-layer-row" title="Shows designated safe evacuation centers for residents">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#3b82f6;"></span> Evacuation Shelters</div>
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#1558b0;"></span> Evacuation Shelters</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('evac',this)"><span class="toggle-slider"></span></label>
         </div>
 
@@ -307,11 +303,11 @@
           <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard Areas
         </div>
         <div class="pub-layer-row" title="Shows flood-prone areas across Barangay Linao">
-          <div class="pub-layer-left"><span class="legend-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span> Flood-Prone Areas</div>
+          <div class="pub-layer-left"><span class="legend-poly" style="background:#ea580c;border:1px solid #f97316;"></span> Flood-Prone Areas</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('flood',this)"><span class="toggle-slider"></span></label>
         </div>
         <div class="pub-layer-row" title="Shows landslide-susceptible slopes and hillsides">
-          <div class="pub-layer-left"><span class="legend-poly" style="background:#f97316;border:1px solid #fb923c;"></span> Landslide Areas</div>
+          <div class="pub-layer-left"><span class="legend-poly" style="background:#dc2626;border:1px solid #ef4444;"></span> Landslide Areas</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('landslide',this)"><span class="toggle-slider"></span></label>
         </div>
 
@@ -322,18 +318,13 @@
           <i data-lucide="hospital" style="width:12px;height:12px;color:#10b981;"></i> Help & Health Facilities
         </div>
         <div class="pub-layer-row" title="Shows nearby hospitals and barangay health stations">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#10b981;"></span> Hospitals & Clinics</div>
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#2e7d32;"></span> Hospitals & Clinics</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('hospitals',this)"><span class="toggle-slider"></span></label>
         </div>
         <div class="pub-layer-row" title="Shows police, fire, and BDRRMC responder outposts">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#2563eb;"></span> Police & Fire Outposts</div>
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#1a73e8;"></span> Police & Fire Outposts</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('stations',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row" title="Shows impassable or blocked roads">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#eab308;"></span> Blocked Roads</div>
-          <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('roads',this)"><span class="toggle-slider"></span></label>
-        </div>
-
         <div class="layer-panel-footer">
           <button class="layer-footer-btn" id="toggle-all-pub-btn" onclick="toggleAllPubLayers()" style="background:rgba(239, 68, 68, 0.15);border-color:rgba(239, 68, 68, 0.3);color:#fca5a5;">
             <i data-lucide="eye-off"></i> Hide All Layers

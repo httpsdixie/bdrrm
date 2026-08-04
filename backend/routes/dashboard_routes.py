@@ -101,7 +101,7 @@ def get_evac_status(current_user: dict = Depends(get_current_user)):
     """Get evacuation centers for the dashboard status panel."""
     result = (
         supabase.table("evacuation_centers")
-        .select("id, name, capacity, current_occupancy, status")
+        .select("id, name, capacity, status, type, address, contact_person, contact_number")
         .order("name")
         .execute()
     )

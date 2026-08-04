@@ -197,12 +197,12 @@ async function initMap(authenticated = false) {
   const initialData = getPublicMapPayload(null);
   allIncidentData = initialData.incidents || [];
   try { buildHeatmap(allIncidentData); } catch (e) { console.warn('Heatmap init notice:', e); }
-  try { renderIncidents(initialData.incidents || [], authenticated); } catch (e) { console.warn('Incidents init notice:', e); }
+  // incidents markers removed
   try { renderEvacCenters(initialData.evacuation_centers || [], authenticated); } catch (e) { console.warn('Evac init notice:', e); }
   try { renderHazardZones(initialData.hazard_zones || []); } catch (e) { console.warn('Hazard zones init notice:', e); }
   try { renderHospitals(initialData.hospitals || [], authenticated); } catch (e) { console.warn('Hospitals init notice:', e); }
   try { renderStations(initialData.responder_stations || [], authenticated); } catch (e) { console.warn('Stations init notice:', e); }
-  try { renderRoadClosures(initialData.road_closures || [], authenticated); } catch (e) { console.warn('Road closures init notice:', e); }
+  // road closures removed
 
 
   // Invalidate map size to force Leaflet to recalculate container viewport bounds immediately on open
@@ -239,12 +239,12 @@ async function initMap(authenticated = false) {
         const payload = getPublicMapPayload(raw);
         allIncidentData = payload.incidents || [];
         try { buildHeatmap(allIncidentData); } catch (_) {}
-        try { renderIncidents(payload.incidents || [], authenticated); } catch (_) {}
+        // incidents markers removed
         try { renderEvacCenters(payload.evacuation_centers || [], authenticated); } catch (_) {}
         try { renderHazardZones(payload.hazard_zones || []); } catch (_) {}
         try { renderHospitals(payload.hospitals || [], authenticated); } catch (_) {}
         try { renderStations(payload.responder_stations || [], authenticated); } catch (_) {}
-        try { renderRoadClosures(payload.road_closures || [], authenticated); } catch (_) {}
+        // road closures removed
       }
     } catch (err) {
       console.warn('Backend live sync notice:', err.message);
@@ -486,11 +486,31 @@ function buildHeatmap(incidents) {
     heatmapLayer = null;
   }
 
-  // Combine incidents for heatmap
+  // Static baseline heatmap seed points for Barangay Linao
+  // Based on known flood-prone areas, dense puroks, and historical incident zones
+  const STATIC_HEAT_SEEDS = [
+    // Bao River flood corridor (Puroks 1-3) — highest risk
+    [11.0135, 124.5868, 1.0], [11.0140, 124.5875, 0.95], [11.0145, 124.5882, 0.9],
+    [11.0148, 124.5890, 0.85], [11.0130, 124.5880, 0.85], [11.0138, 124.5862, 0.8],
+    [11.0125, 124.5872, 0.75], [11.0150, 124.5858, 0.7],
+    // Barangay center flood zone (Puroks 6-7)
+    [11.0175, 124.5920, 0.8], [11.0180, 124.5930, 0.75], [11.0172, 124.5912, 0.7],
+    [11.0168, 124.5925, 0.65], [11.0185, 124.5940, 0.6],
+    // Eastern hillside landslide zone
+    [11.0220, 124.5960, 0.85], [11.0225, 124.5970, 0.8], [11.0215, 124.5955, 0.75],
+    [11.0230, 124.5975, 0.7], [11.0218, 124.5965, 0.65],
+    // Northern slope erosion zone
+    [11.0250, 124.5895, 0.7], [11.0255, 124.5905, 0.65], [11.0245, 124.5888, 0.6],
+    // Dense residential puroks (4, 5, 11)
+    [11.0157, 124.5907, 0.55], [11.0155, 124.5900, 0.5], [11.0163, 124.5930, 0.5],
+    [11.0160, 124.5915, 0.45], [11.0152, 124.5922, 0.4],
+  ];
+
+  // Combine live incidents + static seeds
   let rawIncidents = (Array.isArray(incidents) && incidents.length) ? incidents : [];
 
   const WEIGHT = { critical: 1.0, high: 0.8, medium: 0.5, low: 0.3 };
-  let points = [];
+  let points = [...STATIC_HEAT_SEEDS]; // always start with baseline
 
   rawIncidents.forEach(inc => {
     const lat = Number(inc.latitude || inc.lat);
@@ -498,14 +518,12 @@ function buildHeatmap(incidents) {
     if (lat && lng) {
       const w = WEIGHT[inc.severity] || 0.6;
       points.push([lat, lng, w]);
-      // Add minor cluster points around the incident location for rich visual density
+      // Add minor cluster points around the incident for richer visual density
       points.push([lat + 0.0006, lng + 0.0005, w * 0.75]);
       points.push([lat - 0.0005, lng - 0.0006, w * 0.75]);
       points.push([lat + 0.0003, lng - 0.0004, w * 0.85]);
     }
   });
-
-  if (!points.length) return;
 
   if (typeof L.heatLayer === 'function') {
     try {
@@ -878,7 +896,6 @@ function renderEvacCenters(centers, auth = false) {
     const effStatus = (c.status === 'maintenance' || c.status === 'closed') ? c.status : (c.status || 'available');
     const col = EVAC_COLOR[effStatus] || EVAC_COLOR.available;
     const bg  = EVAC_BG[effStatus]   || EVAC_BG.available;
-    const barColor = pct >= 100 ? '#d93025' : pct >= 80 ? '#f9a825' : '#2e7d32';
     const marker = L.marker([c.latitude, c.longitude], { icon: makeSvgIcon(SVG.evac, col, bg) });
 
     marker.bindTooltip(c.name, { direction: 'top', offset: [0, -10] });

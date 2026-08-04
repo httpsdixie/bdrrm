@@ -500,12 +500,6 @@
 
       <!-- Action buttons -->
       <div class="map-actions">
-        <button class="map-btn" onclick="toggleManagePanel()">
-          <i data-lucide="layers"></i> Manage Layers
-        </button>
-        <button class="map-btn" onclick="openRoadClosureModal()">
-          <i data-lucide="road"></i> Road Closure
-        </button>
         <button class="map-btn pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest incident density.">
           <i data-lucide="flame"></i> Incident Heatmap
         </button>
@@ -521,47 +515,40 @@
             <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
           </div>
           <div style="display:flex;align-items:center;gap:.4rem;">
-            <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">7/7</span>
+            <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">5/5</span>
             <i data-lucide="chevron-up" id="layer-panel-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
           </div>
         </div>
         <div class="layer-panel-body" id="layer-panel-body">
 
-          <!-- Section: Emergencies & Shelters -->
+          <!-- Section: Shelters -->
           <div class="layer-group-label">
-            <i data-lucide="siren" style="width:12px;height:12px;color:#ef4444;"></i> Emergencies & Shelters
+            <i data-lucide="house" style="width:12px;height:12px;color:#3b82f6;"></i> Shelters
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span>
-              <span>Active Emergencies</span>
+              <span class="layer-dot" style="background:#1558b0;box-shadow:0 0 5px rgba(21,88,176,.5);"></span>
+              <span>Evacuation Shelters</span>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="toggle-incidents" checked onchange="toggleLayer('incidents')"><span class="toggle-slider"></span></label>
-          </label>
-          <label class="layer-toggle">
-            <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#eab308;box-shadow:0 0 5px rgba(234,179,8,.4);"></span>
-              <span>Blocked Roads</span>
-            </div>
-            <label class="toggle-switch"><input type="checkbox" id="toggle-roads" checked onchange="toggleLayer('roads')"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="toggle-evac" checked onchange="toggleLayer('evac')"><span class="toggle-slider"></span></label>
           </label>
 
           <div class="layer-group-sep"></div>
 
-          <!-- Section: Danger & Risk Areas -->
+          <!-- Section: Hazard Areas -->
           <div class="layer-group-label">
             <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard Areas
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span>
+              <span class="layer-poly" style="background:#ea580c;border:1px solid #f97316;"></span>
               <span>Flood-Prone Areas</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-poly" style="background:#f97316;border:1px solid #fb923c;"></span>
+              <span class="layer-poly" style="background:#dc2626;border:1px solid #ef4444;"></span>
               <span>Landslide Areas</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')"><span class="toggle-slider"></span></label>
@@ -575,21 +562,14 @@
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#3b82f6;box-shadow:0 0 5px rgba(59,130,246,.4);"></span>
-              <span>Evacuation Shelters</span>
-            </div>
-            <label class="toggle-switch"><input type="checkbox" id="toggle-evac" checked onchange="toggleLayer('evac')"><span class="toggle-slider"></span></label>
-          </label>
-          <label class="layer-toggle">
-            <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#10b981;box-shadow:0 0 5px rgba(16,185,129,.4);"></span>
+              <span class="layer-dot" style="background:#2e7d32;box-shadow:0 0 5px rgba(46,125,50,.5);"></span>
               <span>Hospitals & Clinics</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-hospitals" checked onchange="toggleLayer('hospitals')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#2563eb;box-shadow:0 0 5px rgba(37,99,235,.4);"></span>
+              <span class="layer-dot" style="background:#1a73e8;box-shadow:0 0 5px rgba(26,115,232,.5);"></span>
               <span>Police & Fire Outposts</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-stations" checked onchange="toggleLayer('stations')"><span class="toggle-slider"></span></label>
@@ -674,120 +654,6 @@
         </div>
         <div class="info-panel-body" id="panel-body"></div>
         <div class="info-panel-actions" id="panel-actions"></div>
-      </div>
-
-      <!-- ===== Layer Management & GIS Directory Panel (left slide-in) ===== -->
-      <div class="manage-panel" id="manage-panel">
-        <div class="manage-panel-header">
-          <div style="display:flex;align-items:center;gap:.5rem;">
-            <i data-lucide="layers" style="color:var(--primary);width:18px;height:18px;"></i>
-            <span style="font-weight:800;color:#fff;font-size:.95rem;">GIS Layer Information</span>
-          </div>
-          <button class="info-panel-close" onclick="toggleManagePanel()"><i data-lucide="x"></i></button>
-        </div>
-
-        <!-- GIS Overview Summary Banner -->
-        <div id="gis-summary-bar" style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);padding:.75rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
-          <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:.5rem .75rem;">
-            <div style="font-size:.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Total Monitored</div>
-            <div style="font-size:1.05rem;font-weight:800;color:#60a5fa;" id="stat-total-items">-- Layer Items</div>
-          </div>
-          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:.5rem .75rem;">
-            <div style="font-size:.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Active Hazards / Risks</div>
-            <div style="font-size:1.05rem;font-weight:800;color:#f87171;" id="stat-active-hazards">-- Active Hazards</div>
-          </div>
-        </div>
-
-        <!-- Tab bar -->
-        <div class="manage-tabs">
-          <button class="manage-tab active" id="mtab-hazard"    onclick="switchManageTab('hazard')">Hazard Zones</button>
-          <button class="manage-tab"        id="mtab-evac"      onclick="switchManageTab('evac')">Evacuation</button>
-          <button class="manage-tab"        id="mtab-incidents" onclick="switchManageTab('incidents')">Incidents</button>
-          <button class="manage-tab"        id="mtab-hospitals"  onclick="switchManageTab('hospitals')">Hospitals</button>
-          <button class="manage-tab"        id="mtab-stations"   onclick="switchManageTab('stations')">Stations</button>
-          <button class="manage-tab"        id="mtab-roads"      onclick="switchManageTab('roads')">Road Closures</button>
-        </div>
-
-        <!-- ---- Hazard Zones ---- -->
-        <div id="mpane-hazard" class="manage-pane">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="mhz-search" placeholder="Search hazard zones..." oninput="mFilterHazard()" />
-            <div id="mhz-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Zones</div>
-          </div>
-          <div id="mhz-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ---- Evacuation Centers ---- -->
-        <div id="mpane-evac" class="manage-pane" style="display:none;">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="mev-search" placeholder="Search evacuation centers..." oninput="mFilterEvac()" />
-            <div id="mevac-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Centers</div>
-          </div>
-          <div id="mevac-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ---- Incidents ---- -->
-        <div id="mpane-incidents" class="manage-pane" style="display:none;">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="minc-search" placeholder="Search incidents..." oninput="mFilterIncidents()" />
-            <div id="minc-count-chip" class="badge badge-orange" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Active</div>
-          </div>
-          <div id="minc-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ---- Hospitals ---- -->
-        <div id="mpane-hospitals" class="manage-pane" style="display:none;">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="mhosp-search" placeholder="Search hospitals..." oninput="mFilterHospitals()" />
-            <div id="mhosp-count-chip" class="badge badge-green" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Facilities</div>
-          </div>
-          <div id="mhosp-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ---- Stations ---- -->
-        <div id="mpane-stations" class="manage-pane" style="display:none;">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="msta-search" placeholder="Search stations..." oninput="mFilterStations()" />
-            <div id="msta-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Outposts</div>
-          </div>
-          <div id="msta-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ---- Road Closures ---- -->
-        <div id="mpane-roads" class="manage-pane" style="display:none;">
-          <div class="manage-pane-toolbar">
-            <input type="text" class="manage-search" id="mrd-search" placeholder="Search road closures..." oninput="mFilterRoads()" />
-            <div id="mrd-count-chip" class="badge badge-orange" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Blockages</div>
-          </div>
-          <div id="mrd-list" class="manage-list">
-            <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
-          </div>
-        </div>
-
-        <!-- ===== Inline forms (slide over manage panel) ===== -->
-        <div class="manage-form-overlay" id="manage-form-overlay" style="display:none;">
-          <div class="manage-form-header">
-            <span id="mform-title">Add Zone</span>
-            <button class="info-panel-close" onclick="closeManageForm()"><i data-lucide="x"></i></button>
-          </div>
-          <div class="manage-form-body" id="mform-body"></div>
-          <div class="manage-form-footer">
-            <button class="btn btn-ghost" onclick="closeManageForm()">Cancel</button>
-            <button class="btn btn-primary" id="mform-submit-btn" onclick="submitManageForm()">
-              <i data-lucide="save"></i> Save
-            </button>
-          </div>
-        </div>
       </div>
 
       <div id="map"></div>
