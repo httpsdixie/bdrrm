@@ -3,54 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Barangay DRRM</title>
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <meta name="theme-color" content="#1e293b" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="assets/css/style.css?v=4.5" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
+  <script src="assets/js/components.js"></script>
 </head>
 <body>
 
 <div class="layout">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <i data-lucide="shield-alert" class="brand-icon"></i>
-      <div>
-        <h2>Barangay DRRM</h2>
-        <span>Linao, Ormoc City</span>
-      </div>
-    </div>
-    <nav>
-      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
-      <a href="dashboard.html" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
-      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
-      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
-      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
-      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
-    </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
-  </aside>
+  <!-- Sidebar (Rendered via components.js) -->
+  <aside class="sidebar"></aside>
 
   <!-- Main Content -->
   <div class="main-content">
     <div class="topbar">
-      <div class="topbar-left">
-        <h2>Dashboard Overview</h2>
-        <span class="dash-timestamp">Last updated: <span id="last-updated">—</span></span>
+      <div class="topbar-left" style="display:flex; align-items:center; gap:0.85rem;">
+        <div>
+          <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:0.5rem;">
+            Dashboard Overview
+            <span class="badge badge-green" style="font-size:0.65rem; font-weight:800; padding:0.18rem 0.5rem; letter-spacing:0.04em; display:inline-flex; align-items:center; gap:0.35rem;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80;"></span> LIVE
+            </span>
+          </h2>
+          <div class="dash-timestamp">
+            <span class="sync-item"><i data-lucide="clock"></i> Updated <span class="sync-val" id="last-updated">Just now</span></span>
+            <span class="sync-sep"></span>
+            <span class="sync-item auto-sync" title="Automatic telemetry sync interval">
+              <i data-lucide="refresh-cw"></i> Auto-sync in <span id="sync-countdown">05:00</span>
+            </span>
+          </div>
+        </div>
       </div>
+
       <div class="user-info">
-        <button class="btn-icon-sm" onclick="loadDashboard(this)" id="refresh-btn" title="Refresh">
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-header">
+              <i data-lucide="cloud-sun"></i>
+              <span>Ormoc City Weather</span>
+              <button class="weather-refresh" onclick="loadWeather(event)" title="Refresh Weather">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-body" id="weather-body">
+              <div class="weather-loading"><i data-lucide="loader" class="spin"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-icon-sm" onclick="loadDashboard(this)" id="refresh-btn" title="Refresh Dashboard">
           <i data-lucide="refresh-cw"></i>
         </button>
 
@@ -81,11 +95,15 @@
 
     <div class="page-body">
 
-      <!-- ===== Stat Cards ===== -->
+      <!-- ===== SECTION 1: STAT CARDS ===== -->
+      <h3 class="dash-section-title" style="margin-top:0;"><i data-lucide="layout-grid"></i> Operational Overview &amp; Key Metrics</h3>
       <div class="stats-grid">
 
-        <a href="incidents.html" class="stat-card stat-card-link">
-          <div class="stat-icon red"><i data-lucide="triangle-alert"></i></div>
+        <a href="incidents.html" class="stat-card stat-card-link stat-card-red">
+          <div class="stat-card-top">
+            <div class="stat-icon red"><i data-lucide="triangle-alert"></i></div>
+            <div class="stat-arrow"><i data-lucide="arrow-up-right"></i></div>
+          </div>
           <div class="stat-info">
             <h3 id="stat-active-incidents"><span class="skeleton skeleton-stat-num"></span></h3>
             <p>Active Incidents</p>
@@ -93,8 +111,11 @@
           <div class="stat-sub" id="stat-critical-sub"><span class="skeleton skeleton-text" style="width:70px;"></span></div>
         </a>
 
-        <a href="evacuation.html" class="stat-card stat-card-link">
-          <div class="stat-icon blue"><i data-lucide="house"></i></div>
+        <a href="evacuation.html" class="stat-card stat-card-link stat-card-blue">
+          <div class="stat-card-top">
+            <div class="stat-icon blue"><i data-lucide="house"></i></div>
+            <div class="stat-arrow"><i data-lucide="arrow-up-right"></i></div>
+          </div>
           <div class="stat-info">
             <h3 id="stat-evac-centers"><span class="skeleton skeleton-stat-num"></span></h3>
             <p>Evacuation Centers</p>
@@ -102,8 +123,11 @@
           <div class="stat-sub" id="stat-evac-sub"><span class="skeleton skeleton-text" style="width:90px;"></span></div>
         </a>
 
-        <a href="evacuation.html" class="stat-card stat-card-link">
-          <div class="stat-icon green"><i data-lucide="users"></i></div>
+        <a href="evacuation.html" class="stat-card stat-card-link stat-card-green">
+          <div class="stat-card-top">
+            <div class="stat-icon green"><i data-lucide="users"></i></div>
+            <div class="stat-arrow"><i data-lucide="arrow-up-right"></i></div>
+          </div>
           <div class="stat-info">
             <h3 id="stat-evacuees"><span class="skeleton skeleton-stat-num"></span></h3>
             <p>Total Evacuees</p>
@@ -111,8 +135,11 @@
           <div class="stat-sub" id="stat-evacuees-sub"><span class="skeleton skeleton-text" style="width:80px;"></span></div>
         </a>
 
-        <a href="resources.html" class="stat-card stat-card-link">
-          <div class="stat-icon orange"><i data-lucide="truck"></i></div>
+        <a href="resources.html" class="stat-card stat-card-link stat-card-orange">
+          <div class="stat-card-top">
+            <div class="stat-icon orange"><i data-lucide="truck"></i></div>
+            <div class="stat-arrow"><i data-lucide="arrow-up-right"></i></div>
+          </div>
           <div class="stat-info">
             <h3 id="stat-resources"><span class="skeleton skeleton-stat-num"></span></h3>
             <p>Resources Deployed</p>
@@ -122,13 +149,57 @@
 
       </div>
 
-      <!-- ===== Main panels ===== -->
+      <!-- ===== SECTION 2: ANALYTICS & GRAPHS ===== -->
+      <h3 class="dash-section-title"><i data-lucide="line-chart"></i> Situational Analytics &amp; Graphs</h3>
+      <div class="analytics-grid" style="display:grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem;">
+        
+        <!-- Incident Trends Line Chart Card -->
+        <div class="dash-panel" style="display:flex; flex-direction:column;">
+          <div class="dash-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:nowrap; gap:0.5rem;">
+            <h3 style="display:flex; align-items:center; gap:0.5rem; margin:0; font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <i data-lucide="line-chart" style="color:#3b82f6; flex-shrink:0;"></i> Incident &amp; Evacuee Trends
+            </h3>
+            <div style="display:flex; gap:0.35rem; align-items:center; flex-shrink:0;">
+              <button class="btn btn-outline-sm chart-filter-btn active" id="btn-period-6m" onclick="updateTrendsChartPeriod('6m')" style="font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:8px;">6 Months</button>
+              <button class="btn btn-outline-sm chart-filter-btn" id="btn-period-30d" onclick="updateTrendsChartPeriod('30d')" style="font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:8px;">30 Days</button>
+              <button class="btn btn-outline-sm chart-filter-btn" id="btn-period-7d" onclick="updateTrendsChartPeriod('7d')" style="font-size:0.75rem; padding:0.25rem 0.65rem; border-radius:8px;">7 Days</button>
+            </div>
+          </div>
+          <div style="position:relative; width:100%; height:290px; padding:1.25rem 1rem 1rem 1rem;">
+            <canvas id="incidentTrendsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Hazard & Evac Distribution Doughnut Chart Card -->
+        <div class="dash-panel" style="display:flex; flex-direction:column;">
+          <div class="dash-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:nowrap; gap:0.5rem;">
+            <h3 style="display:flex; align-items:center; gap:0.5rem; margin:0; font-size:1.02rem; white-space:nowrap;">
+              <i data-lucide="pie-chart" style="color:#fbbf24; flex-shrink:0;"></i> Hazard Distribution
+            </h3>
+            <span class="badge badge-blue" style="font-weight:700; white-space:nowrap; flex-shrink:0;">By Incident Type</span>
+          </div>
+          <div style="position:relative; width:100%; height:290px; padding:1rem; display:flex; align-items:center; justify-content:center;">
+            <canvas id="hazardDistributionChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== SECTION 3: REAL-TIME FEEDS & THREAT ANALYSIS ===== -->
+      <h3 class="dash-section-title"><i data-lucide="shield"></i> Real-Time Monitors &amp; Risk Intelligence</h3>
       <div class="dash-panels">
 
         <!-- Recent Incidents -->
         <div class="dash-panel">
-          <div class="dash-panel-header">
-            <h3><i data-lucide="triangle-alert"></i> Recent Incidents</h3>
+          <div class="dash-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <h3 style="margin:0; font-size:1.02rem; font-weight:700;"><i data-lucide="triangle-alert"></i> Recent Incidents</h3>
+              <div class="inc-filter-group" style="display:flex; gap:0.25rem;">
+                <button class="btn btn-outline-sm active" onclick="filterIncidents('all', this)" style="padding:0.18rem 0.5rem; font-size:0.7rem; border-radius:6px;">ALL</button>
+                <button class="btn btn-outline-sm" onclick="filterIncidents('active', this)" style="padding:0.18rem 0.5rem; font-size:0.7rem; border-radius:6px; color:#fbbf24;">ONGOING</button>
+                <button class="btn btn-outline-sm" onclick="filterIncidents('resolved', this)" style="padding:0.18rem 0.5rem; font-size:0.7rem; border-radius:6px; color:#34d399;">RESOLVED</button>
+              </div>
+            </div>
             <a href="incidents.html" class="dash-panel-link">View all <i data-lucide="arrow-right"></i></a>
           </div>
           <div id="recent-incidents-list" class="dash-feed">
@@ -188,9 +259,16 @@
       <!-- ===== Proactive Risk Widget ===== -->
       <div style="margin-bottom:1.25rem;">
         <div class="dash-panel">
-          <div class="dash-panel-header">
-            <h3><i data-lucide="shield-alert"></i> Proactive Risk Analysis</h3>
-            <span id="risk-summary-badge" class="badge badge-blue">Analyzing...</span>
+          <div class="dash-panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+              <h3 style="margin:0; font-size:1.02rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
+                <i data-lucide="shield-alert" style="color:#60a5fa; flex-shrink:0;"></i> Proactive Risk Analysis
+              </h3>
+              <p style="margin:0.25rem 0 0 0; font-size:0.75rem; color:#94a3b8; font-weight:500;">
+                Real-time localized threat matrix &amp; sitio vulnerability assessment
+              </p>
+            </div>
+            <span id="risk-summary-badge" class="badge badge-blue" style="flex-shrink:0;">Analyzing...</span>
           </div>
           <div id="risk-widget-body" class="dash-feed" style="padding:.75rem 1.25rem;">
             <div class="skeleton-card" style="padding:0.5rem 0;">
@@ -203,9 +281,9 @@
         </div>
       </div>
 
-      <!-- ===== Quick actions ===== -->
+      <!-- ===== SECTION 4: QUICK ACTIONS ===== -->
       <div class="dash-quick-actions" style="margin-top:1.25rem;">
-        <h3 class="dash-section-title">Quick Actions</h3>
+        <h3 class="dash-section-title" style="margin-top:0;"><i data-lucide="zap"></i> Quick Dispatch Actions</h3>
         <div class="quick-actions-grid">
           <a href="incidents.html" class="quick-action-card" onclick="sessionStorage.setItem('openIncidentModal','1')">
             <div class="qa-icon red"><i data-lucide="plus-circle"></i></div>
@@ -219,19 +297,22 @@
             <div class="qa-icon orange"><i data-lucide="send"></i></div>
             <span>Dispatch Resource</span>
           </a>
-          <a href="map.html" class="quick-action-card">
-            <div class="qa-icon green"><i data-lucide="map-pin"></i></div>
-            <span>Open GIS Map</span>
+          <a href="#" class="quick-action-card" onclick="openManualFallbackModal(); return false;" style="border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.08);">
+            <div class="qa-icon orange" style="background:rgba(245,158,11,0.25);color:#fbbf24;"><i data-lucide="notebook-pen"></i></div>
+            <span style="color:#fbbf24;font-weight:700;">Manual Fallback Encoder</span>
           </a>
         </div>
       </div>
 
-      <!-- ===== Emergency Hotlines Widget ===== -->
-      <div style="margin-top:1.25rem;">
+      <!-- ===== SECTION 5: EMERGENCY COMMUNICATIONS ===== -->
+      <h3 class="dash-section-title"><i data-lucide="phone-call"></i> Emergency Communications Directory</h3>
+      <div style="margin-top:0.5rem;">
         <div class="dash-panel">
-          <div class="dash-panel-header">
+          <div class="dash-panel-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
             <h3><i data-lucide="phone-call"></i> Emergency Hotlines</h3>
-            <a href="directory.html" class="dash-panel-link">Full Directory <i data-lucide="arrow-right"></i></a>
+            <button class="btn btn-sm btn-primary" onclick="openAddHotlineModal()" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.8rem; font-weight:700; padding:0.4rem 0.85rem; border-radius:8px; background:linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%); border:1px solid rgba(59,130,246,0.4); box-shadow:0 2px 8px rgba(37,99,235,0.3); transition:all 0.2s ease;">
+              <i data-lucide="plus" style="width:14px; height:14px;"></i> Add Hotline
+            </button>
           </div>
           <div id="hotlines-widget-body" class="dash-feed" style="padding: 1rem;">
             <!-- skeleton -->
@@ -244,9 +325,530 @@
   </div>
 </div>
 
-<script src="assets/js/api.js"></script>
-<script src="assets/js/auth.js"></script>
-<script src="assets/js/dashboard.js"></script>
+<!-- ======================================================== -->
+<!-- SECTION 9: MANUAL FALLBACK & DATA RECOVERY MODAL         -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="manual-fallback-modal-overlay" onclick="closeManualFallbackModalOutside(event)">
+  <div class="modal" style="max-width:850px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(245,158,11,0.4);box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 35px rgba(245,158,11,0.25);">
+    
+    <div class="modal-header" style="padding:1.2rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.95));border-bottom:1px solid rgba(245,158,11,0.3);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);display:flex;align-items:center;justify-content:center;color:#fbbf24;">
+          <i data-lucide="notebook-pen" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:#fff;margin:0;">Post-Event Manual Fallback &amp; Data Recovery Portal</h3>
+          <div style="font-size:.74rem;color:#fbbf24;margin-top:.1rem;">Mandatory 24-Hour Post-Hardware Failure Data Recovery Protocol</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeManualFallbackModal()"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="modal-body" style="padding:1.5rem;background:var(--bg-main);max-height:80vh;overflow-y:auto;">
+
+      <!-- Module Selection Tabs -->
+      <div class="tab-bar" style="margin-bottom:1.25rem;">
+        <button class="tab-btn active" id="man-tab-btn-incident" onclick="switchManualModuleTab('incident')">
+          <i data-lucide="triangle-alert"></i> Incident Logbook
+        </button>
+        <button class="tab-btn" id="man-tab-btn-dispatch" onclick="switchManualModuleTab('dispatch')">
+          <i data-lucide="truck"></i> Dispatch Ledger
+        </button>
+        <button class="tab-btn" id="man-tab-btn-facility" onclick="switchManualModuleTab('facility')">
+          <i data-lucide="house"></i> Facility Audit Ledger
+        </button>
+        <button class="tab-btn" id="man-tab-btn-evacuee" onclick="switchManualModuleTab('evacuee')">
+          <i data-lucide="users"></i> Evacuee Logbook
+        </button>
+      </div>
+
+      <!-- 9.2 Incident Logbook Form -->
+      <div id="man-form-pane-incident">
+        <form onsubmit="submitManualIncidentLog(event)">
+          <!-- Visual Category Selector Cards -->
+          <div style="margin-bottom: 1.2rem;">
+            <label class="form-label" style="display:flex; align-items:center; gap:0.4rem;">
+              <i data-lucide="shield-alert" style="width:14px; height:14px; color:#60a5fa;"></i> Incident Category <span style="color:#ef4444;">*</span>
+            </label>
+            <select id="man-inc-type" style="display:none;" required>
+              <option value="flood" selected>Flooding</option>
+              <option value="landslide">Landslide</option>
+              <option value="fire">Fire Incident</option>
+              <option value="road_accident">Road Accident</option>
+              <option value="medical">Medical Emergency</option>
+              <option value="other">Other Incident</option>
+            </select>
+
+            <div class="type-card-grid">
+              <div class="type-card-item active" data-val="flood" onclick="selectTypeCardManual('flood')">
+                <i data-lucide="waves" class="type-card-icon"></i>
+                <span class="type-card-label">Flooding</span>
+              </div>
+              <div class="type-card-item" data-val="landslide" onclick="selectTypeCardManual('landslide')">
+                <i data-lucide="mountain" class="type-card-icon"></i>
+                <span class="type-card-label">Landslide</span>
+              </div>
+              <div class="type-card-item" data-val="fire" onclick="selectTypeCardManual('fire')">
+                <i data-lucide="flame" class="type-card-icon"></i>
+                <span class="type-card-label">Fire</span>
+              </div>
+              <div class="type-card-item" data-val="road_accident" onclick="selectTypeCardManual('road_accident')">
+                <i data-lucide="car" class="type-card-icon"></i>
+                <span class="type-card-label">Accident</span>
+              </div>
+              <div class="type-card-item" data-val="medical" onclick="selectTypeCardManual('medical')">
+                <i data-lucide="ambulance" class="type-card-icon"></i>
+                <span class="type-card-label">Medical</span>
+              </div>
+              <div class="type-card-item" data-val="other" onclick="selectTypeCardManual('other')">
+                <i data-lucide="help-circle" class="type-card-icon"></i>
+                <span class="type-card-label">Other</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+            <div>
+              <label class="form-label" style="display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="map-pin" style="width:14px; height:14px; color:#60a5fa;"></i> Location / Sitio Address <span style="color:#ef4444;">*</span>
+              </label>
+              <input type="text" id="man-inc-location" class="form-input" placeholder="e.g. Sitio 2 Coastal Alley 4" required />
+            </div>
+
+            <div>
+              <label class="form-label" style="display:flex; align-items:center; gap:0.4rem; color:#fbbf24;">
+                <i data-lucide="clock" style="width:14px; height:14px; color:#fbbf24;"></i> Actual Occurrence Timestamp <span style="color:#ef4444;">*</span>
+              </label>
+              <input type="datetime-local" id="man-inc-timestamp" class="form-input" style="border-color:rgba(245,158,11,0.5);" required />
+            </div>
+          </div>
+
+          <!-- Casualty Status Triage Selector -->
+          <div style="margin-bottom: 1.2rem;">
+            <label class="form-label" style="display:flex; align-items:center; gap:0.4rem;">
+              <i data-lucide="activity" style="width:14px; height:14px; color:#60a5fa;"></i> Casualty Status Triage
+            </label>
+            <select id="man-inc-casualties" style="display:none;">
+              <option value="none" selected>None (0 Casualties)</option>
+              <option value="minor">Injuries Treated On-Site</option>
+              <option value="severe">Hospital Transfer Needed</option>
+              <option value="fatal">Fatalities Reported</option>
+            </select>
+
+            <div class="triage-grid-manual">
+              <div class="triage-btn-manual active" data-val="none" onclick="selectCasualtyCardManual('none')">
+                None (0 Casualties)
+              </div>
+              <div class="triage-btn-manual" data-val="minor" onclick="selectCasualtyCardManual('minor')">
+                Minor / On-Site
+              </div>
+              <div class="triage-btn-manual" data-val="severe" onclick="selectCasualtyCardManual('severe')">
+                Hospital Transfer
+              </div>
+              <div class="triage-btn-manual" data-val="fatal" onclick="selectCasualtyCardManual('fatal')">
+                Fatalities Reported
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:1.2rem;">
+            <label class="form-label" style="display:flex; align-items:center; gap:0.4rem;">
+              <i data-lucide="file-text" style="width:14px; height:14px; color:#60a5fa;"></i> Description &amp; Action Taken <span style="color:#ef4444;">*</span>
+            </label>
+            <textarea id="man-inc-desc" class="form-input" rows="3" placeholder="Captured from Emergency Incident Logbook paper records..." required></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.5); padding:0.85rem 1.1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:0.6rem; flex:1; max-width:320px;">
+              <i data-lucide="user-check" style="width:16px; height:16px; color:#94a3b8;"></i>
+              <input type="text" id="man-inc-officer" class="form-input" style="padding:0.5rem 0.75rem;" placeholder="Encoding Officer Name" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:800; border:none; padding:0.6rem 1.35rem; border-radius:8px; box-shadow:0 4px 15px rgba(245,158,11,0.35); display:inline-flex; align-items:center; gap:0.45rem;">
+              <i data-lucide="save"></i> Encode Manual Incident
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 9.2 Resource Dispatch Ledger Form -->
+      <div id="man-form-pane-dispatch" style="display:none;">
+        <form onsubmit="submitManualDispatchLog(event)" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label class="form-label">Property Number *</label>
+            <input type="text" id="man-dsp-propno" class="form-input" placeholder="e.g. PR-2026-009" required />
+          </div>
+          <div>
+            <label class="form-label">Asset Name *</label>
+            <input type="text" id="man-dsp-asset" class="form-input" placeholder="e.g. Inflatable Rubber Boat 1" required />
+          </div>
+          <div>
+            <label class="form-label">Assigned Personnel Name *</label>
+            <input type="text" id="man-dsp-personnel" class="form-input" placeholder="e.g. Tanod V. Cruz" required />
+          </div>
+          <div>
+            <label class="form-label">Destination Address *</label>
+            <input type="text" id="man-dsp-dest" class="form-input" placeholder="e.g. Sitio 2 Riverside" required />
+          </div>
+          <div>
+            <label class="form-label">Time Out (Actual)</label>
+            <input type="datetime-local" id="man-dsp-timeout" class="form-input" />
+          </div>
+          <div>
+            <label class="form-label">Expected Return Time</label>
+            <input type="datetime-local" id="man-dsp-timereturn" class="form-input" />
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label class="form-label" style="color:#fbbf24;">Mandated Actual Occurrence Timestamp *</label>
+            <input type="datetime-local" id="man-dsp-timestamp" class="form-input" style="border-color:rgba(245,158,11,0.5);" required />
+          </div>
+          <div style="grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;">
+            <input type="text" id="man-dsp-officer" class="form-input" style="max-width:250px;" placeholder="Encoding Officer Name" />
+            <button type="submit" class="btn btn-primary" style="background:#f59e0b;color:#000;font-weight:700;">
+              <i data-lucide="save"></i> Encode Dispatch Ledger
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 9.2 Facility Audit Ledger Form -->
+      <div id="man-form-pane-facility" style="display:none;">
+        <form onsubmit="submitManualFacilityAudit(event)" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label class="form-label">Facility / Center Name *</label>
+            <input type="text" id="man-fac-center" class="form-input" placeholder="e.g. Linao Central Elementary" required />
+          </div>
+          <div>
+            <label class="form-label">Operational Status *</label>
+            <select id="man-fac-status" class="form-input" required>
+              <option value="Operational">Operational</option>
+              <option value="Capacity Near Full">Capacity Near Full</option>
+              <option value="Maintenance Issue">Maintenance Issue</option>
+              <option value="Decommissioned">Decommissioned</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Water Supply Status</label>
+            <select id="man-fac-water" class="form-input">
+              <option value="Operational">Operational</option>
+              <option value="Deficient">Deficient / Tanker Needed</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Power Status</label>
+            <select id="man-fac-power" class="form-input">
+              <option value="Grid Power Operational">Grid Power Operational</option>
+              <option value="Generator Backup Operational">Generator Backup Operational</option>
+              <option value="Power Blackout">Power Blackout</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Latrine / Sanitation Facilities</label>
+            <select id="man-fac-latrine" class="form-input">
+              <option value="Operational">Operational</option>
+              <option value="Deficient">Deficient / Needs Servicing</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="color:#fbbf24;">Mandated Actual Occurrence Timestamp *</label>
+            <input type="datetime-local" id="man-fac-timestamp" class="form-input" style="border-color:rgba(245,158,11,0.5);" required />
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label class="form-label">JMC2 Audit Checklist Summary</label>
+            <textarea id="man-fac-jmc2" class="form-input" rows="2" placeholder="Notes from paper Facility Audit Ledger..."></textarea>
+          </div>
+          <div style="grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;">
+            <input type="text" id="man-fac-officer" class="form-input" style="max-width:250px;" placeholder="Encoding Officer Name" />
+            <button type="submit" class="btn btn-primary" style="background:#f59e0b;color:#000;font-weight:700;">
+              <i data-lucide="save"></i> Encode Facility Audit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 9.2 Evacuee Logbook Form -->
+      <div id="man-form-pane-evacuee" style="display:none;">
+        <form onsubmit="submitManualEvacueeLog(event)" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label class="form-label">Head of Family Name *</label>
+            <input type="text" id="man-evc-head" class="form-input" placeholder="e.g. Pedro Penduko" required />
+          </div>
+          <div>
+            <label class="form-label">Total Family Members *</label>
+            <input type="number" id="man-evc-members" class="form-input" value="4" min="1" required />
+          </div>
+          <div>
+            <label class="form-label">Contact Number</label>
+            <input type="text" id="man-evc-contact" class="form-input" placeholder="e.g. 0917-000-1111" />
+          </div>
+          <div>
+            <label class="form-label">Disaster Event Link</label>
+            <input type="text" id="man-evc-event" class="form-input" value="Typhoon Kristine" required />
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label class="form-label">Vulnerability Triage Tags (Paper Logbook Checkboxes)</label>
+            <div style="display:flex;gap:1rem;margin-top:.3rem;">
+              <label style="font-size:.82rem;"><input type="checkbox" id="man-evc-infant" /> Infant (<2 yrs)</label>
+              <label style="font-size:.82rem;"><input type="checkbox" id="man-evc-senior" /> Senior (60+ yrs)</label>
+              <label style="font-size:.82rem;"><input type="checkbox" id="man-evc-pwd" /> PWD</label>
+              <label style="font-size:.82rem;"><input type="checkbox" id="man-evc-pregnant" /> Pregnant / Lactating</label>
+            </div>
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label class="form-label" style="color:#fbbf24;">Mandated Actual Occurrence Timestamp *</label>
+            <input type="datetime-local" id="man-evc-timestamp" class="form-input" style="border-color:rgba(245,158,11,0.5);" required />
+          </div>
+          <div style="grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;">
+            <input type="text" id="man-evc-officer" class="form-input" style="max-width:250px;" placeholder="Encoding Officer Name" />
+            <button type="submit" class="btn btn-primary" style="background:#f59e0b;color:#000;font-weight:700;">
+              <i data-lucide="save"></i> Encode Evacuee Logbook
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div style="height:1px;background:var(--border-color);margin:1.5rem 0;"></div>
+
+      <!-- Audit Trail Table of Encoded Manual Entries -->
+      <h4 style="font-size:.9rem;font-weight:700;color:var(--text-main);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="shield-check" style="color:#fbbf24;"></i> Post-Event Encoded Audit Trail
+      </h4>
+
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Audit Tag</th>
+            <th>Module</th>
+            <th>Summary Title</th>
+            <th>Actual Occurrence Time</th>
+            <th>Encoded At</th>
+            <th>24h SLA Status</th>
+          </tr>
+        </thead>
+        <tbody id="manual-audit-tbody">
+          <tr>
+            <td colspan="6" style="text-align:center;padding:1.2rem;color:var(--text-muted);">No post-event manual entries encoded yet.</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- ITEM DETAILS MODAL 1: INCIDENT DETAILS MODAL             -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="incident-detail-modal" onclick="if(event.target===this) closeIncidentDetailModal()">
+  <div class="modal" style="max-width:550px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); background:rgba(15,23,42,0.95); backdrop-filter:blur(24px); box-shadow:0 25px 60px rgba(0,0,0,0.8);">
+    <div class="modal-header" style="padding:1.2rem 1.5rem; background:rgba(15,23,42,0.8); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:0.65rem;">
+        <div style="width:36px; height:36px; border-radius:10px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; color:#f87171;">
+          <i data-lucide="triangle-alert" style="width:20px; height:20px;"></i>
+        </div>
+        <h3 style="font-size:1.1rem; font-weight:800; color:#fff; margin:0;">Emergency Incident Details</h3>
+      </div>
+      <button class="modal-close" onclick="closeIncidentDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem; color:#cbd5e1; font-size:0.9rem;">
+      <div id="inc-modal-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:1rem 1.5rem; background:rgba(15,23,42,0.6); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+      <a href="incidents.html" class="btn btn-outline-sm" style="border-color:rgba(59,130,246,0.4); color:#60a5fa; font-weight:700;">
+        <i data-lucide="external-link"></i> Full Incidents Module
+      </a>
+      <button class="btn btn-primary btn-sm" onclick="closeIncidentDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- ITEM DETAILS MODAL 2: EVACUATION CENTER DETAILS MODAL    -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="evac-detail-modal" onclick="if(event.target===this) closeEvacDetailModal()">
+  <div class="modal" style="max-width:550px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); background:rgba(15,23,42,0.95); backdrop-filter:blur(24px); box-shadow:0 25px 60px rgba(0,0,0,0.8);">
+    <div class="modal-header" style="padding:1.2rem 1.5rem; background:rgba(15,23,42,0.8); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:0.65rem;">
+        <div style="width:36px; height:36px; border-radius:10px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); display:flex; align-items:center; justify-content:center; color:#60a5fa;">
+          <i data-lucide="house" style="width:20px; height:20px;"></i>
+        </div>
+        <h3 style="font-size:1.1rem; font-weight:800; color:#fff; margin:0;">Evacuation Shelter Details</h3>
+      </div>
+      <button class="modal-close" onclick="closeEvacDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem; color:#cbd5e1; font-size:0.9rem;">
+      <div id="evac-modal-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:1rem 1.5rem; background:rgba(15,23,42,0.6); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+      <a href="evacuation.html" class="btn btn-outline-sm" style="border-color:rgba(59,130,246,0.4); color:#60a5fa; font-weight:700;">
+        <i data-lucide="external-link"></i> Manage Evacuation Module
+      </a>
+      <button class="btn btn-primary btn-sm" onclick="closeEvacDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- ITEM DETAILS MODAL 3: PROACTIVE RISK ZONE MODAL          -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="risk-detail-modal" onclick="if(event.target===this) closeRiskDetailModal()">
+  <div class="modal" style="max-width:550px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); background:rgba(15,23,42,0.95); backdrop-filter:blur(24px); box-shadow:0 25px 60px rgba(0,0,0,0.8);">
+    <div class="modal-header" style="padding:1.2rem 1.5rem; background:rgba(15,23,42,0.8); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:0.65rem;">
+        <div style="width:36px; height:36px; border-radius:10px; background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); display:flex; align-items:center; justify-content:center; color:#fbbf24;">
+          <i data-lucide="shield-alert" style="width:20px; height:20px;"></i>
+        </div>
+        <h3 style="font-size:1.1rem; font-weight:800; color:#fff; margin:0;">Proactive Risk &amp; Threat Matrix</h3>
+      </div>
+      <button class="modal-close" onclick="closeRiskDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.5rem; color:#cbd5e1; font-size:0.9rem;">
+      <div id="risk-modal-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:1rem 1.5rem; background:rgba(15,23,42,0.6); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+      <a href="map.html" class="btn btn-outline-sm" style="border-color:rgba(59,130,246,0.4); color:#60a5fa; font-weight:700;">
+        <i data-lucide="map-pin"></i> Open GIS Map Heatmap
+      </a>
+      <button class="btn btn-primary btn-sm" onclick="closeRiskDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- ADD EMERGENCY HOTLINE MODAL                              -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="add-hotline-modal-overlay" onclick="if(event.target===this) closeAddHotlineModal()">
+  <div class="modal" style="max-width:540px; border-radius:18px; overflow:hidden; border:1px solid rgba(59,130,246,0.35); background:linear-gradient(165deg, rgba(15,23,42,0.97) 0%, rgba(30,41,59,0.96) 100%); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 30px 70px rgba(0,0,0,0.85), 0 0 45px rgba(59,130,246,0.22);">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.25rem 1.6rem; background:linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.95)); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.25), rgba(37,99,235,0.35)); border:1px solid rgba(96,165,250,0.5); display:flex; align-items:center; justify-content:center; color:#60a5fa; box-shadow:0 4px 14px rgba(59,130,246,0.3);">
+          <i data-lucide="phone-call" style="width:22px; height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.15rem; font-weight:800; color:#fff; margin:0; letter-spacing:0.01em;">Add Emergency Hotline</h3>
+          <div style="font-size:.76rem; color:#94a3b8; margin-top:.15rem; font-weight:500;">Register a new emergency contact for Barangay Linao</div>
+        </div>
+      </div>
+    </div>
+
+    <form onsubmit="submitAddHotline(event)">
+      <div class="modal-body" style="padding:1.6rem; display:flex; flex-direction:column; gap:1.25rem;">
+        
+        <!-- Quick Autofill Banner -->
+        <div style="background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(217,119,6,0.18)); border: 1px solid rgba(245,158,11,0.35); border-radius: 12px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; box-shadow: 0 4px 14px rgba(0,0,0,0.2);">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(245,158,11,0.25); display: flex; align-items: center; justify-content: center; color: #fbbf24;">
+              <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: #fef08a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">Demo Helper</div>
+              <div style="font-size: 0.73rem; color: #fcd34d;">Fill form with 1-click test details</div>
+            </div>
+          </div>
+          <button type="button" onclick="autofillAddHotline()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; font-weight: 800; font-size: 0.78rem; padding: 0.4rem 0.85rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(245,158,11,0.4); display: inline-flex; align-items: center; gap: 0.35rem;" onmouseover="this.style.transform='scale(1.03)';" onmouseout="this.style.transform='scale(1)';">
+            ⚡ Quick Autofill
+          </button>
+        </div>
+
+        <div>
+          <label class="form-label" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; margin-bottom:0.45rem; color:#93c5fd; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+            <i data-lucide="building-2" style="width:15px; height:15px; color:#60a5fa;"></i> Agency / Organization Name <span style="color:#ef4444;">*</span>
+          </label>
+          <input type="text" id="hotline-add-name" class="form-control" placeholder="e.g. BDRRMC Rescue Team Alpha / City Health" required style="width:100%;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.1rem;">
+          <div>
+            <label class="form-label" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; margin-bottom:0.45rem; color:#93c5fd; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+              <i data-lucide="tag" style="width:15px; height:15px; color:#60a5fa;"></i> Category <span style="color:#ef4444;">*</span>
+            </label>
+            <select id="hotline-add-category" class="form-control" required style="width:100%;">
+              <option value="command" selected>Command &amp; Disaster</option>
+              <option value="fire">Fire &amp; Rescue</option>
+              <option value="medical">Medical &amp; Hospital</option>
+              <option value="police">Police &amp; Security</option>
+              <option value="other">Other / Support</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; margin-bottom:0.45rem; color:#93c5fd; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+              <i data-lucide="phone" style="width:15px; height:15px; color:#60a5fa;"></i> Primary Hotline <span style="color:#ef4444;">*</span>
+            </label>
+            <input type="text" id="hotline-add-number" class="form-control" placeholder="e.g. 0917-123-4567 / (053) 561-0000" required style="width:100%;">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.1rem;">
+          <div>
+            <label class="form-label" style="display:flex; align-items:center; gap:0.45rem; font-weight:600; margin-bottom:0.45rem; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+              <i data-lucide="phone-forwarded" style="width:15px; height:15px; color:#64748b;"></i> Secondary Hotline
+            </label>
+            <input type="text" id="hotline-add-secondary" class="form-control" placeholder="e.g. 911 / Alt number (optional)" style="width:100%;">
+          </div>
+          <div>
+            <label class="form-label" style="display:flex; align-items:center; gap:0.45rem; font-weight:600; margin-bottom:0.45rem; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">
+              <i data-lucide="map-pin" style="width:15px; height:15px; color:#64748b;"></i> Location / Address
+            </label>
+            <input type="text" id="hotline-add-address" class="form-control" placeholder="e.g. Sitio 2, Brgy Linao (optional)" style="width:100%;">
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="modal-footer" style="padding:1.1rem 1.6rem; background:rgba(15,23,42,0.6); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; gap:0.85rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeAddHotlineModal()" style="border-radius:10px; font-weight:700; padding:0.6rem 1.2rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1;">Cancel</button>
+        <button type="submit" id="hotline-add-submit-btn" class="btn btn-primary" style="border-radius:10px; font-weight:800; padding:0.6rem 1.4rem; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border:1px solid rgba(96,165,250,0.5); box-shadow:0 4px 18px rgba(59,130,246,0.4); color:#ffffff; display:inline-flex; align-items:center; gap:0.45rem;">
+          <i data-lucide="check"></i> Save Hotline
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- VIEW EMERGENCY HOTLINE DETAILS MODAL                      -->
+<!-- ======================================================== -->
+<div class="modal-overlay" id="view-hotline-modal-overlay" onclick="if(event.target===this) closeViewHotlineModal()">
+  <div class="modal" style="max-width:500px; border-radius:18px; overflow:hidden; border:1px solid rgba(59,130,246,0.35); background:linear-gradient(165deg, rgba(15,23,42,0.97) 0%, rgba(30,41,59,0.96) 100%); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 30px 70px rgba(0,0,0,0.85), 0 0 45px rgba(59,130,246,0.22);">
+    
+    <div class="modal-header" style="padding:1.25rem 1.6rem; background:linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.95)); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.25), rgba(37,99,235,0.35)); border:1px solid rgba(96,165,250,0.5); display:flex; align-items:center; justify-content:center; color:#60a5fa; box-shadow:0 4px 14px rgba(59,130,246,0.3);">
+          <i data-lucide="phone-call" style="width:22px; height:22px;"></i>
+        </div>
+        <div>
+          <h3 id="view-hotline-title" style="font-size:1.15rem; font-weight:800; color:#fff; margin:0; letter-spacing:0.01em;">Emergency Hotline</h3>
+          <div id="view-hotline-sub" style="font-size:.76rem; color:#60a5fa; margin-top:.15rem; font-weight:600;">Official Contact Details</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body" id="view-hotline-body" style="padding:1.6rem; display:flex; flex-direction:column; gap:1.1rem;">
+      <!-- Content populated dynamically -->
+    </div>
+    
+    <div class="modal-footer" style="padding:1.1rem 1.6rem; background:rgba(15,23,42,0.6); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; gap:0.85rem;">
+      <button type="button" class="btn btn-secondary" onclick="closeViewHotlineModal()" style="border-radius:10px; font-weight:700; padding:0.6rem 1.2rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1;">Close</button>
+      <a id="view-hotline-call-btn" href="#" class="btn btn-primary" style="border-radius:10px; font-weight:800; padding:0.6rem 1.4rem; background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border:1px solid rgba(96,165,250,0.5); box-shadow:0 4px 18px rgba(59,130,246,0.4); color:#ffffff; display:inline-flex; align-items:center; gap:0.45rem; text-decoration:none;">
+        <i data-lucide="phone-call"></i> Call Hotline
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/api.js?v=4.1"></script>
+<script src="assets/js/auth.js?v=4.1"></script>
+<script src="assets/js/dashboard.js?v=4.6"></script>
+<script src="assets/js/manual-fallback.js?v=4.1"></script>
+<script src="assets/js/i18n.js?v=4.1"></script>
+<script src="assets/js/weather.js?v=4.1"></script>
 <script>
   requireAuth();
   const user = getUser();
@@ -257,8 +859,8 @@
   lucide.createIcons();
   loadDashboard();
 
-  // Auto-refresh every 60 seconds
-  setInterval(loadDashboard, 60000);
+  // Auto-refresh every 5 minutes (300,000 ms)
+  setInterval(loadDashboard, 300000);
 
   // Open incident modal if redirected from quick action
   if (sessionStorage.getItem('openIncidentModal')) {

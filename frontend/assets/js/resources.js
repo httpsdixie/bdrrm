@@ -269,7 +269,7 @@ function addActivityLogEntry(entry) {
   const log = {
     id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     resource_name: entry.resource_name || entry.resource || 'Unknown Resource',
-    resource_type: entry.resource_type || entry.type || 'equipment',
+    resource_type: entry.resource_type || entry.resource_type || 'equipment',
     event_type: entry.event_type,
     qty_change: entry.qty_change != null ? entry.qty_change : null,
     qty_before: entry.qty_before != null ? entry.qty_before : null,
@@ -282,76 +282,8 @@ function addActivityLogEntry(entry) {
 
   pendingActivityLogs.unshift(log);
   allLogs.unshift(log);
-  if (typeof filterLogs === 'function') filterLogs();
+  if (document.getElementById('log-search')) filterLogs();
 }
-
-const FALLBACK_LOGS = [
-  {
-    id: "log-1",
-    resource_name: "Heavy-Duty Diesel Generator 10kVA",
-    resource_type: "equipment",
-    event_type: "restocked",
-    qty_change: 2,
-    qty_before: 3,
-    qty_after: 5,
-    new_status: "available",
-    description: "Annual DRRM budget allocation - 2 unit 10kVA generators restocked to Barangay Main Depot",
-    performed_by_name: "Captain Rodriguez",
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString()
-  },
-  {
-    id: "log-2",
-    resource_name: "Motorized Rescue Flatboat B-1",
-    resource_type: "vehicle",
-    event_type: "dispatched",
-    qty_change: -1,
-    qty_before: 3,
-    qty_after: 2,
-    new_status: "in_use",
-    description: "Dispatched to Sitio 2 Shoreline for coastal flood monitoring",
-    performed_by_name: "Officer Tanod",
-    created_at: new Date(Date.now() - 3600000 * 6).toISOString()
-  },
-  {
-    id: "log-3",
-    resource_name: "Emergency First Aid Responder Kits",
-    resource_type: "medical",
-    event_type: "added",
-    qty_change: 15,
-    qty_before: 25,
-    qty_after: 40,
-    new_status: "available",
-    description: "Medical supplies restocked for typhoons and triage operations",
-    performed_by_name: "Health Officer Maria",
-    created_at: new Date(Date.now() - 3600000 * 18).toISOString()
-  },
-  {
-    id: "log-4",
-    resource_name: "High-Powered Stihl Chain Saw",
-    resource_type: "equipment",
-    event_type: "returned",
-    qty_change: 1,
-    qty_before: 1,
-    qty_after: 2,
-    new_status: "available",
-    description: "Returned after clearing fallen tree debris on Main Road",
-    performed_by_name: "Tanod Maintenance",
-    created_at: new Date(Date.now() - 3600000 * 28).toISOString()
-  },
-  {
-    id: "log-5",
-    resource_name: "High-Visibility Adult Life Vests",
-    resource_type: "supplies",
-    event_type: "status_changed",
-    qty_change: 0,
-    qty_before: 50,
-    qty_after: 50,
-    new_status: "maintenance",
-    description: "Scheduled safety inspect & strap check for water rescue vests",
-    performed_by_name: "Supply Officer Reyes",
-    created_at: new Date(Date.now() - 3600000 * 48).toISOString()
-  }
-];
 
 async function loadResourceLogs() {
   const tbody = document.getElementById('logs-tbody');
@@ -382,15 +314,11 @@ async function loadResourceLogs() {
   try {
     allLogs = await apiFetch('/resources/logs?limit=500');
     if (!allLogs || !allLogs.length) {
-      allLogs = [...FALLBACK_LOGS];
+      allLogs = [];
     }
   } catch (err) {
-    console.warn('Backend activity log endpoint unreachable, using fallback activity logs:', err);
-    allLogs = [...FALLBACK_LOGS];
-  }
-
-  if (pendingActivityLogs.length) {
-    allLogs = [...pendingActivityLogs, ...allLogs];
+    console.warn('Failed to load resource logs:', err);
+    allLogs = [];
   }
 
   logPagination.filtered = [...allLogs];
@@ -913,81 +841,6 @@ function showResourcesSkeletons() {
   }
 }
 
-const FALLBACK_RESOURCES = [
-  {
-    id: "res-1",
-    name: "Submersible De-Watering Trash Pump (Heavy Duty)",
-    category: "flooding",
-    applicable_hazards: ["flooding", "typhoon", "general_emergency"],
-    type: "other",
-    quantity: 6,
-    available_quantity: 6,
-    status: "available",
-    property_code: "BRG-2026-1001",
-    location: "Barangay Operations Depot"
-  },
-  {
-    id: "res-2",
-    name: "Inflatable Water Rescue Boat (Motorized)",
-    category: "flooding",
-    applicable_hazards: ["flooding", "typhoon", "search_rescue"],
-    type: "rescue_boat",
-    quantity: 4,
-    available_quantity: 3,
-    status: "available",
-    property_code: "BRG-2026-1002",
-    location: "Barangay Operations Center Storage"
-  },
-  {
-    id: "res-3",
-    name: "Emergency First Aid Trauma Kit",
-    category: "medical",
-    applicable_hazards: ["medical", "general_emergency"],
-    type: "medical_kit",
-    quantity: 25,
-    available_quantity: 18,
-    status: "available",
-    property_code: "BRG-2026-1003",
-    location: "Barangay Health Station (BHS)"
-  },
-  {
-    id: "res-4",
-    name: "Heavy-Duty Chainsaw (Fallen Tree Removal)",
-    category: "typhoon",
-    applicable_hazards: ["typhoon", "landslide", "earthquake"],
-    type: "other",
-    quantity: 4,
-    available_quantity: 4,
-    status: "available",
-    property_code: "BRG-2026-1004",
-    location: "Barangay Operations Center Storage"
-  },
-  {
-    id: "res-5",
-    name: "Portable Electric Generator (5kVA Solar-Hybrid)",
-    category: "power_outage",
-    applicable_hazards: ["power_outage", "typhoon", "flooding", "general_emergency"],
-    type: "other",
-    quantity: 3,
-    available_quantity: 3,
-    status: "available",
-    property_code: "BRG-2026-1005",
-    location: "Evacuation Center Depot"
-  },
-  {
-    id: "res-6",
-    name: "BFP Fire Extinguisher (ABC Dry Chemical 10kg)",
-    category: "fire",
-    applicable_hazards: ["fire", "general_emergency"],
-    type: "other",
-    quantity: 15,
-    available_quantity: 15,
-    status: "available",
-    property_code: "BRG-2026-1006",
-    location: "Barangay Hall Fire Cabinet"
-  }
-];
-
 let resPagination = { currentPage: 1, pageSize: 10, filtered: [] };
 let dispatchPagination = { currentPage: 1, pageSize: 10, filtered: [] };
 
@@ -1000,9 +853,9 @@ async function loadResources() {
     renderResourceSummary(allResources);
     filterResources();
   } catch (err) {
-    console.warn('Backend unavailable, using fallback resources:', err);
-    allResources = [...FALLBACK_RESOURCES];
-    renderResourceSummary(allResources);
+    console.warn('Failed to load resources:', err);
+    allResources = [];
+    renderResourceSummary([]);
     filterResources();
   } finally {
     if (btn) btn.classList.remove('spinning');
@@ -1164,8 +1017,7 @@ function renderResourceTable(data) {
       <td style="text-align:right;">
         ${canEdit
           ? `<div class="table-actions" style="justify-content:flex-end;" onclick="event.stopPropagation()">
-              <button class="action-btn action-btn-primary" title="Issue Dispatch Ticket" onclick="event.stopPropagation();openDispatchModalFor('${r.id}')"><i data-lucide="send"></i></button>
-              <button class="action-btn action-btn-warning" title="Log Maintenance" onclick="event.stopPropagation();openMaintenanceTicketModal('${r.id}')"><i data-lucide="wrench"></i></button>
+              <button class="action-btn action-btn-primary" title="Edit Resource" onclick="event.stopPropagation();openEditResourceModalById('${r.id}')"><i data-lucide="pencil"></i></button>
             </div>`
           : '<span style="color:var(--text-muted);font-size:.8rem;">—</span>'}
       </td>
@@ -1273,8 +1125,8 @@ function setWizardStep(step) {
   }
 
   // Footer Navigation Buttons
-  const prevBtn   = document.getElementById('wizard-btn-prev');
-  const nextBtn   = document.getElementById('wizard-btn-next');
+  const prevBtn   = document.getElementById('resource-wizard-btn-prev');
+  const nextBtn   = document.getElementById('resource-wizard-btn-next');
   const submitBtn = document.getElementById('resource-submit-btn');
 
   if (prevBtn) prevBtn.style.visibility = step === 1 ? 'hidden' : 'visible';
@@ -1409,6 +1261,21 @@ function updateAssetSummaryPreview() {
   lucide.createIcons();
 }
 
+function calculateDepreciationPreview() {
+  // Simplified: Net Book Value = Acquisition Cost - Accumulated Depreciation
+  const acqCostEl = document.getElementById('r-acq-cost');
+  const accDepEl  = document.getElementById('r-acc-dep');
+  const nbvEl     = document.getElementById('r-net-book');
+  if (!acqCostEl || !accDepEl || !nbvEl) return;
+
+  const cost = parseFloat(acqCostEl.value) || 0;
+  const accDep = parseFloat(accDepEl.value) || 0;
+  const nbv = Math.max(0, cost - accDep);
+  nbvEl.value = nbv.toFixed(2);
+
+  updateAssetSummaryPreview();
+}
+
 async function autoGenResourceCode() {
   try {
     const res = await apiFetch('/resources/generate/code');
@@ -1426,18 +1293,37 @@ async function autoGenResourceCode() {
 
 function openAddResourceModal() {
   editingResourceId = null;
-  document.getElementById('resource-modal-title').innerHTML = '<i data-lucide="package"></i> Add Resource (Step-by-Step Wizard)';
-  document.getElementById('resource-submit-label').textContent = 'Save Resource';
-  document.getElementById('resource-form').reset();
-  document.getElementById('r-id').value = '';
-  if (document.getElementById('r-ownership')) document.getElementById('r-ownership').value = 'barangay';
-  document.getElementById('resource-error').style.display = 'none';
+  const titleEl = document.getElementById('resource-modal-title');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="plus-circle" style="color:var(--primary);width:22px;height:22px;"></i> Add New Resource';
+  const labelEl = document.getElementById('resource-submit-label');
+  if (labelEl) labelEl.textContent = 'Save Resource';
+  
+  const formEl = document.getElementById('resource-form');
+  if (formEl) formEl.reset();
+  // Ensure responsibility center default and clear monetary fields for new entries
+  const respEl = document.getElementById('r-resp-center');
+  if (respEl) { try { respEl.value = 'Linao'; } catch(e) { /* ignore */ } }
+  const idEl = document.getElementById('r-id');
+  if (idEl) idEl.value = '';
+  const accDepEl = document.getElementById('r-acc-dep');
+  if (accDepEl) accDepEl.value = '';
+  const nbvEl = document.getElementById('r-net-book');
+  if (nbvEl) nbvEl.value = '';
+  const errEl = document.getElementById('resource-error');
+  if (errEl) errEl.style.display = 'none';
 
-  // Default hazard tags for new resource
-  selectedModalHazards = ['flooding', 'typhoon'];
-  renderHazardTagPicker();
+  // Clear hazard tags for new entry (harmless if tags UI not present)
+  selectedModalHazards = [];
+  try { renderHazardTagPicker(); } catch (e) { /* ignore */ }
 
-  setWizardStep(1);
+  // Hide multi-step wizard UI and show the Save button for the simplified form
+  const stepper = document.querySelector('.wizard-stepper'); if (stepper) stepper.style.display = 'none';
+  const prevBtn = document.getElementById('resource-wizard-btn-prev'); if (prevBtn) prevBtn.style.display = 'none';
+  const nextBtn = document.getElementById('resource-wizard-btn-next'); if (nextBtn) nextBtn.style.display = 'none';
+  const submitBtn = document.getElementById('resource-submit-btn'); if (submitBtn) submitBtn.style.display = 'inline-flex';
+
+  // Initialize form and auto-generate property code
+  try { setWizardStep(1); } catch(e) { /* ignore if wizard functions removed */ }
   autoGenResourceCode();
   document.getElementById('resource-modal-overlay').classList.add('active');
   lucide.createIcons();
@@ -1474,72 +1360,57 @@ function closeResourceModal() {
   currentWizardStep = 1;
 }
 
+// Helper: open edit modal by resource id (simplified single action for UI)
+function openEditResourceModalById(id) {
+  const r = allResources.find(x => x.id === id);
+  if (!r) return;
+  openEditResourceModal(r);
+}
+
 function closeResourceModalOutside(e) {
   if (e.target === document.getElementById('resource-modal-overlay')) closeResourceModal();
 }
 
 async function submitResource() {
   const errorEl  = document.getElementById('resource-error');
-  errorEl.style.display = 'none';
+  if (errorEl) errorEl.style.display = 'none';
 
-  const nameEl         = document.getElementById('r-name');
-  const typeEl         = document.getElementById('r-type');
-  const qtyEl          = document.getElementById('r-quantity');
-
-  const name           = nameEl ? nameEl.value.trim() : '';
-  const ownership_tier = document.getElementById('r-ownership') ? document.getElementById('r-ownership').value : 'barangay';
-  const type           = typeEl ? typeEl.value : '';
-  const quantity       = qtyEl ? parseInt(qtyEl.value) : NaN;
-  const location       = document.getElementById('r-location').value.trim();
   const property_code  = document.getElementById('r-property-code') ? document.getElementById('r-property-code').value.trim() : '';
-  const serial_number  = document.getElementById('r-serial-number') ? document.getElementById('r-serial-number').value.trim() : '';
+  const acquisition_date = document.getElementById('r-acq-date') ? document.getElementById('r-acq-date').value || null : null;
+  const estimated_life = document.getElementById('r-est-life') ? parseFloat(document.getElementById('r-est-life').value) || null : null;
+  const responsibility_center = document.getElementById('r-resp-center') ? (document.getElementById('r-resp-center').value || 'Linao') : 'Linao';
+  const acquisition_cost = document.getElementById('r-acq-cost') ? parseFloat(document.getElementById('r-acq-cost').value) || 0 : 0;
+  const accumulated_depreciation = document.getElementById('r-acc-dep') ? parseFloat(document.getElementById('r-acc-dep').value) || 0 : 0;
+  const net_book_value = document.getElementById('r-net-book') ? parseFloat(document.getElementById('r-net-book').value) || 0 : 0;
+  const status = document.getElementById('r-status') ? document.getElementById('r-status').value || 'available' : undefined;
 
-  let isValid = true;
-  let firstInvalidEl = null;
-
-  if (!name) {
-    if (nameEl) nameEl.classList.add('is-invalid');
-    isValid = false;
-    if (!firstInvalidEl) firstInvalidEl = nameEl;
+  // Basic validations
+  if (!property_code) {
+    showToast('Property Number is required.', 'danger', 'Validation Required');
+    const el = document.getElementById('r-property-code'); if (el) el.focus();
+    return;
   }
-  if (!type) {
-    if (typeEl) typeEl.classList.add('is-invalid');
-    isValid = false;
-    if (!firstInvalidEl) firstInvalidEl = typeEl;
+  if (estimated_life !== null && estimated_life !== 0 && estimated_life < 1) {
+    showToast('Estimated life must be at least 1 year.', 'danger', 'Validation Required');
+    return;
   }
-  if (isNaN(quantity) || quantity < 1) {
-    if (qtyEl) qtyEl.classList.add('is-invalid');
-    isValid = false;
-    if (!firstInvalidEl) firstInvalidEl = qtyEl;
-  }
-
-  if (!isValid) {
-    showToast('Please fill out all required fields highlighted in red.', 'danger', 'Validation Required');
-    if (firstInvalidEl) firstInvalidEl.focus();
+  if (acquisition_cost < 0 || accumulated_depreciation < 0 || net_book_value < 0) {
+    showToast('Monetary values cannot be negative.', 'danger', 'Validation Required');
     return;
   }
 
-  if (!selectedModalHazards || selectedModalHazards.length === 0) {
-    const tagBox = document.getElementById('selected-tags-box');
-    if (tagBox) tagBox.classList.add('is-invalid');
-    showToast('Please select at least one emergency hazard tag in Step 2.', 'danger', 'Hazard Tag Required');
-    setWizardStep(2);
-    return;
-  }
-
-  const category = selectedModalHazards[0] || 'general_emergency';
-  const applicable_hazards = [...selectedModalHazards];
+  // Ensure preview/calculation is current
+  try { calculateDepreciationPreview(); } catch (e) {}
 
   const payload = {
-    name,
-    category,
-    applicable_hazards,
-    ownership_tier,
-    type,
-    quantity,
-    location: location || null,
     property_code: property_code || null,
-    serial_number: serial_number || null
+    acquisition_date: acquisition_date || null,
+    estimated_life: estimated_life || null,
+    responsibility_center: responsibility_center || null,
+    acquisition_cost: acquisition_cost || 0,
+    accumulated_depreciation: accumulated_depreciation || 0,
+    net_book_value: net_book_value || 0,
+    ...(typeof status !== 'undefined' ? { status } : {}),
   };
 
   try {
@@ -1556,6 +1427,13 @@ async function submitResource() {
       });
       showToast("New resource added to inventory!", "success", "Resource Saved");
     }
+
+    // Ensure Save button is visible for simplified form
+    const stepper = document.querySelector('.wizard-stepper'); if (stepper) stepper.style.display = 'none';
+    const prevBtn = document.getElementById('resource-wizard-btn-prev'); if (prevBtn) prevBtn.style.display = 'none';
+    const nextBtn = document.getElementById('resource-wizard-btn-next'); if (nextBtn) nextBtn.style.display = 'none';
+    const submitBtn = document.getElementById('resource-submit-btn'); if (submitBtn) submitBtn.style.display = 'inline-flex';
+
     closeResourceModal();
     await loadResources();
   } catch (err) {
@@ -1875,8 +1753,8 @@ function setDispatchWizardStep(step) {
     }
   }
 
-  const prevBtn   = document.getElementById('dispatch-btn-prev');
-  const nextBtn   = document.getElementById('dispatch-btn-next');
+  const prevBtn   = document.getElementById('dispatch-wizard-btn-prev');
+  const nextBtn   = document.getElementById('dispatch-wizard-btn-next');
   const submitBtn = document.getElementById('dispatch-submit-btn');
 
   if (prevBtn) prevBtn.style.visibility = step === 1 ? 'hidden' : 'visible';
@@ -1899,11 +1777,28 @@ function goToDispatchWizardStep(targetStep) {
     return;
   }
 
+window.syncBorrowerFullName = function() {
+  const first  = document.getElementById('d-borrower-first-name')?.value.trim() || '';
+  const middle = document.getElementById('d-borrower-middle-name')?.value.trim() || '';
+  const last   = document.getElementById('d-borrower-last-name')?.value.trim() || '';
+  const suffix = document.getElementById('d-borrower-suffix')?.value.trim() || '';
+
+  const parts = [first, middle, last, suffix].filter(Boolean);
+  const fullName = parts.join(' ');
+  const hiddenEl = document.getElementById('d-borrower-name');
+  if (hiddenEl) hiddenEl.value = fullName;
+  return fullName;
+};
+
   if (currentDispatchWizardStep === 1) {
+    const firstNameEl    = document.getElementById('d-borrower-first-name');
+    const lastNameEl     = document.getElementById('d-borrower-last-name');
     const borrowerNameEl = document.getElementById('d-borrower-name');
     const resourceIdEl   = document.getElementById('d-resource');
     const qtyEl          = document.getElementById('d-qty');
     const destinationEl  = document.getElementById('d-destination');
+
+    syncBorrowerFullName();
 
     const borrowerName = borrowerNameEl?.value.trim();
     const resourceId   = resourceIdEl?.value;
@@ -1913,10 +1808,15 @@ function goToDispatchWizardStep(targetStep) {
     let isValid = true;
     let firstInvalid = null;
 
-    if (!borrowerName) {
-      if (borrowerNameEl) borrowerNameEl.classList.add('is-invalid');
+    if (firstNameEl && !firstNameEl.value.trim()) {
+      firstNameEl.classList.add('is-invalid');
       isValid = false;
-      if (!firstInvalid) firstInvalid = borrowerNameEl;
+      if (!firstInvalid) firstInvalid = firstNameEl;
+    }
+    if (lastNameEl && !lastNameEl.value.trim()) {
+      lastNameEl.classList.add('is-invalid');
+      isValid = false;
+      if (!firstInvalid) firstInvalid = lastNameEl;
     }
     if (!destination) {
       if (destinationEl) destinationEl.classList.add('is-invalid');
@@ -1927,11 +1827,33 @@ function goToDispatchWizardStep(targetStep) {
       if (resourceIdEl) resourceIdEl.classList.add('is-invalid');
       isValid = false;
       if (!firstInvalid) firstInvalid = resourceIdEl;
+    } else {
+      // Block if selected resource has no available units
+      const selectedRes = allResources.find(r => r.id === resourceId);
+      if (selectedRes && (selectedRes.available_quantity ?? 0) <= 0) {
+        if (resourceIdEl) resourceIdEl.classList.add('is-invalid');
+        if (errEl) {
+          errEl.textContent = 'Selected equipment has no available units. Please choose a different item.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
     }
     if (isNaN(qty) || qty < 1) {
       if (qtyEl) qtyEl.classList.add('is-invalid');
       isValid = false;
       if (!firstInvalid) firstInvalid = qtyEl;
+    } else {
+      // Block if qty exceeds available
+      const selectedRes = allResources.find(r => r.id === resourceId);
+      if (selectedRes && qty > (selectedRes.available_quantity ?? 0)) {
+        if (qtyEl) qtyEl.classList.add('is-invalid');
+        if (errEl) {
+          errEl.textContent = `Quantity exceeds available units (${selectedRes.available_quantity ?? 0} available).`;
+          errEl.style.display = 'block';
+        }
+        return;
+      }
     }
 
     if (!isValid) {
@@ -2029,6 +1951,10 @@ async function openDispatchModal() {
   document.getElementById('d-incident').value         = '';
   document.getElementById('d-qty').value              = '';
   document.getElementById('d-notes').value            = '';
+  if (document.getElementById('d-borrower-first-name'))  document.getElementById('d-borrower-first-name').value  = '';
+  if (document.getElementById('d-borrower-middle-name')) document.getElementById('d-borrower-middle-name').value = '';
+  if (document.getElementById('d-borrower-last-name'))   document.getElementById('d-borrower-last-name').value   = '';
+  if (document.getElementById('d-borrower-suffix'))      document.getElementById('d-borrower-suffix').value      = '';
   document.getElementById('d-borrower-name').value    = '';
   document.getElementById('d-borrower-contact').value = '';
   document.getElementById('d-destination').value      = '';
@@ -2050,11 +1976,17 @@ async function openDispatchModalFor(resourceId) {
 
 async function populateDispatchDropdowns() {
   const resSelect = document.getElementById('d-resource');
-  const available = allResources.filter(r => r.available_quantity > 0);
-  resSelect.innerHTML = '<option value="">Select resource equipment...</option>' +
-    available.map(r =>
-      `<option value="${r.id}">${escHtml(r.name)} (${r.available_quantity} available)</option>`
-    ).join('');
+
+  // Show all resources — disable those with 0 available so user can see inventory state
+  resSelect.innerHTML = '<option value="">Select Resource Equipment...</option>' +
+    allResources.map(r => {
+      const avail = r.available_quantity ?? 0;
+      const total = r.quantity ?? avail;
+      const label = avail > 0
+        ? `${r.name} (${avail} / ${total} Available)`
+        : `${r.name} — Unavailable`;
+      return `<option value="${r.id}" ${avail <= 0 ? 'disabled style="color:#64748b;"' : ''}>${escHtml(label)}</option>`;
+    }).join('');
 
   try {
     const incidents = await apiFetch('/incidents/active');
@@ -2070,11 +2002,28 @@ function updateDispatchAvailable() {
   const id  = document.getElementById('d-resource').value;
   const res = allResources.find(r => r.id === id);
   const el  = document.getElementById('d-avail-info');
-  if (res) {
-    el.textContent = `${res.available_quantity} of ${res.quantity} units available in inventory`;
-    document.getElementById('d-qty').max = res.available_quantity;
+  if (!res || !id) {
+    if (el) el.textContent = '';
+    return;
+  }
+
+  // Use available_quantity; fall back to quantity if total not tracked separately
+  const avail = res.available_quantity ?? 0;
+  const total = res.quantity ?? avail;
+  const qtyInput = document.getElementById('d-qty');
+
+  if (avail <= 0) {
+    if (el) {
+      el.textContent = 'No units available — this item cannot be dispatched.';
+      el.style.color = '#f87171';
+    }
+    if (qtyInput) { qtyInput.max = 0; qtyInput.value = 0; qtyInput.disabled = true; }
   } else {
-    el.textContent = '';
+    if (el) {
+      el.textContent = `${avail} of ${total} unit${total !== 1 ? 's' : ''} available in inventory`;
+      el.style.color = avail < total * 0.25 ? '#fb923c' : '#34d399';
+    }
+    if (qtyInput) { qtyInput.max = avail; qtyInput.disabled = false; if (!qtyInput.value || parseInt(qtyInput.value) < 1) qtyInput.value = 1; }
   }
 }
 
@@ -2090,6 +2039,8 @@ function closeDispatchModalOutside(e) {
 async function submitDispatch() {
   const errorEl = document.getElementById('dispatch-error');
   errorEl.style.display = 'none';
+
+  if (typeof syncBorrowerFullName === 'function') syncBorrowerFullName();
 
   const borrowerNameEl = document.getElementById('d-borrower-name');
   const resourceIdEl   = document.getElementById('d-resource');
@@ -2214,18 +2165,6 @@ async function submitRestock() {
       method: 'POST',
       body: JSON.stringify({ add_quantity: addQty, notes: notes || null }),
     });
-    const res = allResources.find(r => r.id === restockResourceId);
-    addActivityLogEntry({
-      resource_name: res?.name || 'Unknown Resource',
-      resource_type: res?.type || 'equipment',
-      event_type: 'restocked',
-      qty_change: addQty,
-      qty_before: res?.available_quantity != null ? res.available_quantity : null,
-      qty_after: res?.available_quantity != null ? res.available_quantity + addQty : null,
-      new_status: 'available',
-      description: `Restocked ${addQty} unit(s). ${notes || ''}`.trim(),
-      performed_by_name: 'System',
-    });
     closeRestockModal();
     showToast(`Successfully added ${addQty} unit(s) to inventory!`, "success", "Resource Restocked");
     await loadResources();
@@ -2317,88 +2256,7 @@ async function submitMaintenanceStatus() {
 // MAINTENANCE TAB
 // =============================================
 
-let allMaintenanceTickets = [
-  {
-    id: 'seed-1',
-    ticket_id: 'MNT-2026-0041',
-    resource_id: null,
-    resource_name: 'Motorized Rescue Flatboat B-1',
-    resource_type: 'rescue_boat',
-    maint_type: 'maintenance',
-    status: 'maintenance',
-    location: 'CDRRMO Repair Shop, Ormoc City',
-    technician: 'Engr. Ramos / BFP Mechanic',
-    date_out: '2026-07-25',
-    date_return: '2026-08-05',
-    description: 'Engine seized during flood operations. Oil leak detected in main drive shaft. Sent to CDRRMO shop for full overhaul.',
-    notes: 'PO# 2026-045 issued. Under warranty.',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'seed-2',
-    ticket_id: 'MNT-2026-0038',
-    resource_id: null,
-    resource_name: 'Heavy-Duty Diesel Generator 10kVA',
-    resource_type: 'other',
-    maint_type: 'damage',
-    status: 'damaged',
-    location: 'Barangay Linao Main Depot',
-    technician: 'Supply Officer Reyes',
-    date_out: '2026-07-20',
-    date_return: '2026-07-30',
-    description: 'Generator casing cracked after typhoon Carina. Fuel line damaged. Awaiting spare parts delivery.',
-    notes: 'Reported by Capt. Rodriguez.',
-    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-  },
-  {
-    id: 'seed-3',
-    ticket_id: 'MNT-2026-0035',
-    resource_id: null,
-    resource_name: 'High-Visibility Adult Life Vests (50 units)',
-    resource_type: 'other',
-    maint_type: 'inspection',
-    status: 'maintenance',
-    location: 'Brgy Linao Equipment Room',
-    technician: 'Tanod Maintenance Team',
-    date_out: '2026-07-28',
-    date_return: '2026-07-31',
-    description: 'Scheduled bi-annual safety inspection and strap check for all water rescue vests before typhoon season.',
-    notes: '12 vests flagged for strap replacement.',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'seed-4',
-    ticket_id: 'MNT-2026-0031',
-    resource_id: null,
-    resource_name: 'BDRRMC Emergency Patrol Utility Vehicle',
-    resource_type: 'vehicle',
-    maint_type: 'calibration',
-    status: 'unavailable',
-    location: 'Casa Dela Torre Auto Shop, Ormoc',
-    technician: 'Casa Dela Torre Mechanic',
-    date_out: '2026-07-15',
-    date_return: '2026-08-01',
-    description: 'LTO-required annual PMS (Preventive Maintenance Service). Oil change, brake inspection, tire rotation.',
-    notes: 'Vehicle plate: ABC-1234. Registration renewal due Aug 2026.',
-    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
-  },
-  {
-    id: 'seed-5',
-    ticket_id: 'MNT-2026-0027',
-    resource_id: null,
-    resource_name: 'High-Powered Stihl Chain Saw',
-    resource_type: 'other',
-    maint_type: 'maintenance',
-    status: 'available',
-    location: 'Returned to BDRRMC Depot',
-    technician: 'Tanod Maintenance',
-    date_out: '2026-07-10',
-    date_return: '2026-07-14',
-    description: 'Blade sharpening and chain lubrication after clearing fallen tree debris on Barangay Main Road post-typhoon.',
-    notes: 'Resolved — returned to service on Jul 14.',
-    created_at: new Date(Date.now() - 86400000 * 20).toISOString(),
-  },
-];
+let allMaintenanceTickets = [];
 let maintPagination = { currentPage: 1, pageSize: 10, filtered: [] };
 let currentMaintWizardStep = 1;
 
@@ -2605,7 +2463,7 @@ function setMaintWizardStep(step) {
     el.classList.toggle('active',i+1===step); el.classList.toggle('completed',i+1<step);
   });
   const line=document.getElementById('maint-wizard-line-1'); if(line)line.classList.toggle('active',step>1);
-  const pb=document.getElementById('maint-btn-prev'),nb=document.getElementById('maint-btn-next'),sb=document.getElementById('maint-submit-btn');
+  const pb=document.getElementById('maint-wizard-btn-prev'),nb=document.getElementById('maint-wizard-btn-next'),sb=document.getElementById('maint-submit-btn');
   if(pb)pb.style.visibility=step>1?'visible':'hidden';
   if(nb)nb.style.display=step<2?'inline-flex':'none';
   if(sb)sb.style.display=step===2?'inline-flex':'none';
@@ -3482,7 +3340,7 @@ function showImportPreview(rows) {
       <td>${escHtml(r.ownership_tier)}</td>
       <td>${escHtml(r.location || '—')}</td>
       <td style="font-size:.72rem;">${r.applicable_hazards.join(', ')}</td>
-      <td style="font-size:.72rem;color:#f87171;">${r._errors.join('; ') || '✓'}</td>
+      <td style="font-size:.72rem;color:#34d399;">${r._errors.join('; ') || 'OK'}</td>
     </tr>
   `).join('');
 
@@ -3550,3 +3408,216 @@ async function runBulkImport() {
   submitBtn.disabled = false;
   setTimeout(() => closeImportModal(), 2200);
 }
+
+// ==========================================
+// DEMO AUTOFILL FUNCTIONS
+// ==========================================
+
+window.autoFillResourceDemoData = function(suppressToast = false) {
+  // Step 1: Basic Details
+  const nameEl = document.getElementById('r-name');
+  if (nameEl) nameEl.value = 'Submersible De-Watering Trash Pump 3" (Heavy Duty)';
+
+  const ownershipEl = document.getElementById('r-ownership');
+  if (ownershipEl) ownershipEl.value = 'barangay';
+
+  const typeEl = document.getElementById('r-type');
+  if (typeEl) typeEl.value = 'rescue_boat';
+
+  const locationEl = document.getElementById('r-location');
+  if (locationEl) locationEl.value = 'Barangay Linao Operations Depot - Zone 2';
+
+  // Step 2: Emergency Tag System
+  selectedModalHazards = ['flooding', 'typhoon', 'rescue'];
+  if (typeof renderHazardTagPicker === 'function') {
+    try { renderHazardTagPicker(); } catch (_) {}
+  }
+
+  // Step 3: COA Asset Accounting & Valuation
+  const qtyEl = document.getElementById('r-quantity');
+  if (qtyEl) qtyEl.value = 2;
+
+  const propCodeEl = document.getElementById('r-property-code');
+  if (propCodeEl) propCodeEl.value = 'BRG-2026-9111';
+
+  const acqDateEl = document.getElementById('r-acq-date');
+  if (acqDateEl) acqDateEl.value = '2024-03-15';
+
+  const estLifeEl = document.getElementById('r-est-life');
+  if (estLifeEl) estLifeEl.value = 5;
+
+  const respCenterEl = document.getElementById('r-resp-center');
+  if (respCenterEl) respCenterEl.value = 'BDRRMC Operations';
+
+  const acqCostEl = document.getElementById('r-acq-cost');
+  if (acqCostEl) acqCostEl.value = 145000;
+
+  const accDepEl = document.getElementById('r-acc-dep');
+  if (accDepEl) accDepEl.value = 29000;
+
+  const serialEl = document.getElementById('r-serial-number');
+  if (serialEl) serialEl.value = 'HUSQ-2024-PUMP-99A';
+
+  // Update calculations and live previews
+  if (typeof calculateDepreciationPreview === 'function') {
+    try { calculateDepreciationPreview(); } catch (_) {}
+  }
+  if (typeof updateAssetSummaryPreview === 'function') {
+    try { updateAssetSummaryPreview(); } catch (_) {}
+  }
+
+  if (!suppressToast && typeof showToast === 'function') {
+    showToast('Demo resource and COA accounting data auto-filled!', 'info', 'Autofill Complete');
+  }
+};
+
+window.autoFillDispatchDemoData = async function(suppressToast = false) {
+  const firstNameEl  = document.getElementById('d-borrower-first-name');
+  const middleNameEl = document.getElementById('d-borrower-middle-name');
+  const lastNameEl   = document.getElementById('d-borrower-last-name');
+  const suffixEl     = document.getElementById('d-borrower-suffix');
+
+  if (firstNameEl)  firstNameEl.value  = 'Mario';
+  if (middleNameEl) middleNameEl.value = 'Santos';
+  if (lastNameEl)   lastNameEl.value   = 'Tanod';
+  if (suffixEl)     suffixEl.value     = 'Jr.';
+
+  if (typeof syncBorrowerFullName === 'function') {
+    syncBorrowerFullName();
+  } else {
+    const nameEl = document.getElementById('d-borrower-name');
+    if (nameEl) nameEl.value = 'Mario Santos Tanod Jr.';
+  }
+
+  const contactEl = document.getElementById('d-borrower-contact');
+  if (contactEl) contactEl.value = '0917-555-0199';
+
+  const destEl = document.getElementById('d-destination');
+  if (destEl) destEl.value = 'Sitio 4 Riverbank Evacuation Staging Area';
+
+  const resSelect = document.getElementById('d-resource');
+  if (resSelect) {
+    if (resSelect.options.length <= 1 && typeof populateDispatchDropdowns === 'function') {
+      try { await populateDispatchDropdowns(); } catch (_) {}
+    }
+    if (resSelect.options.length <= 1 && typeof allResources !== 'undefined' && allResources.length > 0) {
+      resSelect.innerHTML = '<option value="">Select resource equipment...</option>' +
+        allResources.map(r => `<option value="${r.id}">${escHtml(r.name)} (${r.available_quantity || r.quantity || 5} available)</option>`).join('');
+    }
+    if (resSelect.options.length <= 1) {
+      resSelect.innerHTML = `
+        <option value="">Select resource equipment...</option>
+        <option value="demo-pump-1" selected>High-Pressure Submersible Water Pump 3HP (4 available)</option>
+        <option value="demo-gen-1">Heavy-Duty Diesel Generator 10kVA (3 available)</option>
+        <option value="demo-boat-1">Motorized Rescue Flatboat B-1 (2 available)</option>
+      `;
+    }
+    if (resSelect.options.length > 1) {
+      resSelect.selectedIndex = 1;
+    }
+    if (typeof updateDispatchAvailable === 'function') {
+      try { updateDispatchAvailable(); } catch (_) {}
+    }
+  }
+
+  const qtyEl = document.getElementById('d-qty');
+  if (qtyEl) qtyEl.value = 1;
+
+  const dueDateEl = document.getElementById('d-due-date');
+  if (dueDateEl) {
+    const future = new Date();
+    future.setDate(future.getDate() + 3);
+    dueDateEl.value = future.toISOString().split('T')[0];
+  }
+
+  const purposeEl = document.getElementById('d-purpose');
+  if (purposeEl) purposeEl.value = 'Emergency flood response and water pumping along Sitio 4 main access road.';
+
+  const notesEl = document.getElementById('d-notes');
+  if (notesEl) notesEl.value = 'Equipment inspected, fueled, and verified fully operational prior to release.';
+
+  if (typeof updateDispatchTicketPreview === 'function') {
+    try { updateDispatchTicketPreview(); } catch (_) {}
+  }
+
+  if (!suppressToast && typeof showToast === 'function') {
+    showToast('Demo dispatch ticket data auto-filled!', 'info', 'Autofill Complete');
+  }
+};
+
+window.autoFillMaintenanceDemoData = function(suppressToast = false) {
+  // Step 1: Item & Issue
+  const resSelect = document.getElementById('maint-resource-select');
+  if (resSelect) {
+    if (resSelect.options.length <= 1 && typeof allResources !== 'undefined' && allResources.length > 0) {
+      resSelect.innerHTML = '<option value="">Select equipment...</option>' +
+        allResources.map(r => `<option value="${r.id}">${escHtml(r.name)} (${r.status})</option>`).join('');
+    }
+    if (resSelect.options.length <= 1) {
+      resSelect.innerHTML = `
+        <option value="">Select equipment...</option>
+        <option value="demo-gen-1" selected>Heavy-Duty Diesel Generator 10kVA (available)</option>
+        <option value="demo-boat-1">Motorized Rescue Flatboat B-1 (maintenance)</option>
+      `;
+    }
+    if (resSelect.options.length > 1) {
+      resSelect.selectedIndex = 1;
+    }
+    if (typeof updateMaintItemInfo === 'function') {
+      try { updateMaintItemInfo(); } catch (_) {}
+    }
+  }
+
+  const typeEl = document.getElementById('maint-type');
+  if (typeEl) typeEl.value = 'maintenance';
+
+  const statusEl = document.getElementById('maint-status');
+  if (statusEl) statusEl.value = 'maintenance';
+
+  const descEl = document.getElementById('maint-description');
+  if (descEl) descEl.value = 'Scheduled bi-annual engine servicing, oil filter replacement, and pressure calibration.';
+
+  // Step 2: Location, Schedule & Confirmation
+  const locEl = document.getElementById('maint-location');
+  if (locEl) locEl.value = 'CDRRMO Central Repair & Fleet Depot - Ormoc City';
+
+  const techEl = document.getElementById('maint-technician');
+  if (techEl) techEl.value = 'Engr. Mario Santos (BFP Certified Heavy Mechanic)';
+
+  const dateOutEl = document.getElementById('maint-date-out');
+  if (dateOutEl) {
+    const today = new Date();
+    dateOutEl.value = today.toISOString().split('T')[0];
+  }
+
+  const dateReturnEl = document.getElementById('maint-date-return');
+  if (dateReturnEl) {
+    const future = new Date();
+    future.setDate(future.getDate() + 5);
+    dateReturnEl.value = future.toISOString().split('T')[0];
+  }
+
+  const notesEl = document.getElementById('maint-notes');
+  if (notesEl) notesEl.value = 'Under BDRRMC annual service warranty contract. Work Order #WO-2026-8819.';
+
+  if (typeof updateMaintPreview === 'function') {
+    try { updateMaintPreview(); } catch (_) {}
+  }
+
+  if (!suppressToast && typeof showToast === 'function') {
+    showToast('Demo maintenance ticket data auto-filled!', 'info', 'Autofill Complete');
+  }
+};
+
+window.autoFillRestockDemoData = function(suppressToast = false) {
+  const qtyEl = document.getElementById('restock-qty');
+  if (qtyEl) qtyEl.value = 25;
+
+  const notesEl = document.getElementById('restock-notes');
+  if (notesEl) notesEl.value = 'CDRRMO Relief & Heavy Equipment Logistics Procurement Batch #2026-08';
+
+  if (!suppressToast && typeof showToast === 'function') {
+    showToast('Demo restock quantity and batch notes auto-filled!', 'info', 'Autofill Complete');
+  }
+};
+

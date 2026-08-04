@@ -3,50 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evacuation Centers — Barangay DRRM</title>
+  <title>Evacuation Centers — Barangay DRRM System</title>
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
+  <script src="assets/js/components.js"></script>
+  <style>
+    /* High-contrast dark inputs for Evacuation Center Personnel Directory */
+    #personnel-directory-tbody input {
+      background: rgba(15, 23, 42, 0.95) !important;
+      border: 1px solid rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
+      font-weight: 500 !important;
+      border-radius: 6px !important;
+    }
+    #personnel-directory-tbody input::placeholder {
+      color: #94a3b8 !important;
+      opacity: 0.85 !important;
+    }
+    #personnel-directory-tbody input:focus {
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35) !important;
+      outline: none !important;
+    }
+    #personnel-directory-tbody input.p-role {
+      background: rgba(30, 41, 59, 0.95) !important;
+      border: 1px solid rgba(59, 130, 246, 0.4) !important;
+      color: #60a5fa !important;
+      font-weight: 700 !important;
+    }
+  </style>
 </head>
 <body>
 
 <div class="layout">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <i data-lucide="shield-alert" class="brand-icon"></i>
-      <div>
-        <h2>Barangay DRRM</h2>
-        <span>Linao, Ormoc City</span>
-      </div>
-    </div>
-    <nav>
-      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
-      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
-      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
-      <a href="evacuation.html" class="active"><i data-lucide="house"></i> Evacuation Centers</a>
-      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
-      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
-    </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
-  </aside>
+  <!-- Sidebar (Rendered via components.js) -->
+  <aside class="sidebar"></aside>
 
   <!-- Main Content -->
   <div class="main-content">
     <div class="topbar">
-      <h2>Evacuation Centers</h2>
+      <div class="topbar-left">
+        <h2>Evacuation Centers</h2>
+        <div class="dash-timestamp">
+          <span class="sync-item"><i data-lucide="home"></i> Shelter Capacity &amp; Relief Logistics</span>
+        </div>
+      </div>
+
       <div class="user-info">
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-header">
+              <i data-lucide="cloud-sun"></i>
+              <span>Ormoc City Weather</span>
+              <button class="weather-refresh" onclick="loadWeather(event)" title="Refresh Weather">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-body" id="weather-body">
+              <div class="weather-loading"><i data-lucide="loader" class="spin"></i></div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-icon-sm" id="refresh-btn" onclick="loadCenters(this)" title="Refresh">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -78,615 +108,1583 @@
 
     <div class="page-body">
 
-      <!-- ===== VIEW 1: Center Directory & Summary Grid ===== -->
-      <div id="center-directory-view">
-        <!-- Summary bar -->
-        <div class="evac-summary" id="evac-summary">
-          <div class="evac-summary-item">
-            <span class="evac-summary-num" id="sum-total"><span class="skeleton skeleton-stat-num" style="width:40px;height:1.4rem;"></span></span>
-            <span class="evac-summary-label">Total Centers</span>
+      <!-- Interactive Evacuation Center Summary Tally Bar -->
+      <div class="evac-summary" id="evac-summary" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.7)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.1rem 1.5rem; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+        <!-- Total Centers -->
+        <div class="evac-summary-item" onclick="quickFilterEvacStatus('')" style="cursor:pointer; transition:transform 0.2s ease; text-align:center;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Show all centers">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#60a5fa;">
+            <i data-lucide="building-2" style="width:18px; height:18px;"></i>
           </div>
-          <div class="evac-summary-sep"></div>
-          <div class="evac-summary-item">
-            <span class="evac-summary-num green" id="sum-available"><span class="skeleton skeleton-stat-num" style="width:40px;height:1.4rem;"></span></span>
-            <span class="evac-summary-label">Available</span>
-          </div>
-          <div class="evac-summary-sep"></div>
-          <div class="evac-summary-item">
-            <span class="evac-summary-num orange" id="sum-full"><span class="skeleton skeleton-stat-num" style="width:40px;height:1.4rem;"></span></span>
-            <span class="evac-summary-label">Full</span>
-          </div>
-          <div class="evac-summary-sep"></div>
-          <div class="evac-summary-item">
-            <span class="evac-summary-num" id="sum-evacuees"><span class="skeleton skeleton-stat-num" style="width:40px;height:1.4rem;"></span></span>
-            <span class="evac-summary-label">Total Evacuees</span>
-          </div>
-          <div class="evac-summary-sep"></div>
-          <div class="evac-summary-item">
-            <span class="evac-summary-num" id="sum-capacity"><span class="skeleton skeleton-stat-num" style="width:40px;height:1.4rem;"></span></span>
-            <span class="evac-summary-label">Total Capacity</span>
-          </div>
+          <div class="evac-summary-num blue" id="sum-total" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
+          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Total Centers</div>
         </div>
 
-        <!-- Action bar -->
-        <div class="action-bar">
-          <div class="action-bar-left">
+        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08); width:1px; height:52px; flex-shrink:0;"></div>
+
+        <!-- Type breakdown -->
+        <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; flex:1;">
+          <span style="font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;">By Type:</span>
+          <div id="sum-type-breakdown" style="display:flex; gap:.4rem; flex-wrap:wrap;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Header Bar with Tab & Add Action Button -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+        <div class="tab-bar" style="margin-bottom:0;">
+          <button class="tab-btn active" id="tab-all-centers" onclick="switchEvacTab('all')">
+            <i data-lucide="building-2"></i> All Evacuation Centers
+          </button>
+          <button class="tab-btn" id="tab-evac-logs" onclick="switchEvacTab('logs')">
+            <i data-lucide="clock"></i> Activity Log
+          </button>
+        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <i data-lucide="plus-circle"></i> Add Evacuation Center
+        </button>
+      </div>
+
+      <!-- Main Evacuation Center List Pane -->
+      <div id="pane-all-centers">
+
+      <!-- Filter Bar -->
+      <div class="filter-bar-card" style="margin-bottom: 1.25rem;">
+        <div class="search-wrap">
+          <i data-lucide="search"></i>
+          <input type="text" id="search-input" placeholder="Search center name, address, classification..." oninput="filterCenters()" />
+        </div>
+
+        <div class="filter-group" style="display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;">
+          <!-- Filter Type Dropdown -->
+          <select id="filter-type" onchange="filterCenters()" class="filter-select" style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:.45rem .85rem; color:#f8fafc; font-size:.82rem; font-weight:600; outline:none;">
+            <option value="">Type: All</option>
+            <option value="Barangay Hall">Barangay Hall</option>
+            <option value="Chapel/Church">Chapel/Church</option>
+            <option value="Covered Court">Covered Court</option>
+            <option value="Government Building">Government Building</option>
+            <option value="School">School</option>
+            <option value="Open Space">Open Space</option>
+            <option value="Private Building">Private Building</option>
+            <option value="Purpose-Built Evacuation Center">Purpose-Built Evacuation Center</option>
+          </select>
+
+          <!-- Reset Button -->
+          <button type="button" class="btn btn-outline-sm" onclick="resetEvacFilters()" style="padding:.45rem .85rem;font-size:.82rem;gap:.35rem;border-color:rgba(255,255,255,0.15);">
+            <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Evacuation Centers Table Card -->
+      <div class="table-container" style="background:linear-gradient(135deg, rgba(15,23,42,0.7), rgba(30,41,59,0.5)); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden; backdrop-filter:blur(16px); box-shadow:0 10px 30px rgba(0,0,0,0.35);">
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;font-size:.85rem;border-collapse:collapse;">
+            <thead>
+              <tr style="background:rgba(15,23,42,0.9);border-bottom:1px solid rgba(255,255,255,0.1);">
+                <th style="padding:1rem;text-align:left;font-size:.74rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">EVACUATION SHELTER</th>
+                <th style="padding:1rem;text-align:left;font-size:.74rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">LOCATION &amp; GIS</th>
+                <th style="padding:1rem;text-align:left;font-size:.74rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">CAPACITY</th>
+                <th style="padding:1rem;text-align:right;font-size:.74rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="evac-table-tbody">
+              <!-- Dynamically rendered rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination bar -->
+      <div class="table-pagination" id="evac-pagination" style="margin-top:1.25rem;border-radius:12px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+        <div class="pagination-info" id="evac-pagination-info" style="font-size:.82rem;color:#94a3b8;font-weight:500;">Showing 0 of 0 centers</div>
+        <div class="pagination-controls" style="display:flex;align-items:center;gap:.75rem;">
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span style="font-size:.78rem;color:#94a3b8;">Per page:</span>
+            <select id="evac-page-size" onchange="changeEvacPageSize(this.value)" class="pagination-select" style="background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#f8fafc;padding:.2rem .4rem;font-size:.78rem;">
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <button class="page-btn" id="evac-btn-prev" onclick="prevEvacPage()"><i data-lucide="chevron-left"></i></button>
+          <div id="evac-page-numbers" style="display:flex;gap:.25rem;"></div>
+          <button class="page-btn" id="evac-btn-next" onclick="nextEvacPage()"><i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+    </div> <!-- end #pane-all-centers -->
+
+    <!-- Evacuation Center Activity Log Pane -->
+    <div id="pane-evac-logs" style="display:none;">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
             <div class="search-wrap">
               <i data-lucide="search"></i>
-              <input type="text" id="search-input" placeholder="Search centers..." oninput="filterCenters()" />
+              <input type="text" id="evac-log-search" placeholder="Search activity logs or evacuation center..." oninput="filterEvacLogs()" />
             </div>
-            <select id="filter-status" onchange="filterCenters()" class="filter-select">
-              <option value="">All Statuses</option>
-              <option value="available">Available</option>
-              <option value="full">Full</option>
-              <option value="closed">Closed</option>
-              <option value="archived">Archived Centers</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:.5rem;align-items:center;">
-            <button class="btn btn-outline" id="btn-toggle-archived" onclick="toggleArchivedView()">
-              <i data-lucide="archive"></i> Archived Vault
-            </button>
-            <button class="btn btn-primary" id="btn-add-center" onclick="openAddModal()">
-              <i data-lucide="plus"></i> Add Center
-            </button>
-          </div>
-        </div>
-
-        <!-- Cards Grid -->
-        <div class="evac-grid" id="evac-grid">
-          <div class="evac-card" style="padding:1.25rem;">
-            <div class="skeleton-card">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div class="skeleton skeleton-title" style="width:65%;"></div>
-                <div class="skeleton skeleton-badge"></div>
-              </div>
-              <div class="skeleton skeleton-text" style="width:85%;margin-bottom:12px;"></div>
-              <div class="skeleton skeleton-text" style="width:100%;height:8px;border-radius:99px;margin-bottom:8px;"></div>
-              <div style="display:flex;justify-content:space-between;">
-                <div class="skeleton skeleton-text" style="width:30%;"></div>
-                <div class="skeleton skeleton-text" style="width:25%;"></div>
-              </div>
-            </div>
-          </div>
-          <div class="evac-card" style="padding:1.25rem;">
-            <div class="skeleton-card">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div class="skeleton skeleton-title" style="width:60%;"></div>
-                <div class="skeleton skeleton-badge"></div>
-              </div>
-              <div class="skeleton skeleton-text" style="width:75%;margin-bottom:12px;"></div>
-              <div class="skeleton skeleton-text" style="width:100%;height:8px;border-radius:99px;margin-bottom:8px;"></div>
-              <div style="display:flex;justify-content:space-between;">
-                <div class="skeleton skeleton-text" style="width:35%;"></div>
-                <div class="skeleton skeleton-text" style="width:20%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pagination bar -->
-        <div class="table-pagination" id="evac-pagination" style="margin-top:1.5rem;border-radius:var(--radius-lg);background:rgba(15,23,42,0.6);border:1px solid var(--border-color);box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-          <div class="pagination-info" id="evac-pagination-info">Showing 0 of 0 centers</div>
-          <div class="pagination-controls">
-            <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
-              <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-              <select id="evac-page-size" onchange="changeEvacPageSize(this.value)" class="pagination-select">
-                <option value="6" selected>6</option>
-                <option value="9">9</option>
-                <option value="12">12</option>
+            <div class="filter-group">
+              <select id="evac-log-filter-event" onchange="filterEvacLogs()" class="filter-select">
+                <option value="">Event: All</option>
+                <option value="registered">Registered</option>
+                <option value="checklist_saved">JMC2 Audit Saved</option>
+                <option value="capacity_updated">Capacity Updated</option>
+                <option value="inspection_passed">Inspection Certified</option>
+                <option value="status_changed">Status Changed</option>
               </select>
-            </div>
-            <button class="page-btn" id="evac-btn-prev" onclick="prevEvacPage()"><i data-lucide="chevron-left"></i></button>
-            <div id="evac-page-numbers" style="display:flex;gap:.25rem;"></div>
-            <button class="page-btn" id="evac-btn-next" onclick="nextEvacPage()"><i data-lucide="chevron-right"></i></button>
-          </div>
-        </div>
-      </div> <!-- end center-directory-view -->
-
-      <!-- ===== VIEW 2: Full Workspace Evacuation Center Management ===== -->
-      <div id="center-workspace-view" style="display:none;margin-top:.2rem;">
-        
-        <!-- Workspace Header & Action Bar -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:rgba(15,23,42,0.7);border:1px solid var(--border-color);border-radius:var(--radius-lg);margin-bottom:1.2rem;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-          <div style="display:flex;align-items:center;gap:.85rem;">
-            <button class="btn btn-outline" onclick="closeTrackingModal()" style="gap:.45rem;padding:.45rem .85rem;font-size:.8rem;">
-              <i data-lucide="arrow-left"></i> Back to Center Directory
-            </button>
-            <div>
-              <h3 style="margin:0;font-size:1.15rem;display:flex;align-items:center;gap:.6rem;color:var(--text-main);">
-                <i data-lucide="house" style="color:var(--primary);"></i>
-                <span id="tracking-modal-center-name">Tambulilid Covered Court</span>
-              </h3>
-              <div style="font-size:.75rem;color:var(--text-muted);margin-top:.15rem;">Disaster Operations &amp; Evacuee Manifest Management Workspace</div>
+              <button class="btn btn-outline" id="btn-clear-evac-log-filters" onclick="clearEvacLogFilters()" style="display:none;">
+                <i data-lucide="rotate-ccw"></i> Reset
+              </button>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:.85rem;">
-            <div style="font-size:.75rem;color:var(--text-muted);" id="tracking-phase-label">Phase: During (Active)</div>
-            <button class="btn btn-primary" id="tracking-save-btn" onclick="submitTracking()" style="padding:.5rem 1.1rem;">
-              <i data-lucide="save"></i> Save Workspace Record
-            </button>
-          </div>
-        </div>
-
-        <!-- Timeline-Based Navigation Phase Tabs Bar -->
-        <div class="modal-phase-tab-bar" style="border-radius:var(--radius-md);margin-bottom:1.25rem;">
-          <button class="modal-phase-tab" id="phase-tab-before" onclick="switchTrackingPhase('before')">
-            <i data-lucide="shield"></i>
-            <div class="tab-label-wrap">
-              <span class="tab-title">1. Before (Pre-Disaster)</span>
-              <span class="tab-sub">Readiness &amp; Positioning</span>
-            </div>
-          </button>
-
-          <button class="modal-phase-tab active" id="phase-tab-during" onclick="switchTrackingPhase('during')">
-            <i data-lucide="zap"></i>
-            <div class="tab-label-wrap">
-              <span class="tab-title">2. During (Active Disaster)</span>
-              <span class="tab-sub">Real-Time Ops &amp; Manifest</span>
-            </div>
-          </button>
-
-          <button class="modal-phase-tab" id="phase-tab-after" onclick="switchTrackingPhase('after')">
-            <i data-lucide="check-circle"></i>
-            <div class="tab-label-wrap">
-              <span class="tab-title">3. After (Post-Disaster)</span>
-              <span class="tab-sub">Damage &amp; Recovery</span>
-            </div>
-          </button>
-
-          <button class="modal-phase-tab" id="phase-tab-history" onclick="switchTrackingPhase('history')">
-            <i data-lucide="history"></i>
-            <div class="tab-label-wrap">
-              <span class="tab-title">4. Past Event History</span>
-              <span class="tab-sub">Utilization &amp; Audit Logs</span>
-            </div>
+          <button class="btn btn-ghost" onclick="printEvacLogs()" style="flex-shrink:0;height:42px;">
+            <i data-lucide="printer"></i> Print Log
           </button>
         </div>
 
-    <div class="modal-body" style="max-height:75vh;overflow-y:auto;padding:1.25rem 1.5rem;">
-
-      <!-- ===== BEFORE PHASE ===== -->
-      <div id="phase-pane-before" style="display:none;">
-        <div class="tracking-section-title"><i data-lucide="shield-check"></i> Pre-Disaster Readiness Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Staff / Responders Deployed</label>
-            <input type="number" id="pre-staff-deployed" min="0" value="0" />
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table" id="evac-log-table">
+              <thead>
+                <tr>
+                  <th style="width:170px;">Date &amp; Time</th>
+                  <th style="min-width:220px;">Evacuation Shelter</th>
+                  <th style="width:160px;">Event Action</th>
+                  <th style="min-width:200px;">Audit Summary / Details</th>
+                  <th style="min-width:140px;">Logged By</th>
+                </tr>
+              </thead>
+              <tbody id="evac-logs-tbody"></tbody>
+            </table>
           </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Readiness Level</label>
-            <select id="pre-readiness-level">
-              <option value="ready">Fully Ready</option>
-              <option value="partially_ready">Partially Ready</option>
-              <option value="not_ready">Not Ready</option>
-              <option value="not_assessed" selected>— Not Yet Assessed</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:.35rem;">
-            <input type="checkbox" id="pre-capacity-check" style="width:14px;height:14px;accent-color:var(--primary);margin:0;" />
-            Capacity check completed and center is cleared for use
-          </label>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Inventory Readiness Notes</label>
-          <textarea id="pre-inventory-notes" rows="2" placeholder="e.g. 200 sleeping mats ready, kitchen stocked for 3 days, medical kit refilled..."></textarea>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Initial Resource Positioning</label>
-          <textarea id="pre-resource-position" rows="2" placeholder="e.g. Rescue boats staged at coastal access. Food packs pre-positioned at bodega. Generator fueled..."></textarea>
-        </div>
-        <!-- Shared: Camp Management -->
-        <div class="tracking-section-title"><i data-lucide="user-check"></i> Camp Management Assignment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.75rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Camp Manager</label>
-            <input type="text" id="before-camp-manager" placeholder="Full name" />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Contact Number</label>
-            <input type="text" id="before-camp-manager-contact" placeholder="09XX-XXX-XXXX" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Assigned Barangay Official</label>
-          <input type="text" id="before-assigned-official" placeholder="e.g. Kagawad M. Palanca" />
-        </div>
-      </div>
-
-      <!-- ===== DURING PHASE (FULL WIDTH DEPLOYMENT DASHBOARD) ===== -->
-      <div id="phase-pane-during">
-        <div style="display:flex;flex-direction:column;gap:1.1rem;">
-          
-          <!-- Manifest KPI Summary Bar -->
-          <div class="manifest-kpi-grid">
-            <div class="manifest-kpi-card">
-              <div class="manifest-kpi-val" id="manifest-kpi-families">0</div>
-              <div class="manifest-kpi-lbl">Families Housed</div>
-            </div>
-            <div class="manifest-kpi-card">
-              <div class="manifest-kpi-val" id="manifest-kpi-individuals">0</div>
-              <div class="manifest-kpi-lbl">Total Evacuees</div>
-            </div>
-            <div class="manifest-kpi-card">
-              <div class="manifest-kpi-val" id="manifest-kpi-relief-claimed" style="color:var(--success);">0</div>
-              <div class="manifest-kpi-lbl">Relief Packs Issued</div>
-            </div>
-            <div class="manifest-kpi-card">
-              <div class="manifest-kpi-val" id="manifest-kpi-vulnerable" style="color:var(--warning);">0</div>
-              <div class="manifest-kpi-lbl">Vulnerable Persons</div>
-            </div>
-          </div>
-
-          <!-- Demographic Sector & Vulnerability Breakdown Grid -->
-          <div style="background:rgba(15,23,42,0.45);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.85rem 1rem;">
-            <div style="font-size:.78rem;font-weight:700;color:var(--text-main);margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;">
-              <span style="display:flex;align-items:center;gap:.4rem;">
-                <i data-lucide="users" style="width:14px;height:14px;color:var(--primary);"></i> Demographic Sectors &amp; Vulnerabilities Tracking
-              </span>
-              <span style="font-size:.7rem;color:var(--text-muted);">Real-Time Occupant Demographic Counts</span>
-            </div>
-            
-            <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:.6rem;">
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">PWD</label>
-                <input type="number" id="demo-pwd" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
+          <div class="table-pagination" id="evac-log-pagination" style="display:none;">
+            <div class="pagination-info" id="evac-log-pagination-info">Showing 0 of 0 entries</div>
+            <div class="pagination-controls">
+              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+                <select id="evac-log-page-size" onchange="changeEvacLogPageSize(this.value)" class="pagination-select">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                </select>
               </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">Pregnant</label>
-                <input type="number" id="demo-pregnant" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">Children</label>
-                <input type="number" id="demo-children" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">Youth</label>
-                <input type="number" id="demo-youth" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">Senior Citizens</label>
-                <input type="number" id="demo-senior" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.7rem;color:var(--text-muted);">Indigenous (IP)</label>
-                <input type="number" id="demo-ip" min="0" value="0" style="padding:.35rem .5rem;font-size:.8rem;font-weight:700;text-align:center;" />
-              </div>
+              <button class="page-btn" id="evac-log-btn-prev" onclick="prevEvacLogPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="evac-log-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="evac-log-btn-next" onclick="nextEvacLogPage()"><i data-lucide="chevron-right"></i></button>
             </div>
-          </div>
-
-          <!-- Add Household Registration Box -->
-          <div class="manifest-register-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
-              <span style="font-size:.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:.4rem;">
-                <i data-lucide="user-plus" style="width:15px;height:15px;color:var(--primary);"></i> Register New Family / Household
-              </span>
-              <span style="font-size:.72rem;color:var(--text-muted);">Disaster Field Manifest Registration</span>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1.5fr 1fr 0.8fr 1fr;gap:.65rem;margin-bottom:.5rem;">
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.72rem;">Head of Family Name *</label>
-                <input type="text" id="fam-head-name" placeholder="e.g. Juan Dela Cruz" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.72rem;">Sitio / Purok Origin *</label>
-                <input type="text" id="fam-sitio" placeholder="e.g. Sitio 2 Coastal" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.72rem;">Family Size *</label>
-                <input type="number" id="fam-size" min="1" value="4" />
-              </div>
-              <div class="form-group" style="margin:0;">
-                <label style="font-size:.72rem;">Room / Tent #</label>
-                <input type="text" id="fam-room" placeholder="e.g. Room 102" />
-              </div>
-            </div>
-
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-top:.4rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,0.06);">
-              <div style="display:flex;align-items:center;gap:.85rem;">
-                <span style="font-size:.72rem;font-weight:600;color:var(--text-muted);">Vulnerability Flags:</span>
-                <label style="font-size:.75rem;display:flex;align-items:center;gap:.25rem;cursor:pointer;">
-                  <input type="checkbox" id="fam-is-pwd" style="accent-color:var(--primary);" /> PWD
-                </label>
-                <label style="font-size:.75rem;display:flex;align-items:center;gap:.25rem;cursor:pointer;">
-                  <input type="checkbox" id="fam-is-senior" style="accent-color:var(--primary);" /> Senior Citizen
-                </label>
-                <label style="font-size:.75rem;display:flex;align-items:center;gap:.25rem;cursor:pointer;">
-                  <input type="checkbox" id="fam-is-infant" style="accent-color:var(--primary);" /> Infant / Child
-                </label>
-              </div>
-
-              <div style="display:flex;align-items:center;gap:.6rem;">
-                <label style="font-size:.75rem;display:flex;align-items:center;gap:.25rem;cursor:pointer;font-weight:600;color:var(--success);">
-                  <input type="checkbox" id="fam-relief-claimed" checked style="accent-color:var(--success);" /> Relief Pack Claimed
-                </label>
-                <button class="btn btn-primary" onclick="addEvacFamilyRecord()" style="padding:.4rem .85rem;font-size:.78rem;gap:.35rem;">
-                  <i data-lucide="plus"></i> Add Family
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Manifest Table & Search Bar -->
-          <div class="manifest-table-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .85rem;background:rgba(15,23,42,0.4);border-bottom:1px solid var(--border-color);">
-              <span style="font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.4rem;">
-                <i data-lucide="users" style="width:14px;height:14px;color:var(--primary);"></i> Household Evacuee Manifest &amp; Relief Register
-              </span>
-              <input type="text" id="fam-search-input" onkeyup="renderEvacManifestTable()" placeholder="Search family head or room..." class="search-input" style="width:220px;padding:.3rem .6rem;font-size:.75rem;" />
-            </div>
-
-            <div style="max-height:260px;overflow-y:auto;">
-              <table class="table" style="width:100%;font-size:.78rem;margin:0;">
-                <thead>
-                  <tr>
-                    <th>Family Head</th>
-                    <th>Location / Room</th>
-                    <th>Size &amp; Members</th>
-                    <th>Vulnerabilities</th>
-                    <th>Relief Pack</th>
-                    <th style="text-align:right;">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="fam-manifest-tbody">
-                  <!-- Dynamically populated -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- BOTTOM CARD: Relief Stocks, Center Utilities & Camp Operations -->
-          <div style="background:rgba(15,23,42,0.45);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1rem;">
-            <div class="tracking-section-title" style="margin-bottom:.85rem;display:flex;align-items:center;justify-content:space-between;">
-              <span style="display:flex;align-items:center;gap:.4rem;">
-                <i data-lucide="package" style="color:var(--primary);"></i> Relief Stocks, Center Utilities &amp; Camp Operations
-              </span>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem;">
-              
-              <!-- Col 1: Relief Supplies -->
-              <div style="display:flex;flex-direction:column;gap:.5rem;">
-                <div style="font-size:.75rem;font-weight:700;color:var(--text-main);margin-bottom:.1rem;">Relief Supplies Stock</div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Food Stock</label>
-                  <select id="relief-food">
-                    <option value="adequate">Adequate Supply</option>
-                    <option value="limited">Limited Supply</option>
-                    <option value="none" selected>Depleted / None</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Water Supply</label>
-                  <select id="relief-water">
-                    <option value="adequate">Adequate Supply</option>
-                    <option value="limited">Limited Supply</option>
-                    <option value="none" selected>Depleted / None</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Clothing / Kits</label>
-                  <select id="relief-clothing">
-                    <option value="adequate">Adequate Supply</option>
-                    <option value="limited">Limited Supply</option>
-                    <option value="none" selected>Depleted / None</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Col 2: Center Utilities -->
-              <div style="display:flex;flex-direction:column;gap:.5rem;">
-                <div style="font-size:.75rem;font-weight:700;color:var(--text-main);margin-bottom:.1rem;">Center Utilities &amp; Power</div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Water System</label>
-                  <select id="water-system">
-                    <option value="operational">Operational</option>
-                    <option value="disrupted">Disrupted</option>
-                    <option value="unavailable">Unavailable</option>
-                    <option value="unknown" selected>Unknown</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Electricity Grid</label>
-                  <select id="electricity">
-                    <option value="operational">Grid Power Operational</option>
-                    <option value="generator">Generator Powered</option>
-                    <option value="unavailable">No Power</option>
-                    <option value="unknown" selected>Unknown</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Signal / Comms</label>
-                  <select id="internet-signal">
-                    <option value="good">Good Coverage</option>
-                    <option value="weak">Weak Signal</option>
-                    <option value="none">No Signal</option>
-                    <option value="unknown" selected>Unknown</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Col 3: Camp Operations Desk & Procurement -->
-              <div style="display:flex;flex-direction:column;gap:.5rem;">
-                <div style="font-size:.75rem;font-weight:700;color:var(--text-main);margin-bottom:.1rem;">Camp Management &amp; Remarks</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
-                  <div class="form-group" style="margin:0;">
-                    <label style="font-size:.72rem;">Camp Manager</label>
-                    <input type="text" id="camp-manager" placeholder="Officer Name" />
-                  </div>
-                  <div class="form-group" style="margin:0;">
-                    <label style="font-size:.72rem;">Contact #</label>
-                    <input type="text" id="camp-manager-contact" placeholder="09XX-XXX-XXXX" />
-                  </div>
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Assigned Official</label>
-                  <input type="text" id="assigned-official" placeholder="e.g. Kagawad M. Palanca" />
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:.72rem;">Operational Remarks</label>
-                  <input type="text" id="occ-remarks" placeholder="e.g. Center open for Sitio 2 evacuees..." />
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Smart Procurement Priorities -->
-            <div style="margin-top:1rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,0.06);">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
-                <span style="font-size:.75rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:.35rem;">
-                  <i data-lucide="cpu" style="width:14px;height:14px;color:var(--primary);"></i> Smart Procurement Recommendations
-                </span>
-                <button class="btn btn-outline-sm" onclick="renderResourceRecommendations()" style="font-size:.72rem;padding:.25rem .6rem;gap:.35rem;">
-                  <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Analyze Needs
-                </button>
-              </div>
-              <div id="resource-recs-container" style="min-height:24px;">
-                <div style="font-size:.72rem;color:var(--text-muted);">Click Analyze to generate procurement recommendations based on relief stock and manifest.</div>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ===== AFTER PHASE ===== -->
-      <div id="phase-pane-after" style="display:none;">
-        <div class="tracking-section-title"><i data-lucide="clipboard-check"></i> Post-Disaster Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Total Evacuees Served</label>
-            <input type="number" id="post-total-served" min="0" value="0" />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:.75rem;">Center Condition After Use</label>
-            <select id="post-center-condition">
-              <option value="good">Good / Undamaged</option>
-              <option value="minor_damage">Minor Damage</option>
-              <option value="major_damage">Major Damage</option>
-              <option value="unknown" selected>— Not Yet Assessed</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Damage Assessment Notes</label>
-          <textarea id="post-damage-notes" rows="2" placeholder="e.g. Roof tiles displaced, flooring damaged in east wing, toilets need repair..."></textarea>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Resources Consumed / Used</label>
-          <textarea id="post-resources-used" rows="2" placeholder="e.g. 350 food packs distributed, 500L water consumed, 2 first aid kits depleted..."></textarea>
-        </div>
-        <div class="form-group">
-          <label style="font-size:.78rem;font-weight:600;">Replenishment &amp; Recovery Needs</label>
-          <textarea id="post-replenishment-needed" rows="3" placeholder="e.g. Restock 200 food packs, repair east wing roof, refill generator fuel, purchase 5 new sleeping mats..."></textarea>
-        </div>
-      </div>
-
-      <!-- ===== HISTORY PANE ===== -->
-      <div id="phase-pane-history" style="display:none;">
-        <div class="tracking-section-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <span style="display:flex;align-items:center;gap:.4rem;">
-            <i data-lucide="history" style="color:var(--primary);"></i> Historical Utilization Log
-          </span>
-          <button class="btn btn-outline-sm" onclick="const f=document.getElementById('hist-form-box'); f.style.display = f.style.display==='none' ? 'block' : 'none';" style="font-size:.75rem;padding:.3rem .7rem;gap:.35rem;">
-            <i data-lucide="plus-circle" style="width:13px;height:13px;"></i> Log New Event
-          </button>
-        </div>
-
-        <!-- Add Event Form (Collapsible) -->
-        <div id="hist-form-box" style="display:none;background:rgba(15,23,42,0.6);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1rem;margin-bottom:1.2rem;box-shadow:0 4px 14px rgba(0,0,0,0.3);">
-          <div style="font-size:.78rem;font-weight:700;color:var(--text-main);margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;">
-            <i data-lucide="plus-circle" style="width:13px;height:13px;color:var(--primary);"></i> Record Past Disaster Utilization Entry
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
-            <div class="form-group" style="margin:0;grid-column:1/-1;">
-              <label style="font-size:.75rem;">Event Name *</label>
-              <input type="text" id="hist-event-name" placeholder="e.g. Typhoon Odette (2021)" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Event Type *</label>
-              <select id="hist-event-type">
-                <option value="typhoon">Typhoon</option>
-                <option value="flood">Flood</option>
-                <option value="earthquake">Earthquake</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Event Date *</label>
-              <input type="date" id="hist-event-date" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Peak Occupancy</label>
-              <input type="number" id="hist-peak-occ" min="0" value="0" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Total Served</label>
-              <input type="number" id="hist-total-served" min="0" value="0" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Duration (days)</label>
-              <input type="number" id="hist-duration" min="1" value="1" />
-            </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:.75rem;">Reliability Rating</label>
-              <select id="hist-reliability">
-                <option value="excellent">Excellent Performance</option>
-                <option value="good" selected>Good Performance</option>
-                <option value="fair">Fair Performance</option>
-                <option value="poor">Poor Performance</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:.4rem;">
-            <label style="font-size:.75rem;">Resource Bottlenecks</label>
-            <textarea id="hist-bottlenecks" rows="2" placeholder="e.g. Food packs depleted Day 3. Generator fuel ran out Day 5..."></textarea>
-          </div>
-          <div class="form-group" style="margin-bottom:.4rem;">
-            <label style="font-size:.75rem;">Structural / Resilience Notes</label>
-            <textarea id="hist-structural" rows="2" placeholder="e.g. Minor roof damage east wing. Floor held well. No failure..."></textarea>
-          </div>
-          <div class="form-group" style="margin-bottom:.65rem;">
-            <label style="font-size:.75rem;">Lessons Learned</label>
-            <textarea id="hist-lessons" rows="2" placeholder="e.g. Pre-position 500 food packs. Keep generator fuel for 7 days..."></textarea>
-          </div>
-          <button class="btn btn-primary" onclick="submitHistoryLog()" style="font-size:.78rem;padding:.45rem .85rem;gap:.35rem;">
-            <i data-lucide="plus"></i> Add Log Entry
-          </button>
-        </div>
-
-        <!-- History Log Table -->
-        <div id="history-log-list">
-          <div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:.82rem;">
-            <i data-lucide="loader" class="spin"></i> Loading history...
           </div>
         </div>
       </div>
-
-        <p class="error-msg" id="tracking-error" style="margin-top:1rem;"></p>
-
-        <!-- Bottom Workspace Footer Actions -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border-color);">
-          <button class="btn btn-outline" onclick="closeTrackingModal()" style="gap:.4rem;">
-            <i data-lucide="arrow-left"></i> Back to Center Directory
-          </button>
-          <button class="btn btn-primary" onclick="submitTracking()" style="padding:.5rem 1.2rem;">
-            <i data-lucide="save"></i> Save Workspace Record
-          </button>
-        </div>
-
-      </div> <!-- end #center-workspace-view -->
 
     </div> <!-- end .page-body -->
   </div> <!-- end .main-content -->
 </div> <!-- end .layout -->
-<script src="assets/js/api.js"></script>
-<script src="assets/js/auth.js"></script>
-<script src="assets/js/evacuation.js"></script>
+<!-- ===== MODAL 1: Add / Edit Facility Registration Modal (Part 1 Camp Management Structure) ===== -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" style="max-width:660px; width:92vw; padding:0; overflow:hidden; border-radius:18px; border:1px solid rgba(59,130,246,0.35); box-shadow:0 25px 65px rgba(0,0,0,0.85), 0 0 40px rgba(59,130,246,0.2); background:#0b1120; display:flex; flex-direction:column; max-height:88vh;">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.1rem 1.6rem; background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border-bottom:1px solid rgba(255,255,255,0.09); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:.8rem;">
+        <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.3), rgba(37,99,235,0.18)); border:1px solid rgba(59,130,246,0.5); display:flex; align-items:center; justify-content:center; color:#60a5fa; box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="building-2" style="width:20px; height:20px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:800; color:#ffffff;" id="modal-title">Add Evacuation Center</h3>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.5rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillEvacuationDemoData()" title="Quick auto-populate sample data" style="font-size:.72rem; padding:.25rem .65rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.3rem;">
+          <i data-lucide="zap" style="width:13px; height:13px;"></i> Auto-Populate
+        </button>
+        <button class="modal-close" onclick="closeModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; padding:.4rem; border-radius:8px;">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body Scrollable -->
+    <div class="modal-body" style="padding:1.25rem 1.5rem; overflow-y:auto; flex:1;">
+      <form id="center-form" onsubmit="event.preventDefault(); submitCenter();">
+        <input type="hidden" id="center-id" />
+
+        <!-- ==================== PART 1: CAMP MANAGEMENT STRUCTURE ==================== -->
+        <div class="wizard-pane active" id="evac-wizard-pane-1">
+
+          <!-- Section Card Header -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.5rem; display:flex; justify-content:space-between; align-items:center;">
+              <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="building-2" style="width:15px; height:15px;"></i> Part 1: Camp Management Structure</span>
+              <span class="badge badge-blue" style="font-size:.7rem; padding:.15rem .5rem; border-radius:9999px;">Barangay Linao</span>
+            </div>
+            <div style="font-size:.76rem; color:var(--text-muted); line-height:1.4; margin-bottom:1rem;">
+              This section collects location details, baseline facility specifications, and center classification:
+            </div>
+
+            <!-- Name of Evacuation Center -->
+            <div class="form-group" style="margin-bottom:.85rem;">
+              <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Name of Evacuation Center <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="c-name" placeholder="e.g. Linao Regional Evacuation Center" required style="width:100%; box-sizing:border-box;" />
+            </div>
+
+            <!-- Year Established & Capacity -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:.85rem;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Year Established</label>
+                <input type="text" id="c-year-established" placeholder='e.g. "2010"' style="width:100%; box-sizing:border-box;" />
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Capacity <span class="required" style="color:var(--danger);">*</span></label>
+                <input type="text" id="c-capacity" placeholder='e.g. "80 families"' required style="width:100%; box-sizing:border-box;" />
+              </div>
+            </div>
+
+            <!-- Address & GIS Pin Picker Button -->
+            <div class="form-group" style="margin-bottom:.85rem;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.35rem;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin:0;">Address <span class="required" style="color:var(--danger);">*</span></label>
+                <button type="button" class="btn btn-outline-sm" onclick="toggleCenterGisMap()" style="font-size:.72rem; padding:.2rem .65rem; border-color:rgba(59,130,246,0.4); color:#60a5fa; background:rgba(59,130,246,0.12); border-radius:9999px; display:inline-flex; align-items:center; gap:.3rem;">
+                  <i data-lucide="map-pin" style="width:12px; height:12px;"></i> Location Pin Picker
+                </button>
+              </div>
+              <textarea id="c-address" rows="2" placeholder="Type complete address OR drop a pin on the integrated map..." required style="width:100%; box-sizing:border-box; resize:vertical;"></textarea>
+              
+              <!-- Integrated Interactive Leaflet GIS Map Picker Container -->
+              <div id="center-gis-map-box" style="display:none; margin-top:.6rem; background:rgba(15,23,42,0.8); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:.5rem;">
+                <div style="font-size:.72rem; color:#60a5fa; margin-bottom:.4rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span><i data-lucide="info" style="width:12px; height:12px;"></i> Drop a pin on the map to save GIS coordinates.</span>
+                  <span id="gis-coords-badge" style="font-weight:700; color:#38bdf8;">11.0180, 124.5920</span>
+                </div>
+                <div id="center-gis-map-picker" style="height:180px; border-radius:6px; width:100%;"></div>
+              </div>
+            </div>
+
+            <!-- Floor Area & Lot Area -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:.85rem;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Floor Area</label>
+                <input type="text" id="c-floor-area" placeholder='e.g. "100 sq. meters"' style="width:100%; box-sizing:border-box;" />
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Lot Area</label>
+                <input type="text" id="c-lot-area" placeholder='e.g. "20X15 feet"' style="width:100%; box-sizing:border-box;" />
+              </div>
+            </div>
+
+            <!-- Type of Evacuation Center (Selection Field) -->
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Type of Evacuation Center (Select ONLY ONE) <span class="required" style="color:var(--danger);">*</span></label>
+              <select id="c-type" onchange="toggleCenterTypeOthers()" style="width:100%; box-sizing:border-box;" required>
+                <option value="Barangay Hall">Barangay Hall</option>
+                <option value="Chapel/Church">Chapel/Church</option>
+                <option value="Covered Court" selected>Covered Court</option>
+                <option value="Government Building">Government Building</option>
+                <option value="School">School</option>
+                <option value="Open Space">Open Space</option>
+                <option value="Private Building">Private Building</option>
+                <option value="Purpose-Built Evacuation Center">Purpose-Built Evacuation Center</option>
+                <option value="Others">Others</option>
+              </select>
+              <div id="c-type-others-box" style="display:none; margin-top:.5rem;">
+                <label style="font-size:.74rem; font-weight:600; color:var(--text-muted);">Others: Specify custom center type</label>
+                <input type="text" id="c-type-others" placeholder="Specify custom center type..." style="width:100%; box-sizing:border-box;" />
+              </div>
+            </div>
+
+          </div> <!-- end section card -->
+
+          <!-- Hidden Coordinates & State -->
+          <input type="hidden" id="c-lat" value="11.0180" />
+          <input type="hidden" id="c-lng" value="124.5920" />
+          <input type="hidden" id="c-contact-person" value="" />
+          <input type="hidden" id="c-contact-number" value="" />
+
+
+        </div> <!-- end #evac-wizard-pane-1 -->
+
+        <p class="error-msg" id="center-error" style="display:none; margin-top:.75rem;"></p>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:.5rem; margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="submit" class="btn btn-primary" id="evac-btn-submit" style="gap:.4rem; background:#10b981; border-color:#10b981;">
+            <i data-lucide="save"></i> <span id="modal-submit-label">Save Center</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL 2: JMC No. 2 Series 2021 Compliance Inspection Modal ===== -->
+<div class="modal-overlay" id="jmc2-modal-overlay" onclick="closeJMC2ModalOutside(event)">
+  <div class="modal" style="max-width:850px;width:95vw;">
+    <div class="modal-header" style="border-bottom:1px solid rgba(59,130,246,0.3);background:rgba(59,130,246,0.06);">
+      <h3 style="color:#60a5fa;"><i data-lucide="shield-check"></i> JMC No. 2 Series 2021 Compliance Inspection (20 Criteria)</h3>
+      <button class="modal-close" onclick="closeJMC2Modal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem;max-height:78vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(15,23,42,0.8);border:1px solid rgba(59,130,246,0.3);padding:.85rem 1.1rem;border-radius:10px;margin-bottom:1.25rem;">
+        <div>
+          <div style="font-weight:700;font-size:1.05rem;color:var(--text-main);" id="jmc2-center-name">Tambulilid Covered Court</div>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.15rem;">Joint Memorandum Circular Standards Audit for Disaster Shelter Standards</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;">Compliance Score</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#34d399;" id="jmc2-live-score">100%</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);padding:.75rem 1rem;border-radius:8px;margin-bottom:1.25rem;font-size:.8rem;color:#fde047;">
+        <i data-lucide="alert-triangle" style="width:15px;height:15px;vertical-align:middle;margin-right:.3rem;"></i>
+        <strong>Automated Maintenance Protocol:</strong> Flagging any criterion as <strong>"Issue / Deficient"</strong> automatically generates a maintenance ticket for rapid barangay response.
+      </div>
+
+      <form id="jmc2-checklist-form" onsubmit="submitJMC2Checklist(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:1rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Inspecting Officer / Auditor</label>
+            <input type="text" id="jmc2-inspector-name" placeholder="e.g. Kagawad M. Palanca" style="width:100%;box-sizing:border-box;" required />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Inspection Date &amp; Time</label>
+            <input type="text" id="jmc2-inspection-time" readonly style="width:100%;box-sizing:border-box;background:rgba(15,23,42,0.6);color:var(--text-muted);" />
+          </div>
+        </div>
+
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;margin-bottom:1.25rem;">
+          <table class="data-table" style="width:100%;font-size:.78rem;">
+            <thead>
+              <tr>
+                <th style="width:38%;">JMC2 Standard Criterion (20 Items)</th>
+                <th style="width:25%;">Category</th>
+                <th style="width:22%;">Status Evaluation</th>
+                <th style="width:15%;">Defect Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="jmc2-items-tbody">
+              <!-- Dynamically populated JMC2 items -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+          <button type="button" class="btn btn-ghost" onclick="closeJMC2Modal()">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="check-circle-2"></i> Save JMC2 Audit Evaluation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL 4: Initialize Active Disaster Event Modal ===== -->
+<div class="modal-overlay" id="disaster-event-modal-overlay" onclick="closeDisasterEventModalOutside(event)">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header" style="background:rgba(239,68,68,0.08);border-bottom:1px solid rgba(239,68,68,0.3);">
+      <h3 style="color:#ef4444;"><i data-lucide="radio"></i> Initialize Active Disaster Event</h3>
+      <button class="modal-close" onclick="closeDisasterEventModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      <form id="disaster-event-form" onsubmit="submitDisasterEvent(event)">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Disaster Event Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="evt-name" placeholder="e.g. Typhoon Kristine (Category 4)" required style="width:100%;box-sizing:border-box;" />
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Disaster Event Category <span style="color:#ef4444;">*</span></label>
+          <select id="evt-type" class="filter-select" style="width:100%;box-sizing:border-box;" required>
+            <option value="Typhoon / Severe Weather">Typhoon / Severe Weather</option>
+            <option value="Flash Flood / Inundation">Flash Flood / Inundation</option>
+            <option value="Earthquake / Seismic">Earthquake / Seismic Activity</option>
+            <option value="Landslide Hazard">Landslide Hazard</option>
+            <option value="Fire Incident">Fire Incident</option>
+            <option value="Precautionary Pre-Evacuation">Precautionary Pre-Evacuation</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Executive Directives &amp; Direct Notes</label>
+          <textarea id="evt-notes" rows="3" placeholder="e.g. Mandatory evacuation for Sitios 1, 2, and 4 coastal zones..." style="width:100%;box-sizing:border-box;"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+          <button type="button" class="btn btn-ghost" onclick="closeDisasterEventModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background:#ef4444;border-color:#ef4444;"><i data-lucide="radio"></i> Initialize Active Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL 5: QR Relief Distribution & Duplicate Claim Scanner Modal ===== -->
+<div class="modal-overlay" id="qr-relief-modal-overlay" onclick="closeQRReliefModalOutside(event)">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header" style="background:rgba(52,211,153,0.08);border-bottom:1px solid rgba(52,211,153,0.3);">
+      <h3 style="color:#34d399;"><i data-lucide="qr-code"></i> QR Relief Distribution &amp; Duplicate Claim Scanner</h3>
+      <button class="modal-close" onclick="closeQRReliefModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      <div style="background:rgba(15,23,42,0.8);border:1px dashed rgba(52,211,153,0.3);padding:1rem;border-radius:10px;text-align:center;margin-bottom:1.25rem;">
+        <i data-lucide="scan-line" style="width:36px;height:36px;color:#34d399;margin-bottom:.4rem;"></i>
+        <div style="font-weight:700;font-size:.95rem;color:var(--text-main);">Scan Family QR Code Token</div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem;">Prevents duplicate relief goods distribution during active disaster runs.</div>
+      </div>
+
+      <form id="qr-scan-form" onsubmit="submitQRReliefScan(event)">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Family QR Code Token or Family ID (e.g. FAM-2026-101)</label>
+          <input type="text" id="qr-token-input" placeholder="e.g. QR-FAM-2026-101-3737 or FAM-2026-101" required style="width:100%;box-sizing:border-box;font-weight:700;font-size:1.05rem;" autofocus />
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Relief Distribution Run Batch ID</label>
+          <input type="text" id="qr-run-id" value="RELIEF-RUN-2026-08-A" style="width:100%;box-sizing:border-box;" required />
+        </div>
+
+        <!-- Claim Result Indicator Container -->
+        <div id="qr-claim-result-box" style="display:none;padding:.85rem 1rem;border-radius:8px;margin-bottom:1.25rem;"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+          <button type="button" class="btn btn-ghost" onclick="closeQRReliefModal()">Close</button>
+          <button type="submit" class="btn btn-primary" style="background:#10b981;border-color:#10b981;"><i data-lucide="check-circle"></i> Verify &amp; Claim Relief Pack</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL 6: Exit & Discharge Workflow Modal ===== -->
+<div class="modal-overlay" id="discharge-modal-overlay" onclick="closeDischargeModalOutside(event)">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header" style="background:rgba(245,158,11,0.08);border-bottom:1px solid rgba(245,158,11,0.3);">
+      <h3 style="color:#fbbf24;"><i data-lucide="log-out"></i> IDP Exit &amp; Discharge Workflow</h3>
+      <button class="modal-close" onclick="closeDischargeModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      <form id="discharge-form" onsubmit="submitDischargeFamily(event)">
+        <input type="hidden" id="dis-family-id" />
+        <div style="font-weight:700;font-size:1.05rem;color:var(--text-main);margin-bottom:.4rem;" id="dis-family-head">Family Head Name</div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:1.25rem;" id="dis-family-meta">Family Code: FAM-2026-101 · Total Members: 4</div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Discharge / Transition Status <span style="color:#ef4444;">*</span></label>
+          <select id="dis-type" class="filter-select" style="width:100%;box-sizing:border-box;" required>
+            <option value="Discharged (Returned to Home)">Discharged (Returned to Residence)</option>
+            <option value="Transferred to Relative / Other Shelter">Transferred to Relative / Other Shelter</option>
+            <option value="Medical Transfer to Hospital">Medical Transfer to Hospital</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label style="font-size:.78rem;font-weight:700;color:var(--text-muted);">Destination Address / Facility</label>
+          <input type="text" id="dis-destination" placeholder="e.g. Sitio Linao Main Residence" style="width:100%;box-sizing:border-box;" required />
+        </div>
+
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:.75rem;border-radius:8px;font-size:.78rem;color:#fde047;margin-bottom:1.25rem;">
+          <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;margin-right:.3rem;"></i>
+          Discharging this family will archive the record to the audit history. (Live occupancy is not tracked in the client UI.)
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+          <button type="button" class="btn btn-ghost" onclick="closeDischargeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background:#f59e0b;border-color:#f59e0b;"><i data-lucide="log-out"></i> Confirm IDP Discharge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL 7: CAMP MANAGEMENT PERSONNEL DIRECTORY Modal ===== -->
+<div class="modal-overlay" id="personnel-modal-overlay" onclick="closePersonnelModalOutside(event)">
+  <div class="modal" style="max-width:980px; width:95vw; padding:0; overflow:hidden; border-radius:18px; border:1px solid rgba(56,189,248,0.35); box-shadow:0 25px 65px rgba(0,0,0,0.85), 0 0 40px rgba(56,189,248,0.15); background:#0b1120; display:flex; flex-direction:column; max-height:90vh;">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.1rem 1.6rem; background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border-bottom:1px solid rgba(255,255,255,0.09); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:.8rem;">
+        <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, rgba(56,189,248,0.3), rgba(37,99,235,0.18)); border:1px solid rgba(56,189,248,0.5); display:flex; align-items:center; justify-content:center; color:#38bdf8; box-shadow:0 0 15px rgba(56,189,248,0.3);">
+          <i data-lucide="users" style="width:20px; height:20px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:800; color:#ffffff; letter-spacing:.02em;">CAMP MANAGEMENT PERSONNEL DIRECTORY</h3>
+          <div style="font-size:.78rem; color:#94a3b8; margin-top:.15rem;" id="personnel-modal-center-name">Center Name</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.5rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillPersonnelDemoData()" title="Quick auto-populate sample personnel data" style="font-size:.72rem; padding:.25rem .65rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.3rem;">
+          <i data-lucide="zap" style="width:13px; height:13px;"></i> Auto-Populate Sample Personnel
+        </button>
+        <button class="modal-close" onclick="closePersonnelModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; padding:.4rem; border-radius:8px;">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body Scrollable -->
+    <div class="modal-body" style="padding:1.25rem 1.5rem; overflow-y:auto; flex:1;">
+      <form id="personnel-modal-form" onsubmit="event.preventDefault(); submitPersonnelDirectory();">
+        <input type="hidden" id="pm-center-id" />
+
+        <!-- Batch 1: Executive & Camp Management Team -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(59,130,246,0.25); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1.25rem;">
+          <div style="font-size:.82rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+            <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="shield-check" style="width:16px; height:16px;"></i> Part 1: Executive &amp; Camp Management Team</span>
+            <span class="badge badge-blue" style="font-size:.68rem; padding:.15rem .5rem; border-radius:9999px;">Core Leadership</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="personnel-table" style="width:100%; border-collapse:collapse; font-size:.78rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; text-align:left;">
+                  <th style="padding:.4rem; width:22%;">ASSIGNMENT</th>
+                  <th style="padding:.4rem; width:44%;">NAME (First, Middle, Last, Suffix)</th>
+                  <th style="padding:.4rem; width:18%;">DESIGNATION / OFFICE</th>
+                  <th style="padding:.4rem; width:16%;">CONTACT DETAILS</th>
+                </tr>
+              </thead>
+              <tbody id="batch-1-tbody">
+                <!-- Pre-filled fixed rows: LGU Camp Coordinator, EC Camp Manager, Assistant Camp Manager -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batch 2: Administrative & Operational Officers -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(168,85,247,0.25); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1.25rem;">
+          <div style="font-size:.82rem; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+            <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="sliders" style="width:16px; height:16px;"></i> Part 2: Administrative &amp; Operational Officers</span>
+            <span class="badge" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-size:.68rem; padding:.15rem .5rem; border-radius:9999px;">Operations &amp; Logistics</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="personnel-table" style="width:100%; border-collapse:collapse; font-size:.78rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; text-align:left;">
+                  <th style="padding:.4rem; width:22%;">ASSIGNMENT</th>
+                  <th style="padding:.4rem; width:44%;">NAME (First, Middle, Last, Suffix)</th>
+                  <th style="padding:.4rem; width:18%;">DESIGNATION / OFFICE</th>
+                  <th style="padding:.4rem; width:16%;">CONTACT DETAILS</th>
+                </tr>
+              </thead>
+              <tbody id="batch-2-tbody">
+                <!-- Pre-filled fixed rows: Administrative/Records Officer, Accommodation and Maintenance Officer, Food and Non-Food Item Officer, Safety and Public Safety Officer, Education, Sports, and Recreation Officer, Logistics Officer -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batch 3: Health Team Sub-Roles -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(52,211,153,0.25); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1.25rem;">
+          <div style="font-size:.82rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+            <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="heart-pulse" style="width:16px; height:16px;"></i> Part 3: Health Team Sub-roles</span>
+            <span class="badge" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:.68rem; padding:.15rem .5rem; border-radius:9999px;">Medical, WASH &amp; Nutrition</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="personnel-table" style="width:100%; border-collapse:collapse; font-size:.78rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; text-align:left;">
+                  <th style="padding:.4rem; width:22%;">ASSIGNMENT</th>
+                  <th style="padding:.4rem; width:44%;">NAME (First, Middle, Last, Suffix)</th>
+                  <th style="padding:.4rem; width:18%;">DESIGNATION / OFFICE</th>
+                  <th style="padding:.4rem; width:16%;">CONTACT DETAILS</th>
+                </tr>
+              </thead>
+              <tbody id="batch-3-tbody">
+                <!-- Pre-filled fixed rows: WASH Officer, Medical Officer, MHPSS Officer, Nutrition Officer -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Custom Personnel Section (Add Person / Role) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px dashed rgba(56,189,248,0.3); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+          <div style="font-size:.82rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+            <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="user-plus" style="width:16px; height:16px;"></i> Additional Dynamic Custom Personnel &amp; Volunteers</span>
+            <button type="button" class="btn btn-outline-sm" onclick="addCustomPersonnelModalRow()" style="font-size:.74rem; padding:.25rem .75rem; color:#38bdf8; border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); font-weight:700;">
+              <i data-lucide="plus" style="width:13px; height:13px;"></i> + Add Person / Role
+            </button>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="personnel-table" style="width:100%; border-collapse:collapse; font-size:.78rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#94a3b8; text-align:left;">
+                  <th style="padding:.4rem; width:20%;">ASSIGNMENT</th>
+                  <th style="padding:.4rem; width:42%;">NAME (First, Middle, Last, Suffix)</th>
+                  <th style="padding:.4rem; width:18%;">DESIGNATION / OFFICE</th>
+                  <th style="padding:.4rem; width:16%;">CONTACT DETAILS</th>
+                  <th style="padding:.4rem; width:4%; text-align:center;">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="batch-custom-tbody">
+                <!-- Dynamically appended custom personnel rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:.75rem;">
+            <button type="button" class="btn btn-outline-sm" onclick="addCustomPersonnelModalRow()" style="font-size:.76rem; padding:.35rem .85rem; color:#38bdf8; border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:.4rem;">
+              <i data-lucide="plus-circle" style="width:14px; height:14px;"></i> + Add Person / Role
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit / Action Footer -->
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="submit" class="btn btn-primary" style="background:#3b82f6; border-color:#3b82f6; font-weight:700; gap:.4rem;">
+            <i data-lucide="save"></i> Save Personnel Directory
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 8: Standard Camp Facilities Checklist (JMC2 Series 2021) -->
+<div id="facilities-modal-overlay" class="modal-overlay" onclick="closeFacilitiesModalOutside(event)">
+  <div class="modal-container" style="max-width:1140px; width:95%; height:90vh; max-height:880px; display:flex; flex-direction:column; background:rgba(15, 23, 42, 0.97); border:1px solid rgba(52,211,153,0.35); box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85); backdrop-filter:blur(20px); border-radius:18px; overflow:hidden;">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1rem 1.6rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; background:rgba(30,41,59,0.4); flex-shrink:0;">
+      <div>
+        <div style="display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
+          <h3 style="font-size:1.15rem; font-weight:800; color:#34d399; margin:0; display:flex; align-items:center; gap:.5rem; letter-spacing:-0.01em;">
+            <i data-lucide="check-square" style="width:22px; height:22px;"></i> STANDARD CAMP FACILITIES CHECKLIST
+          </h3>
+          <span id="fm-compliance-badge" class="badge" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.4); font-size:.75rem; padding:.25rem .75rem; border-radius:9999px; font-weight:800;">
+            JMC2 Score: <span id="fm-score">100%</span>
+          </span>
+        </div>
+        <p style="font-size:.78rem; color:#94a3b8; margin:.25rem 0 0 0;">
+          Joint Memorandum Circular 2 (JMC2 Series 2021) Compliance Checklist for <strong id="fm-center-name" style="color:#f8fafc;">Evacuation Center</strong>
+        </p>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:.75rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillFacilitiesDemoData()" title="Auto-populate sample JMC2 compliance checklist" style="font-size:.75rem; padding:.35rem .85rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.4rem;">
+          <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Auto-Populate Sample Checklist
+        </button>
+        <button class="modal-close" onclick="closeFacilitiesModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; cursor:pointer; padding:.45rem; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; transition:all .15s ease;">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Cluster Tabs Bar -->
+    <div style="padding:.6rem 1.6rem; background:rgba(15,23,42,0.95); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:.6rem; overflow-x:auto; flex-shrink:0; align-items:center; scrollbar-width:thin;">
+      <button type="button" class="fac-tab-btn active" onclick="switchFacTab('cluster-all', this)">All 20 Items</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-admin', this)">1. Admin &amp; Shelter</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-wash', this)">2. WASH &amp; Sanitation</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-health', this)">3. Health &amp; Clinic</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-protection', this)">4. Protection &amp; CFS/WFS</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-waste', this)">5. Waste &amp; Structural</button>
+      <button type="button" class="fac-tab-btn" onclick="switchFacTab('cluster-contingency', this)">6. Layout &amp; Contingency Plan</button>
+    </div>
+
+    <!-- Modal Body Scrollable -->
+    <div class="modal-body" style="padding:1.15rem 1.5rem; overflow-y:auto; flex:1;">
+      <form id="facilities-modal-form" onsubmit="event.preventDefault(); triggerFacilitiesSaveFlow();">
+        <input type="hidden" id="fm-center-id" />
+
+        <!-- CLUSTER 1: Admin & Shelter -->
+        <div id="cluster-admin" class="fac-cluster-sec" style="margin-bottom:1.5rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(59,130,246,0.25); padding-bottom:.35rem;">
+            Cluster 1: Admin, Shelter &amp; Logistics (Items 1, 2, 3, 5, 19)
+          </div>
+
+          <!-- Item 1: Information Board -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 1: Information Board</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Posted in Visible Location:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_1_visible', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_1_visible', false, this)">NO</button>
+                  <input type="hidden" id="fac_1_visible" name="fac_1_visible" value="true" />
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="fac-sublabel">Board Description / Location Details:</label>
+              <input type="text" id="fac_1_desc" class="fac-input" placeholder="e.g. Weatherproof bulletin board posted at main entrance with Camp Rules & Evacuee Directory..." />
+            </div>
+          </div>
+
+          <!-- Item 2: Shelter and Accommodation -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 2: Shelter and Accommodation</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:.65rem;">
+              <div style="background:rgba(15,23,42,0.5); padding:.6rem; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                  <span class="fac-sublabel">Comfortable Living Space (3.5sqm / person):</span>
+                  <div class="fac-toggle-group">
+                    <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_2_space', true, this)">YES</button>
+                    <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_2_space', false, this)">NO</button>
+                    <input type="hidden" id="fac_2_space" name="fac_2_space" value="true" />
+                  </div>
+                </div>
+                <label class="fac-sublabel">No. of Room/s:</label>
+                <input type="number" id="fac_2_rooms" class="fac-input" min="0" placeholder="e.g. 12" />
+              </div>
+
+              <div style="background:rgba(15,23,42,0.5); padding:.6rem; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                  <span class="fac-sublabel">Availability of Modular Tents:</span>
+                  <div class="fac-toggle-group">
+                    <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_2_tents', true, this)">YES</button>
+                    <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_2_tents', false, this)">NO</button>
+                    <input type="hidden" id="fac_2_tents" name="fac_2_tents" value="true" />
+                  </div>
+                </div>
+                <label class="fac-sublabel">No. of Available Modular Tent/s:</label>
+                <input type="number" id="fac_2_tents_count" class="fac-input" min="0" placeholder="e.g. 45" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 3: Camp Management Desk or Office -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 3: Camp Management Desk or Office</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Entrance / Strategic Place &amp; Visibly Marked:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_3_desk', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_3_desk', false, this)">NO</button>
+                  <input type="hidden" id="fac_3_desk" name="fac_3_desk" value="true" />
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="fac-sublabel">Desk Location &amp; Staffing Details:</label>
+              <input type="text" id="fac_3_desc" class="fac-input" placeholder="e.g. Stationed at Lobby 1 with 24/7 BDRRM Helpdesk & Logbook..." />
+            </div>
+          </div>
+
+          <!-- Item 5: Storage Area -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 5: Storage Area</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-bottom:.65rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.5); padding:.5rem .75rem; border-radius:8px;">
+                <span class="fac-sublabel">Dry and Hygienic:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_5_hygiene', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_5_hygiene', false, this)">NO</button>
+                  <input type="hidden" id="fac_5_hygiene" name="fac_5_hygiene" value="true" />
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.5); padding:.5rem .75rem; border-radius:8px;">
+                <span class="fac-sublabel">Weather/Pest Protected:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_5_pest', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_5_pest', false, this)">NO</button>
+                  <input type="hidden" id="fac_5_pest" name="fac_5_pest" value="true" />
+                </div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem;">
+              <div>
+                <label class="fac-sublabel">Minimum Capacity:</label>
+                <input type="text" id="fac_5_min_cap" class="fac-input" placeholder='e.g. "50 sacks / 5 tons"' />
+              </div>
+              <div>
+                <label class="fac-sublabel">Maximum Capacity:</label>
+                <input type="text" id="fac_5_max_cap" class="fac-input" placeholder='e.g. "200 sacks / 20 tons"' />
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 19: Power Supply -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 19: Power Supply</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Enough Power Supply to run Camp:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_19_power', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_19_power', false, this)">NO</button>
+                  <input type="hidden" id="fac_19_power" name="fac_19_power" value="true" />
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="fac-sublabel">Backup Supply Source (e.g. generator set, solar):</label>
+              <input type="text" id="fac_19_backup" class="fac-input" placeholder="e.g. Heavy-duty 50 kVA Diesel Generator Set + Emergency Solar Lights..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- CLUSTER 2: WASH & Sanitation -->
+        <div id="cluster-wash" class="fac-cluster-sec" style="margin-bottom:1.5rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(52,211,153,0.25); padding-bottom:.35rem;">
+            Cluster 2: WASH, Water &amp; Sanitation (Items 4, 6, 7, 8, 9)
+          </div>
+
+          <!-- Item 4: Community Kitchen -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 4: Community Kitchen</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem; margin-bottom:.65rem;">
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Clean Water Access:</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_4_water', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_4_water', false, this)">NO</button>
+                  <input type="hidden" id="fac_4_water" name="fac_4_water" value="true" />
+                </div>
+              </div>
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Easy IDP Access:</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_4_access', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_4_access', false, this)">NO</button>
+                  <input type="hidden" id="fac_4_access" name="fac_4_access" value="true" />
+                </div>
+              </div>
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Away from Latrines:</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_4_distance', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_4_distance', false, this)">NO</button>
+                  <input type="hidden" id="fac_4_distance" name="fac_4_distance" value="true" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="fac-sublabel">Kitchen Condition &amp; Equipment Details:</label>
+              <input type="text" id="fac_4_desc" class="fac-input" placeholder="e.g. Equipped with 4 LPG stoves, stainless sinks & food prep tables..." />
+            </div>
+          </div>
+
+          <!-- Item 6: Water Facility -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 6: Water Facility</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Sufficient Daily Water Supply:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_6_enough', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_6_enough', false, this)">NO</button>
+                  <input type="hidden" id="fac_6_enough" name="fac_6_enough" value="true" />
+                </div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div style="background:rgba(15,23,42,0.5); padding:.6rem; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                  <span class="fac-sublabel">Potable Water:</span>
+                  <div class="fac-toggle-group">
+                    <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_6_potable', true, this)">YES</button>
+                    <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_6_potable', false, this)">NO</button>
+                    <input type="hidden" id="fac_6_potable" name="fac_6_potable" value="true" />
+                  </div>
+                </div>
+                <label class="fac-sublabel">Potable Water Source:</label>
+                <input type="text" id="fac_6_potable_src" class="fac-input" placeholder='e.g. "PrimeWater Tap / Refilling Station"' />
+              </div>
+
+              <div style="background:rgba(15,23,42,0.5); padding:.6rem; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                  <span class="fac-sublabel">Non-Potable Water:</span>
+                  <div class="fac-toggle-group">
+                    <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_6_nonpotable', true, this)">YES</button>
+                    <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_6_nonpotable', false, this)">NO</button>
+                    <input type="hidden" id="fac_6_nonpotable" name="fac_6_nonpotable" value="true" />
+                  </div>
+                </div>
+                <label class="fac-sublabel">Non-Potable Water Source:</label>
+                <input type="text" id="fac_6_nonpotable_src" class="fac-input" placeholder='e.g. "Deepwell / 10,000L Overhead Tanker"' />
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 7: Latrine/Toilets and Bathing Areas -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 7: Latrine/Toilets and Bathing Areas</span>
+            </div>
+
+            <!-- YES/NO Grid for Item 7 -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:.6rem; margin-bottom:.75rem;">
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">1 Toilet / 20 IDPs:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_ratio', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_ratio', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_ratio" name="fac_7_ratio" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">Gender Separation:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_gender', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_gender', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_gender" name="fac_7_gender" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">Garbage Bins Available:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_bins', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_bins', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_bins" name="fac_7_bins" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">MHM Latrines with Cover:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_mhm', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_mhm', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_mhm" name="fac_7_mhm" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">PWD/Elderly Accommodated:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_pwd', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_pwd', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_pwd" name="fac_7_pwd" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">Proper Night Lighting:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_lighting', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_lighting', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_lighting" name="fac_7_lighting" value="true" />
+                </div>
+              </div>
+              <div class="fac-mini-toggle">
+                <span class="fac-sublabel">Soap &amp; Cleaning Supplies:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_7_soap', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_7_soap', false, this)">NO</button>
+                  <input type="hidden" id="fac_7_soap" name="fac_7_soap" value="true" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Number Inputs for Item 7 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem;">
+              <div>
+                <label class="fac-sublabel">No. of Female Toilet/s <span class="required" style="color:var(--danger);">*</span>:</label>
+                <input type="number" id="fac_7_female_toilets" class="fac-input" min="0" placeholder="e.g. 6" required />
+              </div>
+              <div>
+                <label class="fac-sublabel">No. of Male Toilet/s <span class="required" style="color:var(--danger);">*</span>:</label>
+                <input type="number" id="fac_7_male_toilets" class="fac-input" min="0" placeholder="e.g. 6" required />
+              </div>
+              <div>
+                <label class="fac-sublabel">No. of Toilet for PWD/s <span class="required" style="color:var(--danger);">*</span>:</label>
+                <input type="number" id="fac_7_pwd_toilets" class="fac-input" min="0" placeholder="e.g. 2" required />
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 8 & 9 Grid -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <!-- Item 8: Handwashing Facility -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 8: Handwashing Facility</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+                <span class="fac-sublabel">Max 10m from Facility:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_8_nearby', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_8_nearby', false, this)">NO</button>
+                  <input type="hidden" id="fac_8_nearby" name="fac_8_nearby" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">No. of Handwashing Facility/ies:</label>
+              <input type="number" id="fac_8_count" class="fac-input" min="0" placeholder="e.g. 8" />
+            </div>
+
+            <!-- Item 9: Laundry Space -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 9: Laundry Space</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+                <span class="fac-sublabel">Accommodates 20 Persons:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_9_capacity', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_9_capacity', false, this)">NO</button>
+                  <input type="hidden" id="fac_9_capacity" name="fac_9_capacity" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">No. of Laundry Facility/ies:</label>
+              <input type="number" id="fac_9_count" class="fac-input" min="0" placeholder="e.g. 4" />
+            </div>
+          </div>
+        </div>
+
+        <!-- CLUSTER 3: Health & Clinic -->
+        <div id="cluster-health" class="fac-cluster-sec" style="margin-bottom:1.5rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(168,85,247,0.25); padding-bottom:.35rem;">
+            Cluster 3: Health, Clinic &amp; Special Spaces (Items 10, 11, 12, 16)
+          </div>
+
+          <!-- Item 10: Health Station/Clinic/Infirmary -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 10: Health Station / Clinic / Infirmary</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-bottom:.65rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.5); padding:.5rem .75rem; border-radius:8px;">
+                <span class="fac-sublabel">Assigned Medical Staff:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_10_staff', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_10_staff', false, this)">NO</button>
+                  <input type="hidden" id="fac_10_staff" name="fac_10_staff" value="true" />
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.5); padding:.5rem .75rem; border-radius:8px;">
+                <span class="fac-sublabel">Prepositioned Medicine Supply:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_10_meds', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_10_meds', false, this)">NO</button>
+                  <input type="hidden" id="fac_10_meds" name="fac_10_meds" value="true" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="fac-sublabel">Clinic Operational Details:</label>
+              <input type="text" id="fac_10_desc" class="fac-input" placeholder="e.g. On-site Barangay Health Station with 1 Physician & 2 Nurses..." />
+            </div>
+          </div>
+
+          <!-- Item 11 & 12 Grid -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:.8rem;">
+            <!-- Item 11: Breastfeeding Room -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 11: Breastfeeding Room</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_11_secured', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_11_secured', false, this)">NO</button>
+                  <input type="hidden" id="fac_11_secured" name="fac_11_secured" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">Quantity:</label>
+              <input type="number" id="fac_11_qty" class="fac-input" min="0" placeholder="e.g. 2" />
+            </div>
+
+            <!-- Item 12: Couple's Room -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 12: Couple's Room</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_12_located', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_12_located', false, this)">NO</button>
+                  <input type="hidden" id="fac_12_located" name="fac_12_located" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">Description / Location Details:</label>
+              <input type="text" id="fac_12_desc" class="fac-input" placeholder="e.g. 2 secluded rooms located at Wing B..." />
+            </div>
+          </div>
+
+          <!-- Item 16: Ramp -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 16: Ramp (Special Needs Access)</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Designed for Special Needs Concerns:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_16_ramp', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_16_ramp', false, this)">NO</button>
+                  <input type="hidden" id="fac_16_ramp" name="fac_16_ramp" value="true" />
+                </div>
+              </div>
+            </div>
+            <label class="fac-sublabel">Ramp Specs &amp; Incline Details:</label>
+            <input type="text" id="fac_16_desc" class="fac-input" placeholder="e.g. Concrete 1:12 slope ramp with stainless dual handrails..." />
+          </div>
+        </div>
+
+        <!-- CLUSTER 4: Protection & CFS/WFS -->
+        <div id="cluster-protection" class="fac-cluster-sec" style="margin-bottom:1.5rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(56,189,248,0.25); padding-bottom:.35rem;">
+            Cluster 4: Protection, CFS/WFS &amp; Community (Items 13, 14, 15, 17)
+          </div>
+
+          <!-- Item 13 & 14 Grid -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:.8rem;">
+            <!-- Item 13: Child-Friendly Space (CFS) -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 13: Child-Friendly Space (CFS)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                <span class="fac-sublabel">1 CFS per 100 Families:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_13_ratio', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_13_ratio', false, this)">NO</button>
+                  <input type="hidden" id="fac_13_ratio" name="fac_13_ratio" value="true" />
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+                <span class="fac-sublabel">Educational Kits &amp; Toys Available:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_13_kits', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_13_kits', false, this)">NO</button>
+                  <input type="hidden" id="fac_13_kits" name="fac_13_kits" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">CFS Details:</label>
+              <input type="text" id="fac_13_desc" class="fac-input" placeholder="e.g. Designated play tent with UNICEF CFS Kit..." />
+            </div>
+
+            <!-- Item 14: Women-Friendly Space (WFS) -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 14: Women-Friendly Space (WFS)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                <span class="fac-sublabel">1 WFS per 100 Families:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_14_ratio', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_14_ratio', false, this)">NO</button>
+                  <input type="hidden" id="fac_14_ratio" name="fac_14_ratio" value="true" />
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+                <span class="fac-sublabel">WFS Hygiene &amp; Support Kits:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_14_kits', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_14_kits', false, this)">NO</button>
+                  <input type="hidden" id="fac_14_kits" name="fac_14_kits" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">WFS Details:</label>
+              <input type="text" id="fac_14_desc" class="fac-input" placeholder="e.g. Private room with counseling tables & mats..." />
+            </div>
+          </div>
+
+          <!-- Item 15 & 17 Grid -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <!-- Item 15: Prayer Room -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 15: Prayer Room</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_15_faith', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_15_faith', false, this)">NO</button>
+                  <input type="hidden" id="fac_15_faith" name="fac_15_faith" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">Multi-faith Details:</label>
+              <input type="text" id="fac_15_desc" class="fac-input" placeholder="e.g. Multi-faith quiet room..." />
+            </div>
+
+            <!-- Item 17: Domestic and Livestock Animals Area -->
+            <div class="fac-card">
+              <div class="fac-card-header">
+                <span class="fac-item-title">Item 17: Animals Area</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_17_animals', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_17_animals', false, this)">NO</button>
+                  <input type="hidden" id="fac_17_animals" name="fac_17_animals" value="true" />
+                </div>
+              </div>
+              <label class="fac-sublabel">Livestock Pen Details:</label>
+              <input type="text" id="fac_17_desc" class="fac-input" placeholder="e.g. Fenced animal pen 50m away..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- CLUSTER 5: Waste & Structural Integrity -->
+        <div id="cluster-waste" class="fac-cluster-sec" style="margin-bottom:1rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(245,158,11,0.25); padding-bottom:.35rem;">
+            Cluster 5: Waste Management &amp; Structural Integrity (Items 18, 20)
+          </div>
+
+          <!-- Item 18: Solid Waste Management -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 18: Solid Waste Management</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem; margin-bottom:.65rem;">
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Materials Recovery (MRF):</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_18_mrf', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_18_mrf', false, this)">NO</button>
+                  <input type="hidden" id="fac_18_mrf" name="fac_18_mrf" value="true" />
+                </div>
+              </div>
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Adequate Trash Bins:</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_18_bins', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_18_bins', false, this)">NO</button>
+                  <input type="hidden" id="fac_18_bins" name="fac_18_bins" value="true" />
+                </div>
+              </div>
+              <div style="background:rgba(15,23,42,0.5); padding:.5rem; border-radius:8px; text-align:center;">
+                <span class="fac-sublabel" style="display:block; margin-bottom:.3rem;">Regular Collection:</span>
+                <div class="fac-toggle-group" style="justify-content:center;">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_18_schedule', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_18_schedule', false, this)">NO</button>
+                  <input type="hidden" id="fac_18_schedule" name="fac_18_schedule" value="true" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="fac-sublabel">Waste Management Details:</label>
+              <input type="text" id="fac_18_desc" class="fac-input" placeholder="e.g. Daily municipal truck collection at 7:00 AM..." />
+            </div>
+          </div>
+
+          <!-- Item 20: Others & Structural Integrity -->
+          <div class="fac-card">
+            <div class="fac-card-header">
+              <span class="fac-item-title">Item 20: Others &amp; Structural Integrity Report</span>
+              <div class="fac-toggle-wrap">
+                <span class="fac-label">Passed Structural Integrity Inspection:</span>
+                <div class="fac-toggle-group">
+                  <button type="button" class="fac-btn fac-btn-yes active" onclick="setFacToggle('fac_20_integrity', true, this)">YES</button>
+                  <button type="button" class="fac-btn fac-btn-no" onclick="setFacToggle('fac_20_integrity', false, this)">NO</button>
+                  <input type="hidden" id="fac_20_integrity" name="fac_20_integrity" value="true" />
+                </div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div>
+                <label class="fac-sublabel">Custom Additional Facilities:</label>
+                <input type="text" id="fac_20_custom" class="fac-input" placeholder="e.g. Mobile Charging Station, Wifi Hotspot..." />
+              </div>
+              <div>
+                <label class="fac-sublabel">Structural Integrity / Damage Report:</label>
+                <input type="text" id="fac_20_report" class="fac-input" placeholder="e.g. Building certified structurally sound by City Engineering. Minor roof repairs done in 2024..." />
+          </div>
+        </div>
+
+        <!-- SECTION: CAMP LAYOUT & CONTINGENCY PLAN -->
+        <div id="cluster-contingency" class="fac-cluster-sec" style="margin-bottom:1.5rem;">
+          <div style="font-size:.8rem; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; border-bottom:1px solid rgba(245,158,11,0.25); padding-bottom:.35rem; display:flex; align-items:center; justify-content:space-between;">
+            <span>CAMP LAYOUT &amp; CONTINGENCY PLAN TO MEET STANDARDS</span>
+            <span style="font-size:.7rem; font-weight:600; color:#94a3b8; text-transform:none;">Spatial Layout &amp; Action Plan for Unmet Standards</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+            
+            <!-- 1. Camp Layout (Illustration / Media Upload) -->
+            <div class="fac-card" style="margin-bottom:0; background:rgba(30,41,59,0.5); display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="font-size:.84rem; font-weight:800; color:#f8fafc; margin-bottom:.35rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span style="display:flex; align-items:center; gap:.4rem;">
+                    <i data-lucide="map" style="width:15px; height:15px; color:#fbbf24;"></i> Camp Layout (Illustration of Evacuation Center)
+                  </span>
+                  <span class="badge" style="font-size:.65rem; background:rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.25); padding:.15rem .45rem; border-radius:9999px; font-weight:600;">Optional</span>
+                </div>
+                <p style="font-size:.72rem; color:#94a3b8; margin:0 0 .75rem 0; line-height:1.35;">
+                  Optional: Upload a photo, image, or schematic diagram illustrating the floor layout and facility placement within the evacuation center. (Supported: JPG, PNG, PDF)
+                </p>
+              </div>
+
+              <div style="border:2px dashed rgba(255,255,255,0.15); border-radius:10px; padding:.85rem; text-align:center; background:rgba(15,23,42,0.6); transition:all .2s ease;" id="camp-layout-dropzone">
+                <input type="file" id="fac_camp_layout_file" name="fac_camp_layout_file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="handleCampLayoutFile(this)" />
+                <button type="button" class="btn btn-outline-sm" onclick="document.getElementById('fac_camp_layout_file').click()" style="font-size:.75rem; padding:.35rem .75rem; color:#fbbf24; border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); font-weight:700; border-radius:8px;">
+                  <i data-lucide="upload-cloud" style="width:14px; height:14px; margin-right:4px;"></i> Choose Layout File
+                </button>
+                <div id="camp-layout-file-info" style="font-size:.74rem; color:#34d399; margin-top:.5rem; font-weight:600; display:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+              </div>
+            </div>
+
+            <!-- 2. Contingency Plan to Meet Standards -->
+            <div class="fac-card" style="margin-bottom:0; background:rgba(30,41,59,0.5); display:flex; flex-direction:column;">
+              <div style="font-size:.84rem; font-weight:800; color:#f8fafc; margin-bottom:.35rem; display:flex; align-items:center; justify-content:space-between;">
+                <span style="display:flex; align-items:center; gap:.4rem;">
+                  <i data-lucide="file-text" style="width:15px; height:15px; color:#38bdf8;"></i> Contingency Plan to Meet Standards
+                </span>
+                <button type="button" class="btn btn-outline-sm" onclick="autoGenerateContingencyPlan(true)" title="Auto-generate action plan for non-compliant items" style="font-size:.68rem; padding:.15rem .5rem; color:#38bdf8; border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); font-weight:700;">
+                  <i data-lucide="sparkles" style="width:12px; height:12px; margin-right:3px;"></i> Auto-Draft Plan
+                </button>
+              </div>
+              <p style="font-size:.72rem; color:#94a3b8; margin:0 0 .5rem 0; line-height:1.35;">
+                Detailed Action Plan to be undertaken for unmet standards. Auto-drafts entries when items are marked NO; editable manually.
+              </p>
+              <textarea id="fac_contingency_plan" name="fac_contingency_plan" class="fac-input" rows="4" style="width:100%; box-sizing:border-box; flex:1; resize:vertical; font-family:inherit; line-height:1.4; font-size:.76rem;" placeholder="Ex: 1. LGU will Deploy the standby 10pcs Portable Toilets to EC"></textarea>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Submit / Action Footer -->
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="submit" class="btn btn-primary" style="background:#10b981; border-color:#10b981; font-weight:700; gap:.4rem;">
+            <i data-lucide="check-circle-2"></i> Save JMC2 Facilities Checklist
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL 8.5: Form Sign-off & Official Approval Pop-up Modal ===== -->
+<div class="modal-overlay" id="facilities-signoff-modal-overlay" onclick="if(event.target === this) closeFacilitiesSignoffModal()" style="display:none;">
+  <div class="modal" style="max-width:600px; width:92%; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.35); border-radius:14px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.8); overflow:hidden;">
+    <div class="modal-header" style="background:rgba(56,189,248,0.1); border-bottom:1px solid rgba(56,189,248,0.25); padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:.6rem;">
+        <div style="width:36px; height:36px; border-radius:10px; background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); display:flex; align-items:center; justify-content:center; color:#38bdf8;">
+          <i data-lucide="file-check-2" style="width:20px; height:20px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#f8fafc;">Form Sign-off &amp; Official Approval</h3>
+          <p style="margin:.15rem 0 0 0; font-size:.76rem; color:#94a3b8;">Record the officers who prepared and approved this JMC2 audit report.</p>
+        </div>
+      </div>
+      <button type="button" class="modal-close" onclick="closeFacilitiesSignoffModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; cursor:pointer; padding:.45rem; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+        <i data-lucide="x" style="width:18px; height:18px;"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      <form id="facilities-signoff-popup-form" onsubmit="event.preventDefault(); confirmAndSubmitFacilitiesChecklist();">
+        <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.25rem;">
+
+          <!-- Prepared By -->
+          <div style="background:rgba(30,41,59,0.6); border:1px solid rgba(96,165,250,0.3); border-radius:10px; padding:1rem;">
+            <div style="font-size:.85rem; font-weight:800; color:#60a5fa; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem; border-bottom:1px solid rgba(96,165,250,0.2); padding-bottom:.4rem;">
+              <i data-lucide="user-check" style="width:16px; height:16px;"></i> Prepared By
+            </div>
+            <div style="display:flex; flex-direction:column; gap:.65rem;">
+              <div>
+                <label style="font-size:.76rem; font-weight:700; color:#cbd5e1; margin-bottom:.35rem; display:block;">Full Name (First, Middle, Last, Suffix): <span style="color:#ef4444;">*</span></label>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 60px; gap:.35rem;">
+                  <input type="text" id="popup_fac_prep_fn" placeholder="First" required style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_prep_mn" placeholder="Middle" style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_prep_ln" placeholder="Last" required style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_prep_suf" placeholder="Suf" style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                </div>
+              </div>
+              <div>
+                <label style="font-size:.76rem; font-weight:700; color:#cbd5e1; margin-bottom:.35rem; display:block;">Designation / Position: <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="popup_fac_prep_desig" placeholder="e.g. BDRRMC Assessment Officer" required style="width:100%; box-sizing:border-box; padding:.4rem .6rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Approved By -->
+          <div style="background:rgba(30,41,59,0.6); border:1px solid rgba(52,211,153,0.3); border-radius:10px; padding:1rem;">
+            <div style="font-size:.85rem; font-weight:800; color:#34d399; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem; border-bottom:1px solid rgba(52,211,153,0.2); padding-bottom:.4rem;">
+              <i data-lucide="shield-check" style="width:16px; height:16px;"></i> Approved By
+            </div>
+            <div style="display:flex; flex-direction:column; gap:.65rem;">
+              <div>
+                <label style="font-size:.76rem; font-weight:700; color:#cbd5e1; margin-bottom:.35rem; display:block;">Full Name (First, Middle, Last, Suffix): <span style="color:#ef4444;">*</span></label>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr 60px; gap:.35rem;">
+                  <input type="text" id="popup_fac_appr_fn" placeholder="First" required style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_appr_mn" placeholder="Middle" style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_appr_ln" placeholder="Last" required style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                  <input type="text" id="popup_fac_appr_suf" placeholder="Suf" style="padding:.4rem .5rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px; width:100%; box-sizing:border-box;" />
+                </div>
+              </div>
+              <div>
+                <label style="font-size:.76rem; font-weight:700; color:#cbd5e1; margin-bottom:.35rem; display:block;">Designation / Position: <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="popup_fac_appr_desig" placeholder="e.g. Punong Barangay / LGU Camp Chairman" required style="width:100%; box-sizing:border-box; padding:.4rem .6rem; font-size:.76rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:6px;" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:.75rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1rem;">
+          <button type="button" class="btn btn-ghost" onclick="closeFacilitiesSignoffModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background:#10b981; border-color:#10b981; font-weight:700; gap:.4rem;">
+            <i data-lucide="check-circle-2"></i> Confirm &amp; Save Audit Record
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .fac-tab-btn {
+    padding: .45rem .85rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all .2s ease;
+  }
+  .fac-tab-btn:hover {
+    color: #f8fafc;
+    border-color: rgba(52, 211, 153, 0.5);
+    background: rgba(52, 211, 153, 0.08);
+  }
+  .fac-tab-btn.active {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.18);
+    border-color: rgba(52, 211, 153, 0.6);
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);
+  }
+  .fac-card {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    transition: border-color .2s ease;
+  }
+  .fac-card:hover {
+    border-color: rgba(52, 211, 153, 0.25);
+  }
+  .fac-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .75rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+  .fac-item-title {
+    font-size: .88rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+  }
+  .fac-label {
+    font-size: .78rem;
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+  .fac-sublabel {
+    font-size: .76rem;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: .35rem;
+    display: block;
+  }
+  .fac-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .fac-toggle-group {
+    display: inline-flex;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    padding: 3px;
+  }
+  .fac-btn {
+    border: none;
+    padding: .25rem .75rem;
+    font-size: .72rem;
+    font-weight: 800;
+    border-radius: 9999px;
+    cursor: pointer;
+    color: #64748b;
+    background: transparent;
+    transition: all .15s ease;
+  }
+  .fac-btn-yes.active {
+    background: #10b981 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+  .fac-btn-no.active {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+  .fac-mini-toggle {
+    background: rgba(15, 23, 42, 0.6);
+    padding: .5rem .75rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .fac-input {
+    width: 100%;
+    padding: .45rem .75rem;
+    font-size: .8rem;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: all .2s ease;
+  }
+  .fac-input:focus {
+    outline: none;
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+  .fac-input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.35) !important;
+  }
+</style>
+
+<!-- ===== Evacuation Activity Log Detail Modal ===== -->
+<div class="modal-overlay" id="evac-log-detail-modal-overlay" onclick="closeEvacLogDetailModalOutside(event)">
+  <div class="modal" style="max-width:560px;border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
+          <i data-lucide="history" style="width:20px;height:20px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;">Activity Log Record</h3>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Evacuation shelter audit movement detail</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeEvacLogDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" id="evac-log-modal-body" style="font-size:.88rem;padding:1.5rem;max-height:75vh;overflow-y:auto;">
+    </div>
+  </div>
+</div>
+
+<!-- ===== Evacuation Center Full Detail Modal ===== -->
+<div class="modal-overlay" id="evac-center-detail-modal-overlay" onclick="closeEvacCenterDetailModalOutside(event)">
+  <div class="modal" style="max-width:620px;border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
+          <i data-lucide="building-2" style="width:20px;height:20px;"></i>
+        </div>
+        <div>
+          <h3 id="evac-detail-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;">Evacuation Shelter Profile</h3>
+          <div id="evac-detail-subtitle" style="font-size:.73rem;color:var(--text-muted);margin-top:.15rem;">Comprehensive facility specifications &amp; operational status</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeEvacCenterDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" id="evac-detail-body" style="font-size:.88rem;padding:1.5rem;max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-footer" style="padding:.9rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+      <div id="evac-detail-actions-left" style="display:flex;gap:.5rem;"></div>
+      <button class="btn btn-ghost" onclick="closeEvacCenterDetailModal()"><i data-lucide="x"></i> Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/js/api.js?v=4.1"></script>
+<script src="assets/js/auth.js?v=4.1"></script>
+<script src="assets/js/i18n.js?v=4.1"></script>
+<script src="assets/js/evacuation.js?v=4.1"></script>
+<script src="assets/js/weather.js?v=4.1"></script>
 <script>
   requireAuth();
   const user = getUser();

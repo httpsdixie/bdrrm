@@ -1,12 +1,50 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel
-from typing import Optional
-from database import supabase
-from auth.dependencies import get_current_user
+from enum import Enum
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, validator
+
+from ..auth.dependencies import get_current_user
+from ..database import supabase
 from datetime import datetime, timezone
-import random, string
+import json
+import random
+import string
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
+
+
+# ===== Domain Enums =====
+
+class ResourceType(str, Enum):
+    rescue_boat = "rescue_boat"
+    medical_kit = "medical_kit"
+    food_pack = "food_pack"
+    tent = "tent"
+    vehicle = "vehicle"
+    ambulance = "ambulance"
+    fire_truck = "fire_truck"
+    fuel = "fuel"
+    other = "other"
+
+
+class ResourceStatus(str, Enum):
+    available = "available"
+    deployed = "deployed"
+    maintenance = "maintenance"
+    damaged = "damaged"
+    unavailable = "unavailable"
+    retired = "retired"
+    archived = "archived"
+
+
+class ResourceCategory(str, Enum):
+    disaster = "disaster"
+    fire = "fire"
+    medical = "medical"
+    emergency = "emergency"
+    police = "police"
+    other = "other"
 
 
 # ===== Helpers =====
@@ -66,30 +104,57 @@ def _write_log(
 # ===== Schemas =====
 
 class ResourceCreate(BaseModel):
-    name: str
-    type: str           # rescue_boat, medical_kit, food_pack, tent, vehicle, other
-    quantity: int
+    # Make name/type/quantity optional so COA-only submissions are allowed from the simplified form
+    name: Optional[str] = None
+    type: Optional[ResourceType] = None
+    quantity: Optional[int] = Field(default=0)
     location: Optional[str] = None
-    category: Optional[str] = None
-    applicable_hazards: Optional[list[str]] = []
-    ownership_tier: Optional[str] = "barangay"
+    category: Optional[ResourceCategory] = None
+    applicable_hazards: List[str] = Field(default_factory=list)
+    ownership_tier: str = Field(default="barangay")
     property_code: Optional[str] = None   # auto-generated if omitted
     serial_number: Optional[str] = None   # manufacturer serial (optional)
+    # COA Accounting & Asset Management Fields
+    acquisition_date: Optional[str] = None
+    estimated_life: Optional[float] = Field(default=5.0)
+    responsibility_center: Optional[str] = Field(default="BDRRMC Operations")
+    acquisition_cost: Optional[float] = Field(default=0.0)
+    accumulated_depreciation: Optional[float] = Field(default=0.0)
+    net_book_value: Optional[float] = Field(default=0.0)
+
+    @validator("quantity")
+    def validate_quantity(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value < 0:
+            raise ValueError("Quantity must be 0 or greater")
+        return value
 
 
 class ResourceUpdate(BaseModel):
     name: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[ResourceType] = None
     quantity: Optional[int] = None
     available_quantity: Optional[int] = None
     location: Optional[str] = None
-    status: Optional[str] = None
-    category: Optional[str] = None
-    applicable_hazards: Optional[list[str]] = None
+    status: Optional[ResourceStatus] = None
+    category: Optional[ResourceCategory] = None
+    applicable_hazards: Optional[List[str]] = None
     ownership_tier: Optional[str] = None
     property_code: Optional[str] = None
     serial_number: Optional[str] = None
     maintenance_notes: Optional[str] = None   # description for damage/maintenance status
+    # COA Accounting & Asset Management Fields
+    acquisition_date: Optional[str] = None
+    estimated_life: Optional[float] = None
+    responsibility_center: Optional[str] = None
+    acquisition_cost: Optional[float] = None
+    accumulated_depreciation: Optional[float] = None
+    net_book_value: Optional[float] = None
+
+    @validator("quantity", "available_quantity", "estimated_life", "acquisition_cost", "accumulated_depreciation", "net_book_value")
+    def non_negative_values(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and value < 0:
+            raise ValueError("Numeric fields cannot be negative")
+        return value
 
 
 class DispatchCreate(BaseModel):
@@ -102,6 +167,12 @@ class DispatchCreate(BaseModel):
     purpose: Optional[str] = None           # reason / purpose
     due_date: Optional[str] = None          # expected return date YYYY-MM-DD
     notes: Optional[str] = None
+
+    @validator("quantity_dispatched")
+    def validate_dispatch_quantity(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("Dispatched quantity must be greater than 0")
+        return value
 
 
 def _generate_ticket_id() -> str:
@@ -123,22 +194,71 @@ class ReturnDispatch(BaseModel):
     notes: Optional[str] = None
 
 
+def _get_resource_by_id(resource_id: str) -> Optional[dict]:
+    result = (
+        supabase.table("resources")
+        .select("*")
+        .eq("id", resource_id)
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def _normalize_applicable_hazards(hazards: Optional[List[str] | str]) -> List[str]:
+    if hazards is None:
+        return []
+    if isinstance(hazards, str):
+        try:
+            hazards = json.loads(hazards)
+        except Exception:
+            hazards = [h.strip() for h in hazards.split(",") if h.strip()]
+    if isinstance(hazards, list):
+        return [str(h).strip() for h in hazards if str(h).strip()]
+    return [str(hazards).strip()]
+
+
+def _resolve_default_category(category: Optional[str], hazards: List[str]) -> str:
+    if category:
+        return category
+    if hazards:
+        first = hazards[0]
+        if first == "general_emergency":
+            return ResourceCategory.emergency.value
+        return first
+    return ResourceCategory.emergency.value
+
+
 def _normalize_resource(item: dict) -> dict:
     if not item or not isinstance(item, dict):
         return item
-    hazards = item.get("applicable_hazards")
-    if hazards is None or (isinstance(hazards, list) and len(hazards) == 0):
-        cat = item.get("category")
-        if cat:
-            item["applicable_hazards"] = [cat]
-        else:
-            item["applicable_hazards"] = ["general_emergency"]
-    elif isinstance(hazards, str):
+
+    hazards = _normalize_applicable_hazards(item.get("applicable_hazards"))
+    category = item.get("category") or _resolve_default_category(None, hazards)
+    item["applicable_hazards"] = hazards or [category]
+    item["category"] = category
+
+    # Calculate COA Depreciation and Net Book Value
+    cost = float(item.get("acquisition_cost") or 0.0)
+    life = float(item.get("estimated_life") or 5.0)
+    acq_date_str = item.get("acquisition_date")
+
+    if cost > 0 and life > 0 and acq_date_str:
         try:
-            import json
-            item["applicable_hazards"] = json.loads(hazards)
+            acq_dt = datetime.fromisoformat(acq_date_str.replace("Z", "+00:00"))
+            now_dt = datetime.now(timezone.utc)
+            years = max(0.0, (now_dt - acq_dt).days / 365.25)
+            annual_dep = cost / life
+            acc_dep = min(cost, annual_dep * years)
+            nbv = max(0.0, cost - acc_dep)
+            item["accumulated_depreciation"] = round(acc_dep, 2)
+            item["net_book_value"] = round(nbv, 2)
         except Exception:
-            item["applicable_hazards"] = [h.strip() for h in hazards.split(",") if h.strip()]
+            pass
+    elif cost > 0 and item.get("accumulated_depreciation") is not None:
+        acc = float(item.get("accumulated_depreciation") or 0.0)
+        item["net_book_value"] = max(0.0, round(cost - acc, 2))
+
     return item
 
 
@@ -223,30 +343,48 @@ def create_resource(body: ResourceCreate, current_user: dict = Depends(get_curre
     # Check uniqueness
     existing = supabase.table("resources").select("id").eq("property_code", prop_code).execute()
     if existing.data:
-        raise HTTPException(status_code=409, detail=f"Property code '{prop_code}' is already in use.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Property code '{prop_code}' is already in use.")
 
-    primary_cat = body.category or (body.applicable_hazards[0] if body.applicable_hazards else "general_emergency")
+    hazards = _normalize_applicable_hazards(body.applicable_hazards)
+    primary_cat = _resolve_default_category(body.category.value if body.category else None, hazards)
+
+    # Provide sensible defaults for optional fields so COA-only submissions work
+    name_val = (body.name or f"COA Asset {prop_code}").strip()
+    type_val = body.type.value if body.type else ResourceType.other.value
+    quantity_val = int(body.quantity or 0)
 
     payload = {
-        "name": body.name,
-        "type": body.type,
-        "quantity": body.quantity,
-        "available_quantity": body.quantity,
+        "name": name_val,
+        "type": type_val,
+        "quantity": quantity_val,
+        "available_quantity": quantity_val,
         "location": body.location,
-        "status": "available",
-        "ownership_tier": body.ownership_tier or "barangay",
+        "status": (ResourceStatus.available.value if quantity_val > 0 else ResourceStatus.unavailable.value),
+        "ownership_tier": body.ownership_tier,
         "property_code": prop_code,
         "serial_number": body.serial_number or None,
         "category": primary_cat,
-        "applicable_hazards": body.applicable_hazards or [primary_cat],
+        "applicable_hazards": hazards or [primary_cat],
+        "acquisition_date": body.acquisition_date or None,
+        "estimated_life": body.estimated_life,
+        "responsibility_center": body.responsibility_center,
+        "acquisition_cost": body.acquisition_cost,
+        "accumulated_depreciation": body.accumulated_depreciation,
+        "net_book_value": body.net_book_value,
     }
 
     try:
         result = supabase.table("resources").insert(payload).execute()
     except Exception:
-        # Fallback if DB doesn't have applicable_hazards column
-        payload.pop("applicable_hazards", None)
-        result = supabase.table("resources").insert(payload).execute()
+        # Fallback if DB doesn't have newer COA columns yet
+        fallback_payload = payload.copy()
+        for coa_k in [
+            "acquisition_date", "estimated_life", "responsibility_center",
+            "acquisition_cost", "accumulated_depreciation", "net_book_value",
+            "applicable_hazards",
+        ]:
+            fallback_payload.pop(coa_k, None)
+        result = supabase.table("resources").insert(fallback_payload).execute()
 
     created = _normalize_resource(result.data[0])
     _write_log(
@@ -257,7 +395,7 @@ def create_resource(body: ResourceCreate, current_user: dict = Depends(get_curre
         qty_change=created["quantity"],
         qty_before=0,
         qty_after=created["quantity"],
-        new_status="available",
+        new_status=ResourceStatus.available.value,
         description=f"New resource added to inventory. Qty: {created['quantity']}. Location: {created.get('location') or 'N/A'}.",
         performed_by=current_user.get("sub"),
         performed_by_name=current_user.get("full_name"),
@@ -275,27 +413,26 @@ def update_resource(
     if current_user.get("role") not in ("admin", "officer"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
 
-    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    resource = _get_resource_by_id(resource_id)
+    if not resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+
+    updates = {k: v for k, v in body.model_dump(exclude_none=True).items() if v is not None}
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
 
     if "applicable_hazards" in updates and updates["applicable_hazards"]:
+        updates["applicable_hazards"] = _normalize_applicable_hazards(updates["applicable_hazards"])
         updates["category"] = updates["applicable_hazards"][0]
 
-    # Auto-manage available_quantity based on status change
-    OUT_OF_SERVICE = {"maintenance", "damaged", "unavailable"}
+    OUT_OF_SERVICE = {ResourceStatus.maintenance.value, ResourceStatus.damaged.value, ResourceStatus.unavailable.value}
     if "status" in updates:
-        new_status = updates["status"]
+        new_status = updates["status"].value if isinstance(updates["status"], ResourceStatus) else updates["status"]
+        updates["status"] = new_status
         if new_status in OUT_OF_SERVICE:
-            # Fetch current resource to zero out availability
-            res = supabase.table("resources").select("available_quantity").eq("id", resource_id).single().execute()
-            if res.data:
-                updates["available_quantity"] = 0
-        elif new_status == "available" and "available_quantity" not in updates:
-            # Restore available_quantity to full total when returning to service
-            res = supabase.table("resources").select("quantity").eq("id", resource_id).single().execute()
-            if res.data:
-                updates["available_quantity"] = res.data["quantity"]
+            updates["available_quantity"] = 0
+        elif new_status == ResourceStatus.available.value and "available_quantity" not in updates:
+            updates["available_quantity"] = resource.get("quantity", 0)
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
@@ -307,7 +444,6 @@ def update_resource(
             .execute()
         )
     except Exception:
-        # Fallback if column missing in DB
         updates.pop("applicable_hazards", None)
         result = (
             supabase.table("resources")
@@ -324,28 +460,23 @@ def update_resource(
     # Log status changes (maintenance, damaged, unavailable, available)
     if "status" in updates:
         new_st = updates["status"]
-        event_map = {
-            "maintenance": "status_changed",
-            "damaged":     "status_changed",
-            "unavailable": "status_changed",
-            "available":   "status_changed",
-            "deployed":    "status_changed",
-        }
         status_labels = {
-            "available":   "Available",
-            "deployed":    "Deployed",
-            "maintenance": "Under Maintenance",
-            "damaged":     "Damaged",
-            "unavailable": "Unavailable",
+            ResourceStatus.available.value:   "Available",
+            ResourceStatus.deployed.value:    "Deployed",
+            ResourceStatus.maintenance.value: "Under Maintenance",
+            ResourceStatus.damaged.value:     "Damaged",
+            ResourceStatus.unavailable.value: "Unavailable",
+            ResourceStatus.retired.value:     "Retired",
+            ResourceStatus.archived.value:    "Archived",
         }
         maint_notes = body.maintenance_notes or ""
         _write_log(
             resource_id=resource_id,
             resource_name=updated["name"],
             resource_type=updated["type"],
-            event_type=event_map.get(new_st, "status_changed"),
-            qty_before=updated.get("available_quantity"),
-            qty_after=updates.get("available_quantity", updated.get("available_quantity")),
+            event_type="status_changed",
+            qty_before=resource.get("available_quantity", 0),
+            qty_after=updated.get("available_quantity"),
             new_status=new_st,
             description=f"Status changed to '{status_labels.get(new_st, new_st)}'.{(' Notes: ' + maint_notes) if maint_notes else ''}",
             performed_by=current_user.get("sub"),
@@ -356,8 +487,72 @@ def update_resource(
 
 
 class RestockRequest(BaseModel):
-    add_quantity: int
+    add_quantity: int = Field(gt=0)
     notes: Optional[str] = None
+
+
+class RetireRequest(BaseModel):
+    disposal_reason: str      # e.g. End of Life, Beyond Economical Repair, Damaged in Disaster, Auctioned/Decommissioned
+    voucher_number: Optional[str] = None # COA Audit Disposal Voucher No.
+    disposal_date: Optional[str] = None  # YYYY-MM-DD
+    notes: Optional[str] = None
+
+    @validator("disposal_reason")
+    def disposal_reason_not_blank(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Disposal reason is required")
+        return value.strip()
+
+
+@router.post("/{resource_id}/retire")
+def retire_resource(
+    resource_id: str,
+    body: RetireRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Decommission / Retire an asset at the end of its life or severe damage (COA Asset Disposal Workflow)."""
+    if current_user.get("role") not in ("admin", "officer"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+    res = supabase.table("resources").select("*").eq("id", resource_id).single().execute()
+    resource = res.data
+    if not resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+
+    disposal_date = body.disposal_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    voucher = body.voucher_number or f"COA-DISP-{datetime.now().year}-{random.randint(1000, 9999)}"
+
+    # Update resource status to retired and remove from active available quantity
+    result = (
+        supabase.table("resources")
+        .update({
+            "status": ResourceStatus.retired.value,
+            "available_quantity": 0,
+            "maintenance_notes": f"RETIRED / DISPOSED: {body.disposal_reason}. Voucher: {voucher}. Notes: {body.notes or ''}".strip(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", resource_id)
+        .execute()
+    )
+
+    _write_log(
+        resource_id=resource_id,
+        resource_name=resource["name"],
+        resource_type=resource["type"],
+        event_type="archived",
+        qty_before=resource.get("available_quantity", 0),
+        qty_after=0,
+        new_status="retired",
+        description=(
+            f"Asset Decommissioned & Retired under COA Audit Disposal Protocol. "
+            f"Reason: {body.disposal_reason}. Voucher #: {voucher}. Date: {disposal_date}. "
+            f"Net Book Value at Retirement: ₱{resource.get('net_book_value', 0):,.2f}."
+        ),
+        performed_by=current_user.get("sub"),
+        performed_by_name=current_user.get("full_name"),
+    )
+
+    return result.data[0] if result.data else {"message": "Resource retired successfully"}
 
 
 @router.post("/{resource_id}/restock")
@@ -380,7 +575,7 @@ def restock_resource(
 
     new_total = (resource.get("quantity") or 0) + body.add_quantity
     new_avail = (resource.get("available_quantity") or 0) + body.add_quantity
-    new_status = "available" if new_avail > 0 else resource.get("status", "available")
+    new_status = ResourceStatus.available.value if new_avail > 0 else resource.get("status", ResourceStatus.available.value)
 
     result = (
         supabase.table("resources")
@@ -458,25 +653,29 @@ def get_dispatch_log(current_user: dict = Depends(get_current_user)):
 @router.post("/dispatch", status_code=status.HTTP_201_CREATED)
 def dispatch_resource(body: DispatchCreate, current_user: dict = Depends(get_current_user)):
     """Dispatch / lend a resource. Creates a borrowing ticket."""
-    res = (
-        supabase.table("resources")
-        .select("*")
-        .eq("id", body.resource_id)
-        .single()
-        .execute()
-    )
-    resource = res.data
+    resource = _get_resource_by_id(body.resource_id)
     if not resource:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
-    if resource["available_quantity"] < body.quantity_dispatched:
+    if resource.get("status") in {
+        ResourceStatus.maintenance.value,
+        ResourceStatus.damaged.value,
+        ResourceStatus.unavailable.value,
+        ResourceStatus.retired.value,
+    }:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Only {resource['available_quantity']} units available"
+            detail=f"Resource '{resource.get('name')}' is not available for dispatch"
         )
 
-    new_available = resource["available_quantity"] - body.quantity_dispatched
-    new_status = "available" if new_available > 0 else "deployed"
+    if resource.get("available_quantity", 0) < body.quantity_dispatched:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only {resource.get('available_quantity', 0)} units available"
+        )
+
+    new_available = resource.get("available_quantity", 0) - body.quantity_dispatched
+    new_status = ResourceStatus.available.value if new_available > 0 else ResourceStatus.deployed.value
 
     supabase.table("resources").update({
         "available_quantity": new_available,
@@ -504,11 +703,11 @@ def dispatch_resource(body: DispatchCreate, current_user: dict = Depends(get_cur
     ticket = dispatch.data[0]
     _write_log(
         resource_id=body.resource_id,
-        resource_name=resource["name"],
-        resource_type=resource["type"],
+        resource_name=resource.get("name", "Unknown"),
+        resource_type=resource.get("type", "other"),
         event_type="dispatched",
         qty_change=-body.quantity_dispatched,
-        qty_before=resource["available_quantity"],
+        qty_before=resource.get("available_quantity", 0),
         qty_after=new_available,
         new_status=new_status,
         reference_id=ticket["id"],
@@ -547,19 +746,14 @@ def return_resource(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already returned")
 
     # Restore resource availability
-    resource = (
-        supabase.table("resources")
-        .select("name, type, available_quantity, quantity")
-        .eq("id", dispatch["resource_id"])
-        .single()
-        .execute()
-    ).data
+    resource = _get_resource_by_id(dispatch["resource_id"])
+    if not resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource record for dispatch not found")
 
-    new_available = min(
-        resource["quantity"],
-        resource["available_quantity"] + dispatch["quantity_dispatched"]
-    )
-    new_status = "available" if new_available > 0 else "deployed"
+    current_available = resource.get("available_quantity", 0)
+    total_quantity = resource.get("quantity", 0)
+    new_available = min(total_quantity, current_available + dispatch["quantity_dispatched"])
+    new_status = ResourceStatus.available.value if new_available > 0 else resource.get("status", ResourceStatus.deployed.value)
 
     supabase.table("resources").update({
         "available_quantity": new_available,
@@ -575,11 +769,11 @@ def return_resource(
 
     _write_log(
         resource_id=dispatch["resource_id"],
-        resource_name=resource.get("name", "Unknown") if isinstance(resource, dict) else "Unknown",
-        resource_type=resource.get("type", "other") if isinstance(resource, dict) else "other",
+        resource_name=resource.get("name", "Unknown"),
+        resource_type=resource.get("type", "other"),
         event_type="returned",
         qty_change=dispatch["quantity_dispatched"],
-        qty_before=resource["available_quantity"],
+        qty_before=current_available,
         qty_after=new_available,
         new_status=new_status,
         reference_id=dispatch_id,

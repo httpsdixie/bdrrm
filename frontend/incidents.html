@@ -7,10 +7,12 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js?v=2.6"></script>
+  <script src="assets/js/components.js"></script>
   <style>
     /* ---- Pin placement mini-map ---- */
     #pin-map {
-      width: 100%; height: 260px;
+      width: 100%; height: 220px;
       border-radius: 8px;
       border: 2px dashed var(--border-color);
       cursor: crosshair;
@@ -90,6 +92,98 @@
       width: 10px; height: 10px; border-radius: 50%; margin: 0 auto .3rem;
     }
 
+    /* ---- Victim / Complainant multi-row ---- */
+    .victim-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 90px 36px;
+      gap: .5rem;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 10px;
+      padding: .65rem .75rem;
+      margin-bottom: .5rem;
+      animation: victimIn .18s ease;
+      backdrop-filter: blur(8px);
+    }
+    @keyframes victimIn {
+      from { opacity:0; transform:translateY(-6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .victim-row .vr-label {
+      font-size: .68rem; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .05em;
+      margin-bottom: .3rem; display: flex; align-items: center;
+    }
+    .victim-row input {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: .82rem !important;
+      font-weight: 500 !important;
+      padding: .4rem .65rem !important;
+      height: 36px !important;
+      background: rgba(15, 23, 42, 0.85) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 8px !important;
+      color: #f8fafc !important;
+      outline: none !important;
+      transition: all .18s ease !important;
+    }
+    .victim-row input::placeholder {
+      color: #64748b !important;
+      opacity: 1 !important;
+    }
+    .victim-row input:focus {
+      border-color: #3b82f6 !important;
+      background: rgba(15, 23, 42, 0.98) !important;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35) !important;
+      color: #ffffff !important;
+    }
+    .victim-remove-btn {
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); cursor: pointer;
+      color: #f87171; padding: 0;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      transition: all .15s ease;
+      height: 36px; width: 36px; margin-top: auto;
+    }
+    .victim-remove-btn:hover { background: rgba(239,68,68,.25); border-color: rgba(239, 68, 68, 0.5); color: #ffffff; }
+    .victim-index-badge {
+      font-size: .62rem; font-weight: 800; color: #60a5fa;
+      background: rgba(59,130,246,.18);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 9999px; padding: .1rem .45rem;
+      margin-right: .35rem;
+      white-space: nowrap;
+    }
+
+    .modal-body input[type="text"],
+    .modal-body input[type="number"],
+    .modal-body input[type="datetime-local"],
+    .modal-body input[type="date"],
+    .modal-body select,
+    .modal-body textarea {
+      background: rgba(15, 23, 42, 0.75) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 8px !important;
+      color: #f8fafc !important;
+      font-size: .84rem !important;
+      outline: none !important;
+      transition: all .18s ease !important;
+    }
+    .modal-body input[type="text"]::placeholder,
+    .modal-body textarea::placeholder {
+      color: #64748b !important;
+      opacity: 1 !important;
+    }
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      border-color: #3b82f6 !important;
+      background: rgba(15, 23, 42, 0.95) !important;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35) !important;
+      color: #ffffff !important;
+    }
+
     /* Section dividers */
     .form-section-title {
       font-size: .72rem; font-weight: 800; text-transform: uppercase;
@@ -103,42 +197,293 @@
       width: 100%; border-radius: 8px; max-height: 200px;
       object-fit: cover; margin-bottom: 1rem;
     }
+
+    /* ---- Custom Clock Picker Popup ---- */
+    .clock-popup-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: none;
+    }
+    .clock-popup-overlay.active { display: block; }
+
+    /* ---- Custom Calendar Date Picker Popup ---- */
+    .cal-popup-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: none;
+    }
+    .cal-popup-overlay.active { display: block; }
+    .cal-popup {
+      position: fixed;
+      background: #0f172a;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(59, 130, 246, 0.25);
+      padding: 1.1rem;
+      width: 275px;
+      z-index: 10000;
+      user-select: none;
+      animation: clockPopIn .15s ease;
+    }
+    .cal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: .65rem;
+    }
+    .cal-nav-btn {
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text-muted); padding: .3rem; border-radius: 6px;
+      display: flex; align-items: center; transition: background .15s, color .15s;
+    }
+    .cal-nav-btn:hover { background: rgba(59,130,246,0.15); color: var(--primary); }
+    .cal-month-label {
+      font-size: .82rem; font-weight: 700; color: var(--text-main);
+      cursor: pointer; padding: .2rem .5rem; border-radius: 6px;
+      transition: background .15s;
+    }
+    .cal-month-label:hover { background: rgba(59,130,246,0.12); color: var(--primary); }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+    .cal-dow {
+      text-align: center; font-size: .62rem; font-weight: 700;
+      color: var(--text-dim); padding: .2rem 0 .35rem;
+      text-transform: uppercase;
+    }
+    .cal-day {
+      text-align: center; padding: .32rem .1rem;
+      font-size: .78rem; font-weight: 500;
+      border-radius: 6px; cursor: pointer;
+      color: var(--text-main);
+      transition: background .12s, color .12s;
+    }
+    .cal-day:hover { background: rgba(59,130,246,0.18); color: var(--primary); }
+    .cal-day.today {
+      color: var(--primary); font-weight: 800;
+    }
+    .cal-day.selected {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 0 8px rgba(59,130,246,0.45);
+    }
+    .cal-day.other-month { color: var(--text-dim); opacity: .55; }
+    .cal-day.disabled { opacity: .3; pointer-events: none; }
+    .cal-popup-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: .75rem; border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: .65rem;
+    }
+    /* Year/Month picker layer */
+    .cal-ym-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: .3rem; margin: .5rem 0;
+    }
+    .cal-ym-cell {
+      text-align: center; padding: .4rem .2rem;
+      font-size: .78rem; font-weight: 600;
+      border-radius: 6px; cursor: pointer;
+      color: var(--text-main);
+      transition: background .12s;
+    }
+    .cal-ym-cell:hover { background: rgba(59,130,246,0.18); color: var(--primary); }
+    .cal-ym-cell.selected { background: var(--primary); color: #fff; }
+    .cal-ym-title {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-muted); margin-bottom: .35rem; text-align:center;
+    }
+
+    .clock-popup {
+      position: fixed;
+      background: #1a2744;
+      border: 1px solid rgba(59,130,246,0.35);
+      border-radius: 14px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(59,130,246,0.18);
+      padding: 1rem;
+      width: 260px;
+      z-index: 10000;
+      user-select: none;
+      animation: clockPopIn .15s ease;
+    }
+    @keyframes clockPopIn {
+      from { opacity:0; transform: translateY(-6px) scale(.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .clock-popup-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: .9rem;
+    }
+    .clock-time-display {
+      display: flex; align-items: center; gap: .2rem;
+      background: rgba(15,23,42,0.6);
+      border-radius: 8px;
+      padding: .35rem .75rem;
+      font-size: 1.6rem; font-weight: 800; font-family: monospace;
+      color: var(--text-main);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .clock-seg {
+      cursor: pointer; border-radius: 5px; padding: .05rem .1rem;
+      transition: background .15s, color .15s;
+    }
+    .clock-seg.active {
+      background: var(--primary); color: #fff;
+    }
+    .clock-colon { color: var(--text-muted); font-weight: 400; }
+    .clock-ampm-toggle {
+      display: flex; flex-direction: column;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px; overflow: hidden;
+    }
+    .clock-ampm-btn {
+      padding: .2rem .55rem; font-size: .72rem; font-weight: 700;
+      cursor: pointer; color: var(--text-muted);
+      transition: background .15s, color .15s;
+      background: transparent; border: none; text-align: center;
+    }
+    .clock-ampm-btn.active {
+      background: var(--primary); color: #fff;
+    }
+
+    /* Analog face */
+    .clock-face-wrap {
+      display: flex; justify-content: center; margin-bottom: .9rem;
+    }
+    .clock-face {
+      position: relative;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(15,23,42,0.85) 60%, rgba(30,41,59,0.9) 100%);
+      border: 2px solid rgba(59,130,246,0.25);
+      cursor: pointer;
+      touch-action: none;
+    }
+    .clock-center-dot {
+      position: absolute; top: 50%; left: 50%;
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      transform: translate(-50%,-50%);
+      z-index: 3;
+    }
+    .clock-hand {
+      position: absolute; bottom: 50%; left: 50%;
+      transform-origin: bottom center;
+      border-radius: 4px 4px 0 0;
+      transition: transform .12s ease;
+    }
+    .clock-hand-hour {
+      width: 4px; height: 50px;
+      background: var(--primary);
+      margin-left: -2px;
+    }
+    .clock-hand-minute {
+      width: 2px; height: 68px;
+      background: rgba(148,163,184,0.7);
+      margin-left: -1px;
+    }
+    .clock-tick {
+      position: absolute; top: 50%; left: 50%;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      transform-origin: 0 0;
+      background: rgba(255,255,255,0.15);
+    }
+    .clock-tick.major {
+      width: 8px; height: 8px;
+      background: rgba(255,255,255,0.35);
+    }
+    .clock-tick.selected {
+      background: var(--primary);
+      box-shadow: 0 0 6px var(--primary-glow);
+    }
+    .clock-num {
+      position: absolute; top: 50%; left: 50%;
+      font-size: .7rem; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      transform-origin: 0 0;
+      pointer-events: none;
+      transition: color .1s;
+    }
+    .clock-num.active-num { color: var(--primary); }
+
+    /* Minute dots ring */
+    .clock-popup-mode-label {
+      text-align: center;
+      font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text-muted); margin-bottom: .5rem;
+    }
+
+    /* Footer */
+    .clock-popup-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: .5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: .65rem;
+    }
+    .clock-footer-btn {
+      font-size: .76rem; font-weight: 600; cursor: pointer;
+      padding: .3rem .7rem; border-radius: 6px; border: none;
+      transition: background .15s, color .15s;
+    }
+    .clock-footer-cancel {
+      background: transparent; color: var(--text-muted);
+    }
+    .clock-footer-cancel:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
+    .clock-footer-ok {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 0 12px rgba(59,130,246,0.4);
+    }
+    .clock-footer-ok:hover { background: var(--primary-hover); }
+    /* Filter dropdown item hover */
+    .filter-dropdown-item:hover {
+      background: rgba(59, 130, 246, 0.12) !important;
+      color: #ffffff !important;
+    }
   </style>
 </head>
 <body>
 
 <div class="layout">
-  <aside class="sidebar">
-    <div class="brand">
-      <i data-lucide="shield-alert" class="brand-icon"></i>
-      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
-    </div>
-    <nav>
-      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
-      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-      <a href="map.html"><i data-lucide="map"></i> GIS Map</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
-      <a href="incidents.html" class="active"><i data-lucide="triangle-alert"></i> Incidents</a>
-      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
-      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
-      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
-    </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
-  </aside>
+  <!-- Sidebar (Rendered via components.js) -->
+  <aside class="sidebar"></aside>
 
   <div class="main-content">
     <div class="topbar">
-      <h2>Incident Tracking</h2>
+      <div class="topbar-left">
+        <h2>Incident Tracking</h2>
+        <div class="dash-timestamp">
+          <span class="sync-item"><i data-lucide="triangle-alert"></i> Live Field Emergency Intake &amp; Triage</span>
+        </div>
+      </div>
+
       <div class="user-info">
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-header">
+              <i data-lucide="cloud-sun"></i>
+              <span>Ormoc City Weather</span>
+              <button class="weather-refresh" onclick="loadWeather(event)" title="Refresh Weather">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-body" id="weather-body">
+              <div class="weather-loading"><i data-lucide="loader" class="spin"></i></div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-icon-sm" id="refresh-btn" onclick="loadIncidents(this)" title="Refresh">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -166,35 +511,29 @@
     <div class="page-body">
 
       <!-- Interactive Incident Summary Tally Bar -->
-      <div class="evac-summary" id="inc-summary" style="margin-bottom: 1.25rem;">
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('')" style="cursor: pointer;" title="Show all incidents">
-          <i data-lucide="triangle-alert" style="width: 18px; height: 18px; color: #60a5fa; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(96,165,250,0.5));"></i>
-          <div class="evac-summary-num blue" id="inc-sum-total">—</div>
-          <div class="evac-summary-label">Total Incidents</div>
+      <div class="evac-summary" id="inc-summary" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.7)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.1rem 1.5rem; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Show all incidents">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#60a5fa;">
+            <i data-lucide="triangle-alert" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div class="evac-summary-num blue" id="inc-sum-total" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
+          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Total Incidents</div>
         </div>
-        <div class="evac-summary-divider"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('active')" style="cursor: pointer;" title="Filter by Active status">
-          <i data-lucide="radio" style="width: 18px; height: 18px; color: #f87171; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(248,113,113,0.5));"></i>
-          <div class="evac-summary-num red" id="inc-sum-active">—</div>
-          <div class="evac-summary-label">Active</div>
+        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08);"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('ongoing')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Ongoing status">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#fb923c;">
+            <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div class="evac-summary-num orange" id="inc-sum-ongoing" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
+          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Ongoing</div>
         </div>
-        <div class="evac-summary-divider"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('responding')" style="cursor: pointer;" title="Filter by Responding status">
-          <i data-lucide="navigation" style="width: 18px; height: 18px; color: #fb923c; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(251,146,60,0.5));"></i>
-          <div class="evac-summary-num orange" id="inc-sum-responding">—</div>
-          <div class="evac-summary-label">Responding</div>
-        </div>
-        <div class="evac-summary-divider"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('resolved')" style="cursor: pointer;" title="Filter by Resolved status">
-          <i data-lucide="check-circle-2" style="width: 18px; height: 18px; color: #34d399; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(52,211,153,0.5));"></i>
-          <div class="evac-summary-num green" id="inc-sum-resolved">—</div>
-          <div class="evac-summary-label">Resolved</div>
-        </div>
-        <div class="evac-summary-divider"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentValidation('pending')" style="cursor: pointer;" title="Filter by Pending Review">
-          <i data-lucide="clock" style="width: 18px; height: 18px; color: #facc15; margin-bottom: 0.25rem; filter: drop-shadow(0 0 6px rgba(250,204,21,0.5));"></i>
-          <div class="evac-summary-num yellow" id="inc-sum-pending">—</div>
-          <div class="evac-summary-label">Pending Review</div>
+        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08);"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('resolved')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Resolved status">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#34d399;">
+            <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div class="evac-summary-num green" id="inc-sum-resolved" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
+          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Resolved</div>
         </div>
       </div>
 
@@ -204,20 +543,15 @@
           <button class="tab-btn active" id="tab-all" onclick="switchIncidentTab('all')">
             <i data-lucide="list"></i> All Incidents
           </button>
-          <button class="tab-btn" id="tab-pending" onclick="switchIncidentTab('pending')">
-            <i data-lucide="clock"></i> Pending Review
-            <span class="badge badge-orange" id="pending-count" style="margin-left:.3rem;font-size:.65rem;"></span>
+          <button class="tab-btn" id="tab-tanod" onclick="switchIncidentTab('tanod')" style="display:none!important;">
+            <i data-lucide="shield-user"></i> Tanod &amp; Responder Registry
           </button>
-          <button class="tab-btn" id="tab-audit" onclick="switchIncidentTab('audit')">
-            <i data-lucide="shield-alert"></i> Audit Log &amp; QA
-          </button>
-          <button class="tab-btn" id="tab-archived" onclick="switchIncidentTab('archived')">
-            <i data-lucide="archive"></i> Archived Incidents
-            <span class="badge badge-gray" id="archived-count" style="margin-left:.3rem;font-size:.65rem;"></span>
+          <button class="tab-btn" id="tab-logs" onclick="switchIncidentTab('logs')">
+            <i data-lucide="clock"></i> Activity Log
           </button>
         </div>
         <button class="btn btn-primary" onclick="openModal()">
-          <i data-lucide="map-pin"></i> Pin &amp; Report Incident
+          <i data-lucide="plus-circle"></i> New Incident
         </button>
       </div>
 
@@ -227,45 +561,96 @@
         <div class="filter-bar-card">
           <div class="search-wrap">
             <i data-lucide="search"></i>
-            <input type="text" id="search-input" placeholder="Search title, location, ticket..." oninput="filterIncidents()" />
+            <input type="text" id="search-input" placeholder="Search title, location, victim, suspect, responder..." oninput="filterIncidents()" />
           </div>
 
           <div class="filter-group">
-            <select id="filter-status" onchange="filterIncidents()" class="filter-select">
-              <option value="">Status: All</option>
-              <option value="active">Active</option>
-              <option value="responding">Responding</option>
-              <option value="resolved">Resolved</option>
-            </select>
+            <!-- Custom Status Filter -->
+            <div class="custom-status-filter-wrap" style="position:relative; display:inline-block;">
+              <select id="filter-status" onchange="filterIncidents(); updateStatusFilterLabel()" style="display:none!important;">
+                <option value="">Status: All</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <button type="button" id="filter-status-trigger" onclick="toggleFilterStatusDropdown(event)"
+                style="display:flex; align-items:center; gap:.4rem; cursor:pointer; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:.45rem .85rem; color:#f8fafc; font-size:.82rem; font-weight:600; outline:none; transition:all .18s ease;"
+                onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">
+                <i data-lucide="activity" id="filter-status-icon" style="width:14px; height:14px; color:#ffffff;"></i>
+                <span id="filter-status-label">Status: All</span>
+                <i data-lucide="chevron-down" id="filter-status-chevron" style="width:14px; height:14px; color:#ffffff; transition:transform .2s ease;"></i>
+              </button>
+              <div id="filter-status-dropdown" style="display:none; position:fixed; top:0; left:0; z-index:10050; background:#0f172a; border:1px solid rgba(59,130,246,0.4); border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.85), 0 0 25px rgba(59,130,246,0.25); padding:.5rem; backdrop-filter:blur(16px); min-width:160px;">
+                <button type="button" onclick="pickFilterStatus('')" class="filter-dropdown-item" data-val="" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="list" style="width:13px;height:13px;color:#94a3b8;"></i> All Statuses
+                </button>
+                <button type="button" onclick="pickFilterStatus('ongoing')" class="filter-dropdown-item" data-val="ongoing" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#fb923c;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="radio" style="width:13px;height:13px;color:#fb923c;"></i> Ongoing
+                </button>
+                <button type="button" onclick="pickFilterStatus('resolved')" class="filter-dropdown-item" data-val="resolved" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#34d399;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#34d399;"></i> Resolved
+                </button>
+              </div>
+            </div>
 
-            <select id="filter-type" onchange="filterIncidents()" class="filter-select">
-              <option value="">Type: All</option>
-              <option value="flood">Flooding</option>
-              <option value="landslide">Landslide</option>
-              <option value="fire">Fire</option>
-              <option value="road_accident">Road Accident</option>
-              <option value="fallen_tree">Fallen Tree</option>
-              <option value="earthquake">Earthquake</option>
-              <option value="typhoon">Typhoon Damage</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="assistance">Emergency Assistance</option>
-              <option value="other">Other</option>
-            </select>
+            <!-- Custom Glassmorphic Purok Filter Picker -->
+            <div class="custom-purok-filter-wrap" style="position:relative; display:inline-block;">
+              <select id="filter-purok" onchange="filterIncidents()" style="display:none!important;">
+                <option value="">Purok: All</option>
+              </select>
 
-            <select id="filter-validation" onchange="filterIncidents()" class="filter-select">
-              <option value="">Validation: All</option>
-              <option value="validated">Validated Only</option>
-              <option value="pending">Pending Only</option>
-              <option value="invalidated">Invalidated Only</option>
-            </select>
+              <button type="button" id="filter-purok-trigger" onclick="toggleFilterPurokDropdown(event)"
+                style="display:flex; align-items:center; gap:.4rem; cursor:pointer; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:.45rem .85rem; color:#f8fafc; font-size:.82rem; font-weight:600; outline:none; transition:all .18s ease;"
+                onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">
+                <i data-lucide="map-pin" style="width:14px; height:14px; color:#ffffff;"></i>
+                <span id="filter-purok-label">Purok: All</span>
+                <i data-lucide="chevron-down" id="filter-purok-chevron" style="width:14px; height:14px; color:#ffffff; transition:transform .2s ease;"></i>
+              </button>
 
-            <select id="filter-date" onchange="handleIncidentsDatePresetChange()" onclick="if(this.value==='custom') handleIncidentsDatePresetChange()" class="filter-select">
-              <option value="">Date: All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="custom">Custom Range...</option>
-            </select>
+              <div id="filter-purok-dropdown" style="display:none; position:fixed; top:0; left:0; max-width:360px; z-index:10050; background:#0f172a; border:1px solid rgba(59,130,246,0.4); border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.85), 0 0 25px rgba(59,130,246,0.25); padding:.65rem; max-height:220px; overflow-y:auto; backdrop-filter:blur(16px);">
+                <div style="font-size:.68rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; padding:.2rem .3rem .4rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:.5rem; display:flex; justify-content:space-between; align-items:center;">
+                  <span>Barangay Linao Purok Grid</span>
+                  <span class="badge badge-blue" style="font-size:.65rem; padding:.1rem .4rem;">17 Puroks</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:.35rem;" id="filter-purok-chips">
+                </div>
+              </div>
+            </div>
+
+            <!-- Custom Date Filter -->
+            <div class="custom-date-filter-wrap" style="position:relative; display:inline-block;">
+              <select id="filter-date" onchange="handleIncidentsDatePresetChange()" style="display:none!important;">
+                <option value="">Date: All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="custom">Custom Range...</option>
+              </select>
+              <button type="button" id="filter-date-trigger" onclick="toggleFilterDateDropdown(event)"
+                style="display:flex; align-items:center; gap:.4rem; cursor:pointer; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:.45rem .85rem; color:#f8fafc; font-size:.82rem; font-weight:600; outline:none; transition:all .18s ease;"
+                onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">
+                <i data-lucide="calendar" style="width:14px; height:14px; color:#60a5fa;"></i>
+                <span id="filter-date-label">Date: All Time</span>
+                <i data-lucide="chevron-down" id="filter-date-chevron" style="width:14px; height:14px; color:#94a3b8; transition:transform .2s ease;"></i>
+              </button>
+              <div id="filter-date-dropdown" style="display:none; position:fixed; top:0; left:0; z-index:10050; background:#0f172a; border:1px solid rgba(59,130,246,0.4); border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.85), 0 0 25px rgba(59,130,246,0.25); padding:.5rem; backdrop-filter:blur(16px); min-width:185px;">
+                <button type="button" onclick="pickFilterDate('')" class="filter-dropdown-item" data-val="" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="infinity" style="width:13px;height:13px;color:#94a3b8;"></i> All Time
+                </button>
+                <button type="button" onclick="pickFilterDate('today')" class="filter-dropdown-item" data-val="today" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="sun" style="width:13px;height:13px;color:#fbbf24;"></i> Today
+                </button>
+                <button type="button" onclick="pickFilterDate('week')" class="filter-dropdown-item" data-val="week" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="calendar-days" style="width:13px;height:13px;color:#60a5fa;"></i> Last 7 Days
+                </button>
+                <button type="button" onclick="pickFilterDate('month')" class="filter-dropdown-item" data-val="month" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="calendar-range" style="width:13px;height:13px;color:#a78bfa;"></i> Last 30 Days
+                </button>
+                <div style="height:1px;background:rgba(255,255,255,0.06);margin:.35rem .3rem;"></div>
+                <button type="button" onclick="pickFilterDate('custom')" class="filter-dropdown-item" data-val="custom" style="display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .65rem;background:transparent;border:none;border-radius:7px;color:#f8fafc;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;">
+                  <i data-lucide="sliders-horizontal" style="width:13px;height:13px;color:#34d399;"></i> Custom Range…
+                </button>
+              </div>
+            </div>
             <input type="hidden" id="inc-date-from" />
             <input type="hidden" id="inc-date-to" />
 
@@ -278,33 +663,22 @@
         <div class="table-card">
           <div class="table-responsive">
             <table class="data-table">
+              <colgroup>
+                <col style="width:45%">
+                <col style="width:18%">
+                <col style="width:25%">
+                <col style="width:12%">
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Incident</th>
-                  <th>Type</th>
-                  <th>Severity</th>
+                  <th>Title of Complaint</th>
+                  <th>Date &amp; Time</th>
                   <th>Status</th>
-                  <th>Date</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="incidents-tbody">
-                <tr>
-                  <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
-                </tr>
-                <tr>
-                  <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                  <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
-                </tr>
+                <!-- Populated by incidents.js -->
               </tbody>
             </table>
           </div>
@@ -327,121 +701,18 @@
         </div>
       </div>
 
-      <!-- Pending Validation table -->
-      <div id="pane-pending" style="display:none;">
+
+      <!-- Tanod & Responder Registry table -->
+      <div id="pane-tanod" style="display:none;">
         <div class="filter-bar-card" style="margin-bottom:1rem;">
           <div class="search-wrap">
             <i data-lucide="search"></i>
-            <input type="text" id="pending-search-input" placeholder="Search pending reports..." oninput="filterPendingIncidents()" />
+            <input type="text" id="tanod-search-input" placeholder="Search responder name, role, equipment..." oninput="filterTanodRegistry()" />
           </div>
 
           <div class="filter-group">
-            <select id="pending-filter-type" onchange="filterPendingIncidents()" class="filter-select">
-              <option value="">Type: All</option>
-              <option value="flood">Flooding</option>
-              <option value="landslide">Landslide</option>
-              <option value="fire">Fire</option>
-              <option value="road_accident">Road Accident</option>
-              <option value="fallen_tree">Fallen Tree</option>
-              <option value="earthquake">Earthquake</option>
-              <option value="typhoon">Typhoon Damage</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="assistance">Emergency Assistance</option>
-              <option value="other">Other</option>
-            </select>
-
-            <select id="pending-filter-date" onchange="handlePendingDatePresetChange()" onclick="if(this.value==='custom') handlePendingDatePresetChange()" class="filter-select">
-              <option value="">Date: All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="custom">Custom Range...</option>
-            </select>
-            <input type="hidden" id="pending-date-from" />
-            <input type="hidden" id="pending-date-to" />
-
-            <button class="btn btn-outline" onclick="resetPendingFilters()">
-              <i data-lucide="rotate-ccw"></i> Reset
-            </button>
-          </div>
-        </div>
-        <div class="table-card">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Incident</th>
-                <th>Type</th>
-                <th>Severity</th>
-                <th>Reporter</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="pending-tbody">
-              <tr>
-                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:50px;"></span></td>
-              </tr>
-              <tr>
-                <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:50px;"></span></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="table-pagination" id="pending-pagination">
-            <div class="pagination-info" id="pending-pagination-info">Showing 0 of 0 entries</div>
-            <div class="pagination-controls">
-              <button class="page-btn" id="pending-btn-prev" onclick="prevPendingPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="pending-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="pending-btn-next" onclick="nextPendingPage()"><i data-lucide="chevron-right"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Audit Log table -->
-      <div id="pane-audit" style="display:none;">
-        <div class="filter-bar-card" style="margin-bottom:1rem;">
-          <div class="search-wrap">
-            <i data-lucide="search"></i>
-            <input type="text" id="audit-search-input" placeholder="Search audit logs & QA records..." oninput="filterAuditIncidents()" />
-          </div>
-
-          <div class="filter-group">
-            <select id="audit-filter-type" onchange="filterAuditIncidents()" class="filter-select">
-              <option value="">Type: All</option>
-              <option value="flood">Flooding</option>
-              <option value="landslide">Landslide</option>
-              <option value="fire">Fire</option>
-              <option value="road_accident">Road Accident</option>
-              <option value="fallen_tree">Fallen Tree</option>
-              <option value="earthquake">Earthquake</option>
-              <option value="typhoon">Typhoon Damage</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="assistance">Emergency Assistance</option>
-              <option value="other">Other</option>
-            </select>
-
-            <select id="audit-filter-date" onchange="handleAuditDatePresetChange()" onclick="if(this.value==='custom') handleAuditDatePresetChange()" class="filter-select">
-              <option value="">Date: All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="custom">Custom Range...</option>
-            </select>
-            <input type="hidden" id="audit-date-from" />
-            <input type="hidden" id="audit-date-to" />
-
-            <button class="btn btn-outline" onclick="resetAuditFilters()">
-              <i data-lucide="rotate-ccw"></i> Reset
+<button class="btn btn-primary" onclick="openAddTanodModal()">
+              <i data-lucide="user-plus"></i> Add Responder
             </button>
           </div>
         </div>
@@ -450,457 +721,540 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Incident</th>
-                <th>Type</th>
-                <th>Reason</th>
-                <th>Notes</th>
-                <th>Invalidated By</th>
-                <th>Date</th>
+                <th>Responder</th>
+                <th>Role</th>
+                <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
-            <tbody id="audit-tbody">
-              <tr>
-                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:100px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-              </tr>
-              <tr>
-                <td><span class="skeleton skeleton-title" style="width:55%;"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:100px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-              </tr>
+            <tbody id="tanod-tbody">
+              <!-- Rendered via JS -->
             </tbody>
           </table>
-          <div class="table-pagination" id="audit-pagination">
-            <div class="pagination-info" id="audit-pagination-info">Showing 0 of 0 entries</div>
+          <div class="table-pagination" id="tanod-pagination">
+            <div class="pagination-info" id="tanod-pagination-info">Showing 0 of 0 entries</div>
             <div class="pagination-controls">
-              <button class="page-btn" id="audit-btn-prev" onclick="prevAuditPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="audit-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="audit-btn-next" onclick="nextAuditPage()"><i data-lucide="chevron-right"></i></button>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+                <select id="tanod-page-size" onchange="changeTanodPageSize(this.value)" class="pagination-select">
+                  <option value="5" selected>5</option>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                </select>
+              </div>
+              <button class="page-btn" id="tanod-btn-prev" onclick="prevTanodPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="tanod-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="tanod-btn-next" onclick="nextTanodPage()"><i data-lucide="chevron-right"></i></button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Archived Incidents table -->
-      <div id="pane-archived" style="display:none;">
-        <div class="filter-bar-card" style="margin-bottom:1rem;">
-          <div class="search-wrap">
-            <i data-lucide="search"></i>
-            <input type="text" id="archived-search-input" placeholder="Search archived incidents..." oninput="filterArchivedIncidents()" />
+      </div>
+
+      <!-- Active Threat Board Pane -->
+      <div id="pane-threats" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <h3 style="margin:0;font-size:1rem;font-weight:800;color:#f8fafc;display:flex;align-items:center;gap:.5rem;">
+              <i data-lucide="siren" style="width:18px;height:18px;color:#ef4444;"></i> Active Threat Board
+            </h3>
+            <div style="font-size:.78rem;color:#64748b;margin-top:.2rem;">Live view of ongoing incidents ranked by triage severity. Auto-refreshes every 30 seconds.</div>
           </div>
+          <button class="btn btn-outline" onclick="loadActiveThreatBoard()">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+        </div>
+        <div id="threat-board-container"></div>
+      </div>
 
-          <div class="filter-group">
-            <select id="archived-filter-type" onchange="filterArchivedIncidents()" class="filter-select">
-              <option value="">Type: All</option>
-              <option value="flood">Flooding</option>
-              <option value="landslide">Landslide</option>
-              <option value="fire">Fire</option>
-              <option value="road_accident">Road Accident</option>
-              <option value="fallen_tree">Fallen Tree</option>
-              <option value="earthquake">Earthquake</option>
-              <option value="typhoon">Typhoon Damage</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="assistance">Emergency Assistance</option>
-              <option value="other">Other</option>
-            </select>
-
-            <select id="archived-filter-date" onchange="handleArchivedDatePresetChange()" onclick="if(this.value==='custom') handleArchivedDatePresetChange()" class="filter-select">
-              <option value="">Date: All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="custom">Custom Range...</option>
-            </select>
-            <input type="hidden" id="archived-date-from" />
-            <input type="hidden" id="archived-date-to" />
-
-            <button class="btn btn-outline" onclick="resetArchivedFilters()">
-              <i data-lucide="rotate-ccw"></i> Reset
-            </button>
+      <!-- Incident Activity Log Pane -->
+      <div id="pane-logs" style="display:none;">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
+            <div class="search-wrap">
+              <i data-lucide="search"></i>
+              <input type="text" id="inc-log-search" placeholder="Search activity logs or incident title..." oninput="filterIncidentLogs()" />
+            </div>
+            <div class="filter-group">
+              <select id="inc-log-filter-event" onchange="filterIncidentLogs()" class="filter-select">
+                <option value="">Event: All</option>
+                <option value="added">Added</option>
+                <option value="updated">Updated</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <button class="btn btn-outline" id="btn-clear-inc-log-filters" onclick="clearIncidentLogFilters()" style="display:none;">
+                <i data-lucide="rotate-ccw"></i> Reset
+              </button>
+            </div>
           </div>
+          <button class="btn btn-ghost" onclick="printIncidentLogs()" style="flex-shrink:0;height:42px;">
+            <i data-lucide="printer"></i> Print Log
+          </button>
         </div>
 
         <div class="table-card">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Incident</th>
-                <th>Type</th>
-                <th>Severity</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="archived-tbody">
-              <tr>
-                <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-badge"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:75px;"></span></td>
-                <td><span class="skeleton skeleton-text" style="width:80px;"></span></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="table-pagination" id="archived-pagination">
-            <div class="pagination-info" id="archived-pagination-info">Showing 0 of 0 entries</div>
+          <div class="table-responsive">
+            <table class="data-table" id="inc-log-table">
+              <thead>
+                <tr>
+                  <th style="width:170px;">Date &amp; Time</th>
+                  <th style="min-width:220px;">Incident Operation</th>
+                  <th style="width:160px;">Event Action</th>
+                  <th style="min-width:200px;">Details / Remarks</th>
+                  <th style="min-width:140px;">Logged By</th>
+                </tr>
+              </thead>
+              <tbody id="inc-logs-tbody"></tbody>
+            </table>
+          </div>
+          <div class="table-pagination" id="inc-log-pagination" style="display:none;">
+            <div class="pagination-info" id="inc-log-pagination-info">Showing 0 of 0 entries</div>
             <div class="pagination-controls">
-              <button class="page-btn" id="archived-btn-prev" onclick="prevArchivedPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="archived-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="archived-btn-next" onclick="nextArchivedPage()"><i data-lucide="chevron-right"></i></button>
+              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
+                <select id="inc-log-page-size" onchange="changeIncidentLogPageSize(this.value)" class="pagination-select">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+              <button class="page-btn" id="inc-log-btn-prev" onclick="prevIncidentLogPage()"><i data-lucide="chevron-left"></i></button>
+              <div id="inc-log-page-numbers" style="display:flex;gap:.25rem;"></div>
+              <button class="page-btn" id="inc-log-btn-next" onclick="nextIncidentLogPage()"><i data-lucide="chevron-right"></i></button>
             </div>
           </div>
         </div>
       </div>
+
+
     </div>
   </div>
 </div>
 
 <!-- ===== Report Incident Modal ===== -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
-  <div class="modal" style="max-width:920px;width:92vw;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
+  <div class="modal" style="max-width:860px; width:92vw; padding:0; overflow:hidden; border-radius:18px; border:1px solid rgba(59,130,246,0.35); box-shadow:0 25px 65px rgba(0,0,0,0.85), 0 0 40px rgba(59,130,246,0.2); background:#0b1120; display:flex; flex-direction:column; max-height:90vh;">
     
     <!-- Modal Header -->
-    <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
-      <div>
-        <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.15rem;color:var(--text-main);">
-          <i data-lucide="triangle-alert" style="color:var(--primary);width:22px;height:22px;"></i> Report Incident Intake
-        </h3>
-        <p style="margin:.25rem 0 0;font-size:.78rem;color:var(--text-muted);">Guided Administrative &amp; Emergency Intake Form</p>
+    <div class="modal-header" style="padding:1.1rem 1.6rem; background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border-bottom:1px solid rgba(255,255,255,0.09); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:.8rem;">
+        <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.3), rgba(37,99,235,0.18)); border:1px solid rgba(59,130,246,0.5); display:flex; align-items:center; justify-content:center; color:#60a5fa; box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="triangle-alert" style="width:20px; height:20px;"></i>
+        </div>
+        <div>
+          <h3 id="modal-title" style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:800; color:#ffffff;">New Incident</h3>
+        </div>
       </div>
-      <button class="modal-close" onclick="closeModal()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:.4rem;">
-        <i data-lucide="x" style="width:20px;height:20px;"></i>
-      </button>
+      <div style="display:flex; align-items:center; gap:.5rem;">
+        <button type="button" id="modal-auto-populate-btn" class="btn btn-outline-sm" onclick="autoFillIncidentDemoData()" title="Quick fill all 4 steps" style="font-size:.72rem; padding:.25rem .65rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.3rem;">
+          <i data-lucide="zap" style="width:13px; height:13px;"></i> Auto-Populate
+        </button>
+        <button class="modal-close" onclick="closeModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; padding:.4rem; border-radius:8px;">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Stepper Navigation Header -->
-    <div class="wizard-stepper" style="padding:.85rem 1.5rem;background:rgba(15, 23, 42, 0.4);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+    <div class="wizard-stepper" style="padding:.75rem 1.5rem; background:rgba(15, 23, 42, 0.6); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-shrink:0;">
       <div class="wizard-step-item active" id="step-nav-1" onclick="goToStep(1)">
         <div class="wizard-step-badge">1</div>
-        <span class="wizard-step-title">Location</span>
+        <span class="wizard-step-title">Location &amp; Title</span>
       </div>
       <div class="wizard-step-line" id="step-line-1"></div>
 
       <div class="wizard-step-item" id="step-nav-2" onclick="goToStep(2)">
         <div class="wizard-step-badge">2</div>
-        <span class="wizard-step-title">Type &amp; Severity</span>
+        <span class="wizard-step-title">Victim / Complainant</span>
       </div>
       <div class="wizard-step-line" id="step-line-2"></div>
 
       <div class="wizard-step-item" id="step-nav-3" onclick="goToStep(3)">
         <div class="wizard-step-badge">3</div>
-        <span class="wizard-step-title">Casualties</span>
+        <span class="wizard-step-title">Suspect &amp; Responders</span>
       </div>
       <div class="wizard-step-line" id="step-line-3"></div>
 
       <div class="wizard-step-item" id="step-nav-4" onclick="goToStep(4)">
         <div class="wizard-step-badge">4</div>
-        <span class="wizard-step-title">Review</span>
+        <span class="wizard-step-title">Remarks &amp; Review</span>
       </div>
     </div>
 
-    <div class="modal-body" style="padding:1.25rem 1.75rem;max-height:75vh;overflow-y:auto;">
+    <!-- Modal Body Scrollable -->
+    <div class="modal-body" style="padding:1.25rem 1.6rem; overflow-y:auto; flex:1;">
       <form id="incident-form" novalidate onsubmit="return false;">
 
-        <!-- STEP 1: Geolocation & Address -->
+        <!-- STEP 1: Title, Date, Time & Place of Occurrence -->
         <div class="wizard-pane active" id="wizard-pane-1">
-          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">
-            <span><i data-lucide="map-pin" style="color:var(--primary);"></i> 1. Pin Incident Location</span>
-            <button type="button" class="btn btn-ghost" id="manual-loc-toggle" onclick="toggleManualLocation()" style="font-size:.75rem;padding:.2rem .5rem;color:var(--primary);gap:.3rem;">
-              <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Manual Input Mode
-            </button>
-          </div>
-
-          <div id="map-mode-container">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.55rem;flex-wrap:wrap;gap:.4rem;">
-              <p class="pin-map-hint" style="margin-bottom:0;font-size:.78rem;color:var(--text-muted);">
-                <i data-lucide="mouse-pointer-click"></i> Click on map or drag pin to adjust coordinates.
-              </p>
-              <div style="display:flex;gap:.4rem;align-items:center;">
-                <button type="button" class="btn btn-outline-sm" id="toggle-expand-map-btn" onclick="openBigMapModal()"
-                  style="font-size:.75rem;padding:.35rem .65rem;gap:.4rem;border-color:var(--primary);color:var(--primary);">
-                  <i data-lucide="maximize-2" style="width:14px;height:14px;"></i> <span>Expand Map Popup</span>
+          
+          <!-- Card 1A: Title & Timestamps -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+              <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="clipboard-list" style="width:15px; height:15px;"></i> 1A. Incident Title &amp; Timestamps</span>
+              <div style="display:flex; align-items:center; gap:.5rem;">
+                <button type="button" class="btn btn-outline-sm" onclick="autoFillStep1DemoData()" style="font-size:.72rem; padding:.2rem .55rem; border-color:rgba(59,130,246,0.4); color:#60a5fa; background:rgba(59,130,246,0.12); border-radius:9999px; display:inline-flex; align-items:center; gap:.3rem;">
+                  <i data-lucide="zap" style="width:12px; height:12px;"></i> Auto-Populate
                 </button>
-                <button type="button" class="btn btn-outline-sm" id="locate-me-btn" onclick="useCurrentLocation()"
-                  style="font-size:.75rem;padding:.35rem .65rem;gap:.4rem;">
-                  <i data-lucide="locate-fixed" style="width:14px;height:14px;"></i> Locate Me (GPS)
-                </button>
+                <span class="badge badge-blue" style="font-size:.7rem; padding:.15rem .5rem; border-radius:9999px;">Barangay Linao, Ormoc City</span>
               </div>
             </div>
 
-            <div id="pin-map" style="height:320px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-color);margin-bottom:.65rem;transition:height 0.3s ease;"></div>
-
-            <div class="pin-coords-row" style="display:flex;gap:.5rem;margin-bottom:.65rem;">
-              <div class="pin-coord-chip" id="pin-lat-display" style="font-size:.75rem;">Latitude: —</div>
-              <div class="pin-coord-chip" id="pin-lng-display" style="font-size:.75rem;">Longitude: —</div>
+            <div class="form-group" style="margin-bottom:.85rem;">
+              <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Title of Complaint <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="inc-title" placeholder="e.g. Public Disturbance along Coastal Sitio 2" required style="width:100%; box-sizing:border-box;" />
             </div>
-          </div>
 
-          <div class="form-group">
-            <label style="font-size:.8rem;font-weight:600;color:var(--text-main);display:flex;justify-content:space-between;">
-              <span>Location Address <span class="required" style="color:var(--danger);">*</span></span>
-              <span id="address-mode-label" style="font-size:.72rem;color:var(--text-muted);">(auto-fills from map pin)</span>
-            </label>
-            <input type="text" id="inc-address" placeholder="Auto-fills when pin is placed..." readonly
-              style="background:var(--bg-input);font-size:.84rem;" />
-          </div>
-
-          <!-- Manual Coordinates Container (shown when manual mode enabled) -->
-          <div id="manual-coords-container" style="display:none;margin-top:.5rem;">
-            <div class="form-row">
-              <div class="form-group">
-                <label style="font-size:.78rem;font-weight:600;">Manual Latitude</label>
-                <input type="number" step="any" id="inc-manual-lat" placeholder="11.0167" oninput="syncManualCoords()" />
+            <div class="form-row" style="display:flex; gap:.75rem; margin:0;">
+              <div class="form-group" style="flex:1; min-width:180px; margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Date <span class="required" style="color:var(--danger);">*</span></label>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="date" id="inc-date" style="width:100%; padding-right:2.2rem; box-sizing:border-box;" readonly />
+                  <button type="button" onclick="openCalPopup(document.getElementById('inc-date'))" title="Pick date"
+                    style="position:absolute; right:.5rem; background:transparent; border:none; cursor:pointer; padding:0; display:flex; align-items:center; color:var(--text-muted); transition:color .15s;"
+                    onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+                    <i data-lucide="calendar" style="width:16px; height:16px;"></i>
+                  </button>
+                </div>
               </div>
-              <div class="form-group">
-                <label style="font-size:.78rem;font-weight:600;">Manual Longitude</label>
-                <input type="number" step="any" id="inc-manual-lng" placeholder="124.5915" oninput="syncManualCoords()" />
+              <div class="form-group" style="flex:1; min-width:180px; margin:0;">
+                <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Time <span class="required" style="color:var(--danger);">*</span></label>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="time" id="inc-time" step="60" style="width:100%; padding-right:2.2rem; box-sizing:border-box;" readonly />
+                  <button type="button" onclick="openClockPopup(document.getElementById('inc-time'))" title="Pick time"
+                    style="position:absolute; right:.5rem; background:transparent; border:none; cursor:pointer; padding:0; display:flex; align-items:center; color:var(--text-muted); transition:color .15s;"
+                    onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+                    <i data-lucide="clock" style="width:16px; height:16px;"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
+          <!-- Card 1B: Location & GIS Pinning -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; justify-content:space-between; align-items:center;">
+              <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="map-pin" style="width:15px; height:15px;"></i> 1B. Place of Occurrence &amp; GIS Pinning <span class="required" style="color:var(--danger);">*</span></span>
+              <span style="font-size:.72rem; color:var(--text-muted);">Purok 1 – 17 Selection</span>
+            </div>
+
+            <!-- Custom Glassmorphic Purok Grid Picker -->
+            <div class="custom-purok-wrapper" style="position:relative; margin-bottom:.5rem;">
+              <select id="incident-purok-select" onchange="selectPurokLocation(this.value)" style="display:none;">
+                <option value="">Select Purok...</option>
+                <option value="Purok 1">Purok 1</option>
+                <option value="Purok 2">Purok 2</option>
+                <option value="Purok 3">Purok 3</option>
+                <option value="Purok 4">Purok 4</option>
+                <option value="Purok 5">Purok 5</option>
+                <option value="Purok 6">Purok 6</option>
+                <option value="Purok 7">Purok 7</option>
+                <option value="Purok 8">Purok 8</option>
+                <option value="Purok 9">Purok 9</option>
+                <option value="Purok 10">Purok 10</option>
+                <option value="Purok 11">Purok 11</option>
+                <option value="Purok 12">Purok 12</option>
+                <option value="Purok 13">Purok 13</option>
+                <option value="Purok 14">Purok 14</option>
+                <option value="Purok 15">Purok 15</option>
+                <option value="Purok 16">Purok 16</option>
+                <option value="Purok 17">Purok 17</option>
+              </select>
+
+              <!-- Custom Select Trigger Button -->
+              <button type="button" id="purok-select-trigger" onclick="togglePurokDropdown(event)"
+                style="width:100%; padding:.6rem .9rem; background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#f8fafc; font-size:.84rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all .18s ease; outline:none;"
+                onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">
+                <span id="purok-trigger-text" style="display:flex; align-items:center; gap:.5rem;">
+                  <i data-lucide="map-pin" style="width:16px; height:16px; color:#60a5fa;"></i>
+                  <span id="purok-label-val" style="color:#94a3b8; font-weight:400;">Select Purok (Purok 1 – 17)...</span>
+                </span>
+                <i data-lucide="chevron-down" id="purok-chevron" style="width:16px; height:16px; color:#94a3b8; transition:transform .2s ease;"></i>
+              </button>
+
+              <!-- Custom Glassmorphic Options Dropdown Panel -->
+              <div id="purok-dropdown-card" style="display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:10050; background:#0f172a; border:1px solid rgba(59,130,246,0.4); border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.85), 0 0 25px rgba(59,130,246,0.25); padding:.65rem; max-height:210px; overflow-y:auto; backdrop-filter:blur(16px);">
+                <div style="font-size:.68rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; padding:.2rem .3rem .4rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:.5rem; display:flex; justify-content:space-between; align-items:center;">
+                  <span>Barangay Linao Purok Grid</span>
+                  <span class="badge badge-blue" style="font-size:.65rem; padding:.1rem .4rem;">17 Puroks</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(105px, 1fr)); gap:.4rem;" id="purok-grid-container">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <script>
+            (function () {
+              window._buildPurokChips = function (dbList) {
+                const grid = document.getElementById('purok-grid-container');
+                if (!grid) return;
+                const selectEl = document.getElementById('incident-purok-select');
+                
+                let list = [];
+                if (Array.isArray(dbList) && dbList.length > 0) {
+                  list = dbList.map(item => item.name);
+                } else if (typeof BARANGAY_PUROK_COORDS === 'object') {
+                  list = Object.keys(BARANGAY_PUROK_COORDS);
+                } else {
+                  for (let i = 1; i <= 17; i++) list.push(`Purok ${i}`);
+                }
+
+                // Update hidden select options dynamically
+                if (selectEl) {
+                  const curr = selectEl.value;
+                  let selHtml = '<option value="">Select Purok...</option>';
+                  list.forEach(pName => {
+                    selHtml += `<option value="${pName}" ${curr === pName ? 'selected':''}>${pName}</option>`;
+                  });
+                  selectEl.innerHTML = selHtml;
+                }
+
+                let html = '';
+                const currentVal = selectEl?.value || '';
+                list.forEach(pName => {
+                  const isSel = currentVal === pName;
+                  html += `
+                    <button type="button" class="purok-chip" data-val="${pName}" onclick="pickCustomPurok('${pName}')"
+                      style="padding:.45rem .55rem; background:${isSel ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(30, 41, 59, 0.7)'}; border:1px solid ${isSel ? '#60a5fa' : 'rgba(255,255,255,0.08)'}; border-radius:8px; color:${isSel ? '#ffffff' : '#cbd5e1'}; font-size:.76rem; font-weight:600; cursor:pointer; text-align:center; transition:all .15s ease; display:flex; align-items:center; justify-content:center; gap:.35rem;"
+                      onmouseover="if(document.getElementById('incident-purok-select')?.value !== '${pName}'){this.style.background='rgba(59,130,246,0.2)';this.style.borderColor='rgba(59,130,246,0.5)';this.style.color='#93c5fd';}"
+                      onmouseout="if(document.getElementById('incident-purok-select')?.value !== '${pName}'){this.style.background='rgba(30, 41, 59, 0.7)';this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='#cbd5e1';}">
+                      <i data-lucide="map-pin" style="width:12px; height:12px; opacity:.8;"></i> ${pName}
+                    </button>
+                  `;
+                });
+                grid.innerHTML = html;
+                if (window.lucide) lucide.createIcons();
+              };
+
+              window.togglePurokDropdown = function (e) {
+                if (e) e.stopPropagation();
+                const card = document.getElementById('purok-dropdown-card');
+                const chevron = document.getElementById('purok-chevron');
+                if (!card) return;
+                window._buildPurokChips();
+                const isVisible = card.style.display === 'block';
+                card.style.display = isVisible ? 'none' : 'block';
+                if (chevron) chevron.style.transform = isVisible ? 'none' : 'rotate(180deg)';
+              };
+
+              window.pickCustomPurok = function (purokVal) {
+                const hiddenSelect = document.getElementById('incident-purok-select');
+                const labelVal = document.getElementById('purok-label-val');
+                const card = document.getElementById('purok-dropdown-card');
+                const chevron = document.getElementById('purok-chevron');
+
+                if (hiddenSelect) {
+                  hiddenSelect.value = purokVal;
+                  if (typeof selectPurokLocation === 'function') {
+                    selectPurokLocation(purokVal);
+                  }
+                }
+
+                if (labelVal) {
+                  if (purokVal) {
+                    labelVal.textContent = `${purokVal} (Selected)`;
+                    labelVal.style.color = '#ffffff';
+                    labelVal.style.fontWeight = '700';
+                  } else {
+                    labelVal.textContent = 'Select Purok (Purok 1 – 17)...';
+                    labelVal.style.color = '#94a3b8';
+                    labelVal.style.fontWeight = '400';
+                  }
+                }
+
+                // Highlight active chip
+                document.querySelectorAll('.purok-chip').forEach(chip => {
+                  const isSel = chip.getAttribute('data-val') === purokVal;
+                  chip.style.background = isSel ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(30, 41, 59, 0.7)';
+                  chip.style.borderColor = isSel ? '#60a5fa' : 'rgba(255, 255, 255, 0.08)';
+                  chip.style.color = isSel ? '#ffffff' : '#cbd5e1';
+                });
+
+                if (card) card.style.display = 'none';
+                if (chevron) chevron.style.transform = 'none';
+              };
+
+              document.addEventListener('click', function (e) {
+                const trigger = document.getElementById('purok-select-trigger');
+                const card = document.getElementById('purok-dropdown-card');
+                if (card && trigger && !trigger.contains(e.target) && !card.contains(e.target)) {
+                  card.style.display = 'none';
+                  const chevron = document.getElementById('purok-chevron');
+                  if (chevron) chevron.style.transform = 'none';
+                }
+              });
+            })();
+            </script>
+
+            <div id="map-mode-container" style="margin-top:.75rem;">
+              <div id="pin-map" style="height:150px; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); margin-bottom:.55rem; transition:height 0.3s ease;"></div>
+              <div class="pin-coords-row" style="display:flex; gap:.5rem; margin-bottom:0;">
+                <div class="pin-coord-chip" id="pin-lat-display" style="font-size:.75rem; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#94a3b8;">Latitude: —</div>
+                <div class="pin-coord-chip" id="pin-lng-display" style="font-size:.75rem; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#94a3b8;">Longitude: —</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden backend compatibility fields -->
+          <input type="hidden" id="inc-type" value="assistance" />
+          <input type="hidden" id="inc-severity" value="medium" />
+          <input type="hidden" id="inc-address" />
           <input type="hidden" id="inc-lat" />
           <input type="hidden" id="inc-lng" />
         </div>
 
-        <!-- STEP 2: Incident Type & Severity Triage -->
+        <!-- STEP 2: Structured Victim / Complainant List -->
         <div class="wizard-pane" id="wizard-pane-2">
-          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
-            <i data-lucide="shield-alert" style="color:var(--primary);"></i> 2. Incident Category &amp; Severity
-          </div>
-
-          <div class="form-group">
-            <label style="font-size:.8rem;font-weight:600;">Incident Title <span class="required" style="color:var(--danger);">*</span></label>
-            <input type="text" id="inc-title" placeholder="e.g. Flash Flooding along Coastal Sitio 2" required />
-          </div>
-
-          <div class="form-group">
-            <label style="font-size:.8rem;font-weight:600;margin-bottom:.4rem;display:block;">
-              Select Incident Type <span class="required" style="color:var(--danger);">*</span>
-            </label>
-            <select id="inc-type" required style="display:none;">
-              <option value="">Select type...</option>
-              <option value="flood">Flooding</option>
-              <option value="landslide">Landslide</option>
-              <option value="fire">Fire</option>
-              <option value="road_accident">Road Accident</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="other">Other Emergency</option>
-            </select>
-
-            <!-- Visual Type Cards -->
-            <div class="type-card-grid">
-              <div class="type-card-item" data-val="flood" onclick="selectTypeCard('flood')">
-                <i data-lucide="waves" class="type-card-icon"></i>
-                <span class="type-card-label">Flooding</span>
-              </div>
-              <div class="type-card-item" data-val="landslide" onclick="selectTypeCard('landslide')">
-                <i data-lucide="mountain" class="type-card-icon"></i>
-                <span class="type-card-label">Landslide</span>
-              </div>
-              <div class="type-card-item" data-val="fire" onclick="selectTypeCard('fire')">
-                <i data-lucide="flame" class="type-card-icon"></i>
-                <span class="type-card-label">Fire</span>
-              </div>
-              <div class="type-card-item" data-val="road_accident" onclick="selectTypeCard('road_accident')">
-                <i data-lucide="car" class="type-card-icon"></i>
-                <span class="type-card-label">Road Accident</span>
-              </div>
-              <div class="type-card-item" data-val="medical" onclick="selectTypeCard('medical')">
-                <i data-lucide="ambulance" class="type-card-icon"></i>
-                <span class="type-card-label">Medical</span>
-              </div>
-              <div class="type-card-item" data-val="other" onclick="selectTypeCard('other')">
-                <i data-lucide="help-circle" class="type-card-icon"></i>
-                <span class="type-card-label">Other</span>
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.4rem;">
+              <span style="display:flex; align-items:center; gap:.4rem;">
+                <i data-lucide="user-check" style="width:15px; height:15px;"></i> 2. Victim / Complainant Identification
+                <span id="victim-count-badge" style="font-size:0.7rem; font-weight:800; padding:0.15rem 0.55rem; border-radius:9999px; background:rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.4); margin-left:0.35rem;">0 Logged</span>
+              </span>
+              <div style="display:flex; align-items:center; gap:.4rem;">
+                <button type="button" class="btn btn-outline-sm" onclick="autoFillVictimDemoData()" style="font-size:.72rem; padding:.2rem .55rem; border-color:rgba(59,130,246,0.4); color:#60a5fa; background:rgba(59,130,246,0.12); border-radius:9999px; display:inline-flex; align-items:center; gap:.3rem;">
+                  <i data-lucide="zap" style="width:12px; height:12px;"></i> Auto-Populate
+                </button>
+                <button type="button" class="btn btn-outline-sm" onclick="addVictimRow()" style="font-size:.74rem; padding:.25rem .65rem; gap:.3rem; border-radius:9999px; border-color:rgba(59,130,246,0.4); color:#93c5fd; background:rgba(59,130,246,0.1);">
+                  <i data-lucide="plus" style="width:13px; height:13px;"></i> Add Victim / Complainant
+                </button>
               </div>
             </div>
-          </div>
+            <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:.85rem;">Structured record of all victims or complainants associated with this incident.</div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label style="font-size:.8rem;font-weight:600;">Root Cause Category <span class="required" style="color:var(--danger);">*</span></label>
-              <select id="inc-root-cause" required onchange="checkPillar4()">
-                <option value="">Select cause...</option>
-                <option value="natural_hazard">Natural Hazard</option>
-                <option value="human_induced">Human-Induced</option>
-                <option value="infrastructure_failure">Infrastructure Failure</option>
-                <option value="animal_related">Animal-Related</option>
-                <option value="unknown">Unknown</option>
-              </select>
+            <div id="victim-list" style="display:flex; flex-direction:column; gap:.65rem; min-height:140px;"></div>
+            
+            <!-- Victim Pagination Bar -->
+            <div id="victim-pagination-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:.75rem; padding-top:.5rem; border-top:1px solid rgba(255,255,255,0.08);">
+              <div id="victim-pagination-info" style="font-size:.75rem; color:#94a3b8; font-weight:600;">Showing 0 victims</div>
+              <div id="victim-pagination-controls" style="display:flex; gap:.35rem; align-items:center;"></div>
             </div>
-            <div class="form-group">
-              <label style="font-size:.8rem;font-weight:600;">Consciousness Level</label>
-              <select id="inc-consciousness">
-                <option value="unknown">Unknown / Not Evaluated</option>
-                <option value="conscious">Conscious &amp; Alert</option>
-                <option value="unconscious">Unconscious</option>
-                <option value="mixed">Mixed Status</option>
-                <option value="not_applicable">N/A</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top:.4rem;">
-            <label style="font-size:.8rem;font-weight:600;">Severity Level <span class="required" style="color:var(--danger);">*</span></label>
-            <div class="triage-grid" id="triage-grid">
-              <div class="triage-btn" data-val="low" onclick="selectSeverity('low')">
-                <div class="triage-dot" style="background:#2e7d32;box-shadow:0 0 5px #2e7d32;"></div> Minor
-              </div>
-              <div class="triage-btn active-medium" data-val="medium" onclick="selectSeverity('medium')">
-                <div class="triage-dot" style="background:#1a73e8;box-shadow:0 0 5px #1a73e8;"></div> Moderate
-              </div>
-              <div class="triage-btn" data-val="high" onclick="selectSeverity('high')">
-                <div class="triage-dot" style="background:#e65100;box-shadow:0 0 5px #e65100;"></div> Serious
-              </div>
-              <div class="triage-btn" data-val="critical" onclick="selectSeverity('critical')">
-                <div class="triage-dot" style="background:#d93025;box-shadow:0 0 8px #d93025;"></div> Critical
-              </div>
-            </div>
-            <input type="hidden" id="inc-severity" value="medium" />
-          </div>
-
-          <div class="form-group" style="margin-top:.6rem;">
-            <label style="font-size:.8rem;font-weight:600;">Detailed Description <span class="required" style="color:var(--danger);">*</span></label>
-            <textarea id="inc-description" rows="3" placeholder="Describe the current situation and urgency..." required></textarea>
           </div>
         </div>
 
-        <!-- STEP 3: Casualties & Impact -->
+        <!-- STEP 3: Name of Suspect / Respondent & Responder Log -->
         <div class="wizard-pane" id="wizard-pane-3">
-          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
-            <i data-lucide="users" style="color:var(--primary);"></i> 3. Scene Casualties &amp; Impact Assessment
-          </div>
-
-          <div class="form-group">
-            <label style="font-size:.8rem;font-weight:600;">Total People Involved <span class="required" style="color:var(--danger);">*</span></label>
-            <input type="number" id="inc-people" min="0" placeholder="e.g. 5 people affected" oninput="checkPillar3()" required />
-          </div>
-
-          <div class="casualty-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.6rem;">
-            <div class="casualty-input-wrap form-group" style="margin:0;">
-              <label style="color:#ef4444;font-size:.78rem;font-weight:700;">Fatalities (Dead)</label>
-              <input type="number" id="inc-dead" min="0" value="0" oninput="updateCasualtyTotal()"
-                style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);text-align:center;font-weight:700;" />
+          
+          <!-- Card 3A: Suspect / Respondent -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#f87171; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.4rem;">
+              <span style="display:flex; align-items:center; gap:.4rem;">
+                <i data-lucide="user-x" style="width:15px; height:15px; color:#ef4444;"></i> 3A. Suspect / Respondent Record
+                <span id="suspect-count-badge" style="font-size:0.7rem; font-weight:800; padding:0.15rem 0.55rem; border-radius:9999px; background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid rgba(239,68,68,0.4); margin-left:0.35rem;">0 Logged</span>
+              </span>
+              <div style="display:flex; align-items:center; gap:.4rem;">
+                <button type="button" class="btn btn-outline-sm" onclick="autoFillSuspectResponderDemoData()" style="font-size:.72rem; padding:.2rem .55rem; border-color:rgba(239,68,68,0.4); color:#fca5a5; background:rgba(239,68,68,0.12); border-radius:9999px; display:inline-flex; align-items:center; gap:.3rem;">
+                  <i data-lucide="zap" style="width:12px; height:12px;"></i> Auto-Populate
+                </button>
+                <button type="button" class="btn btn-outline-sm" onclick="addSuspectRow()" style="font-size:.74rem; padding:.25rem .65rem; gap:.3rem; border-radius:9999px; border-color:rgba(239,68,68,0.4); color:#fca5a5; background:rgba(239,68,68,0.1);">
+                  <i data-lucide="plus" style="width:13px; height:13px;"></i> Add Suspect / Respondent
+                </button>
+              </div>
             </div>
-            <div class="casualty-input-wrap form-group" style="margin:0;">
-              <label style="color:#f59e0b;font-size:.78rem;font-weight:700;">Injured</label>
-              <input type="number" id="inc-injured" min="0" value="0" oninput="updateCasualtyTotal()"
-                style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);text-align:center;font-weight:700;" />
+            <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:.85rem;">Record suspected or involved respondents in structured format (First, Middle, Last, Suffix).</div>
+
+            <div id="suspect-list" style="display:flex; flex-direction:column; gap:.65rem; min-height:120px;"></div>
+            
+            <!-- Suspect Pagination Bar -->
+            <div id="suspect-pagination-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:.75rem; padding-top:.5rem; border-top:1px solid rgba(255,255,255,0.08);">
+              <div id="suspect-pagination-info" style="font-size:.75rem; color:#94a3b8; font-weight:600;">Showing 0 suspects</div>
+              <div id="suspect-pagination-controls" style="display:flex; gap:.35rem; align-items:center;"></div>
             </div>
-            <div class="casualty-input-wrap form-group" style="margin:0;">
-              <label style="color:#8b5cf6;font-size:.78rem;font-weight:700;">Missing</label>
-              <input type="number" id="inc-missing" min="0" value="0" oninput="updateCasualtyTotal()"
-                style="background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.3);text-align:center;font-weight:700;" />
+          </div>
+
+          <!-- Card 3B: Handling Responders -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.65rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.4rem;">
+              <span style="display:flex; align-items:center; gap:.4rem;">
+                <i data-lucide="shield-user" style="width:15px; height:15px; color:#34d399;"></i> 3B. Responder Log (Handling Responders)
+                <span id="responder-count-badge" style="font-size:0.7rem; font-weight:800; padding:0.15rem 0.55rem; border-radius:9999px; background:rgba(16,185,129,0.2); color:#6ee7b7; border:1px solid rgba(16,185,129,0.4); margin-left:0.35rem;">0 Selected</span>
+              </span>
+              <button type="button" class="btn btn-outline-sm" onclick="openAddTanodModal()" style="font-size:.74rem; padding:.25rem .65rem; gap:.3rem; border-radius:9999px; border-color:rgba(52,211,153,0.4); color:#6ee7b7; background:rgba(16,185,129,0.1);">
+                <i data-lucide="user-plus" style="width:13px; height:13px;"></i> Onboard New Responder Account
+              </button>
+            </div>
+            <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:.65rem;">Pick active responders from the Responder Database who responded to or logged this incident.</div>
+
+            <!-- Live Search & Duty Filter Controls -->
+            <div style="display:flex; gap:.5rem; margin-bottom:.65rem; flex-wrap:wrap; align-items:center;">
+              <div style="position:relative; flex:1; min-width:190px;">
+                <input type="text" id="responder-search-input" oninput="filterRespondersGrid()" placeholder="Search responder by name or role..." style="width:100%; box-sizing:border-box; padding:.4rem .7rem; font-size:.78rem; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff;" />
+              </div>
+              <select id="responder-status-filter" onchange="filterRespondersGrid()" style="padding:.4rem .7rem; font-size:.78rem; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#94a3b8;">
+                <option value="all">All Roles</option>
+                <option value="Chief Barangay Tanod">Chief Barangay Tanod</option>
+                <option value="Barangay Tanod">Barangay Tanod</option>
+                <option value="BDRRMC Team Lead">BDRRMC Team Lead</option>
+                <option value="BHS First Aid Medic">BHS First Aid Medic</option>
+                <option value="Rescue Boat Operator">Rescue Boat Operator</option>
+                <option value="Field Logistics Officer">Field Logistics Officer</option>
+              </select>
+            </div>
+
+            <div id="responder-select-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:.6rem; min-height:130px; padding:.5rem; background:rgba(15,23,42,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+              <!-- Rendered dynamically from Responder Database -->
+            </div>
+            
+            <!-- Responder Grid Pagination Bar -->
+            <div id="responder-pagination-bar" style="display:flex; justify-content:space-between; align-items:center; margin-top:.6rem; padding-top:.4rem; border-top:1px solid rgba(255,255,255,0.08);">
+              <div id="responder-pagination-info" style="font-size:.74rem; color:#94a3b8; font-weight:600;">Showing 0 responders</div>
+              <div id="responder-pagination-controls" style="display:flex; gap:.3rem; align-items:center;"></div>
             </div>
           </div>
-          <div id="casualty-summary" style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem;"></div>
-
-          <div class="form-group" style="margin-top:.75rem;">
-            <label style="font-size:.8rem;font-weight:600;">Affected Households / Vehicles</label>
-            <input type="text" id="inc-parties" placeholder="e.g. 3 households, 2 passenger tricycles" />
-          </div>
-
-          <div class="form-group" style="margin-top:.6rem;">
-            <label style="font-size:.8rem;font-weight:600;">Initial Responders &amp; Actions Taken</label>
-            <textarea id="inc-action" rows="2" placeholder="e.g. 4 BDRRMC responders deployed, first aid administered."></textarea>
-          </div>
-
-          <input type="hidden" id="inc-casualty-status" value="none" />
-          <input type="hidden" id="inc-root-cause-hidden" value="" />
         </div>
 
-        <!-- STEP 4: Reporter Info & Review Summary -->
+        <!-- STEP 4: Remarks & Final Review -->
         <div class="wizard-pane" id="wizard-pane-4">
-          <div class="form-section-title" style="margin-top:0;font-weight:700;color:var(--text-main);font-size:.9rem;">
-            <i data-lucide="check-circle-2" style="color:var(--primary);"></i> 4. Intake Review &amp; Reporter Info
+          
+          <!-- Card 4A: Remarks -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.65rem; display:flex; justify-content:space-between; align-items:center;">
+              <span style="display:flex; align-items:center; gap:.4rem;"><i data-lucide="file-text" style="width:15px; height:15px;"></i> 4A. Remarks &amp; Incident Operational Details</span>
+              <button type="button" class="btn btn-outline-sm" onclick="autoFillRemarksDemoData()" style="font-size:.72rem; padding:.2rem .55rem; border-color:rgba(59,130,246,0.4); color:#60a5fa; background:rgba(59,130,246,0.12); border-radius:9999px; display:inline-flex; align-items:center; gap:.3rem;">
+                <i data-lucide="zap" style="width:12px; height:12px;"></i> Auto-Populate
+              </button>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:.78rem; font-weight:600; color:#e2e8f0; margin-bottom:.35rem; display:block;">Remarks / Field Incident Details <span class="required" style="color:var(--danger);">*</span></label>
+              <textarea id="inc-remarks" rows="3" placeholder="Enter focal person remarks, operational notes, or incident summary..." required style="width:100%; box-sizing:border-box;"></textarea>
+            </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label style="font-size:.8rem;font-weight:600;">Reporter Name</label>
-              <input type="text" id="inc-reporter-name" placeholder="Name of reporting officer/citizen" />
-            </div>
-            <div class="form-group">
-              <label style="font-size:.8rem;font-weight:600;">Reporter Contact / Radio</label>
-              <input type="text" id="inc-reporter-contact" placeholder="Phone or radio channel" />
-            </div>
-          </div>
 
-          <!-- Photo Upload Box -->
-          <div class="form-group" style="margin-top:.4rem;">
-            <label style="font-size:.8rem;font-weight:600;">Attach Incident Photo <span style="font-size:.72rem;color:var(--text-muted);">(optional)</span></label>
-            <div class="photo-drop-zone" id="photo-drop-zone"
-              ondragover="event.preventDefault();this.classList.add('drag-over')"
-              ondragleave="this.classList.remove('drag-over')"
-              ondrop="handlePhotoDrop(event)"
-              style="padding:1rem;border-radius:var(--radius-md);">
-              <input type="file" id="inc-photo" accept="image/jpeg,image/png,image/webp" onchange="handlePhotoSelect(event)" />
-              <i data-lucide="camera" style="width:22px;height:22px;color:var(--primary);margin-bottom:.3rem;"></i>
-              <div style="font-size:.78rem;color:var(--text-muted);">Drag &amp; drop or click to attach image (JPEG/PNG/WebP, max 5MB)</div>
-              <img id="photo-preview" class="photo-preview" alt="Preview" />
-            </div>
-            <div id="photo-filename" style="font-size:.72rem;color:var(--text-muted);margin-top:.25rem;"></div>
-          </div>
 
-          <!-- Summary Review Card -->
-          <div class="wizard-review-box">
-            <div style="font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;">
-              <i data-lucide="file-check" style="width:16px;height:16px;"></i> Summary Verification
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">Title</span>
-              <span class="wizard-review-val" id="rev-title">—</span>
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">Incident Type</span>
-              <span class="wizard-review-val" id="rev-type">—</span>
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">Location Address</span>
-              <span class="wizard-review-val" id="rev-location">—</span>
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">Severity Level</span>
-              <span class="wizard-review-val" id="rev-severity">—</span>
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">People Involved</span>
-              <span class="wizard-review-val" id="rev-people">—</span>
-            </div>
-            <div class="wizard-review-row">
-              <span class="wizard-review-label">Reporter</span>
-              <span class="wizard-review-val" id="rev-reporter">—</span>
-            </div>
+          <!-- Card 4C: Privacy Compliance -->
+          <div class="privacy-consent-card" style="background:linear-gradient(135deg, rgba(30,58,138,0.25) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:.9rem 1.1rem; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <label style="display:flex; align-items:flex-start; gap:.8rem; cursor:pointer; margin:0; user-select:none;">
+              <input type="checkbox" id="inc-privacy-consent" checked style="width:18px !important; height:18px !important; min-width:18px !important; margin-top:.15rem; accent-color:#3b82f6; cursor:pointer; flex-shrink:0 !important;" />
+              <div style="font-size:.8rem; color:#f1f5f9; line-height:1.5;">
+                <div style="font-weight:700; color:#60a5fa; margin-bottom:.2rem; display:flex; align-items:center; gap:.4rem;">
+                  <i data-lucide="shield-check" style="width:16px; height:16px; color:#60a5fa;"></i> Institutional Privacy Compliance
+                </div>
+                I hereby certify that all provided information is accurate and consent to data processing under the <strong>Data Privacy Act of 2012 (RA 10173)</strong> for official emergency &amp; disaster coordination.
+              </div>
+            </label>
           </div>
         </div>
 
-        <p class="error-msg" id="incident-error" style="margin-top:.75rem;display:none;padding:.6rem;border-radius:var(--radius-sm);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:.82rem;"></p>
+        <p class="error-msg" id="incident-error" style="margin-top:.75rem; display:none; padding:.6rem; border-radius:var(--radius-sm); background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#ef4444; font-size:.82rem;"></p>
       </form>
     </div>
 
     <!-- Modal Footer Controls -->
-    <div class="modal-footer" style="padding:1rem 1.5rem;background:var(--bg-card);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+    <div class="modal-footer" style="padding:.9rem 1.6rem; background:rgba(11,17,32,0.95); border-top:1px solid rgba(255,255,255,0.09); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
       <button type="button" class="btn btn-outline" id="wizard-prev-btn" onclick="prevStep()" style="visibility:hidden;">
         <i data-lucide="arrow-left"></i> Back
       </button>
 
-      <span id="wizard-step-indicator" style="font-size:.78rem;color:var(--text-muted);font-weight:600;">Step 1 of 4</span>
+      <span id="wizard-step-indicator" style="font-size:.78rem; color:var(--text-muted); font-weight:600;">Step 1 of 4</span>
 
-      <div>
+      <div style="display:flex; gap:.5rem;">
         <button type="button" class="btn btn-primary" id="wizard-next-btn" onclick="nextStep()">
           Next <i data-lucide="arrow-right"></i>
         </button>
-        <button type="button" class="btn btn-primary" id="submit-btn" onclick="submitIncident()" style="display:none;background:var(--success);border-color:var(--success);">
-          <i data-lucide="send"></i> Submit Incident Report
+        <button type="button" class="btn btn-primary" id="submit-btn" onclick="openSummaryVerifyModal()" style="display:none; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid rgba(52,211,153,0.5); box-shadow:0 0 16px rgba(16,185,129,0.35);">
+          <i data-lucide="file-check"></i> Review &amp; Submit Report
         </button>
       </div>
     </div>
@@ -908,100 +1262,243 @@
   </div>
 </div>
 
-<!-- ===== Validation Modal ===== -->
-<div class="modal-overlay" id="validation-modal-overlay" onclick="if(event.target===this)closeValidationModal()">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <h3 id="validation-modal-title"><i data-lucide="shield-check"></i> Validate Incident</h3>
-      <button class="modal-close" onclick="closeValidationModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="val-incident-id" />
-      <input type="hidden" id="val-action" />
-
-      <div id="val-invalidate-section" style="display:none;">
-        <div class="form-group">
-          <label>Reason for Invalidation <span class="required">*</span></label>
-          <select id="val-reason">
-            <option value="">Select reason...</option>
-            <option value="duplicate">Duplicate — already logged</option>
-            <option value="misinformation">Misinformation — inaccurate or false</option>
-            <option value="test_entry">Test Entry — submitted for testing</option>
-            <option value="other">Other</option>
-          </select>
+<!-- ===== Summary Verification Confirmation Popup Modal ===== -->
+<div class="modal-overlay" id="summary-verify-modal-overlay" onclick="if(event.target===this)closeSummaryVerifyModal()">
+  <div class="modal" style="max-width:720px; width:92vw; padding:0; overflow:hidden; border-radius:16px; border:1px solid rgba(59,130,246,0.35); box-shadow:0 25px 65px rgba(0,0,0,0.85), 0 0 40px rgba(59,130,246,0.25);">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.1rem 1.6rem; background:linear-gradient(135deg, rgba(37,99,235,0.2) 0%, rgba(15,23,42,0.98) 100%); border-bottom:1px solid rgba(59,130,246,0.3); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:#60a5fa; box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="file-check" style="width:22px; height:22px;"></i>
         </div>
-        <div class="form-group">
-          <label>Additional Notes <span style="font-size:.72rem;color:var(--text-muted);">(optional)</span></label>
-          <textarea id="val-notes" rows="2" placeholder="Optional details about why this report was invalidated..."></textarea>
+        <div>
+          <h3 style="font-size:1.15rem; font-weight:800; color:#ffffff; font-family:'Space Grotesk', sans-serif; margin:0;">Summary Verification</h3>
+          <p style="font-size:.76rem; color:var(--text-muted); margin:.15rem 0 0;">Review standardized intake details before official submission</p>
         </div>
       </div>
-
-      <div id="val-validate-section">
-        <p style="font-size:.88rem;color:var(--text-muted);line-height:1.5;">
-          Mark this incident as <strong style="color:var(--success);">Validated</strong>. It will be included in the active dataset and reports.
-        </p>
-      </div>
-
-      <p class="error-msg" id="val-error"></p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeValidationModal()">Cancel</button>
-      <button class="btn btn-primary" id="val-submit-btn" onclick="submitValidation()">
-        <i data-lucide="check"></i> Confirm
+      <button class="modal-close" onclick="closeSummaryVerifyModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; padding:.4rem; border-radius:8px;">
+        <i data-lucide="x" style="width:18px; height:18px;"></i>
       </button>
     </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body" style="padding:1.25rem 1.6rem; max-height:70vh; overflow-y:auto; background:rgba(11,17,32,0.95);">
+      <div style="display:flex; flex-direction:column; gap:.9rem;">
+        
+        <!-- Key Incident Header Info -->
+        <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:1rem 1.2rem; position:relative; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+          <button type="button" onclick="jumpToWizardStep(1)" title="Edit Incident Details" style="position:absolute; top:.8rem; right:.8rem; font-size:.72rem; padding:.25rem .6rem; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); border-radius:6px; color:#60a5fa; cursor:pointer; display:flex; align-items:center; gap:.3rem; font-weight:700;">
+            <i data-lucide="pencil" style="width:11px; height:11px;"></i> Edit
+          </button>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.85rem;">
+            <div>
+              <div style="font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.25rem;">Title of Complaint</div>
+              <div style="font-size:.95rem; font-weight:700; color:#ffffff;" id="pop-rev-title">—</div>
+            </div>
+            <div>
+              <div style="font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.25rem;">Place of Occurrence</div>
+              <div style="font-size:.88rem; font-weight:600; color:#60a5fa; display:flex; align-items:center; gap:.3rem;" id="pop-rev-location"><i data-lucide="map-pin" style="width:13px;height:13px;"></i> —</div>
+            </div>
+            <div style="grid-column: span 2; border-top:1px dashed rgba(255,255,255,0.08); padding-top:.6rem; margin-top:.2rem;">
+              <div style="font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.25rem;">Date &amp; Time of Incident</div>
+              <div style="font-size:.88rem; color:#f1f5f9; font-weight:600;" id="pop-rev-datetime">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Victims & Complainants -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.2rem; position:relative;">
+          <button type="button" onclick="jumpToWizardStep(2)" title="Edit Victims" style="position:absolute; top:.8rem; right:.8rem; font-size:.72rem; padding:.25rem .6rem; background:rgba(147,197,253,0.15); border:1px solid rgba(147,197,253,0.4); border-radius:6px; color:#93c5fd; cursor:pointer; display:flex; align-items:center; gap:.3rem; font-weight:700;">
+            <i data-lucide="pencil" style="width:11px; height:11px;"></i> Edit
+          </button>
+          <div style="font-size:.74rem; font-weight:700; color:#93c5fd; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="user-check" style="width:15px;height:15px;"></i> Victim(s) / Complainant(s)
+          </div>
+          <div id="pop-rev-victims" style="font-size:.86rem; color:#f8fafc; line-height:1.6;">—</div>
+        </div>
+
+        <!-- Suspects & Respondents -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.2rem; position:relative;">
+          <button type="button" onclick="jumpToWizardStep(3)" title="Edit Suspects" style="position:absolute; top:.8rem; right:.8rem; font-size:.72rem; padding:.25rem .6rem; background:rgba(252,165,165,0.15); border:1px solid rgba(252,165,165,0.4); border-radius:6px; color:#fca5a5; cursor:pointer; display:flex; align-items:center; gap:.3rem; font-weight:700;">
+            <i data-lucide="pencil" style="width:11px; height:11px;"></i> Edit
+          </button>
+          <div style="font-size:.74rem; font-weight:700; color:#fca5a5; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="user-x" style="width:15px;height:15px; color:#ef4444;"></i> Suspect(s) / Respondent(s)
+          </div>
+          <div id="pop-rev-suspects" style="font-size:.86rem; color:#f8fafc; line-height:1.6;">—</div>
+        </div>
+
+        <!-- Responders Log -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.2rem; position:relative;">
+          <button type="button" onclick="jumpToWizardStep(3)" title="Edit Responders" style="position:absolute; top:.8rem; right:.8rem; font-size:.72rem; padding:.25rem .6rem; background:rgba(110,231,183,0.15); border:1px solid rgba(110,231,183,0.4); border-radius:6px; color:#6ee7b7; cursor:pointer; display:flex; align-items:center; gap:.3rem; font-weight:700;">
+            <i data-lucide="pencil" style="width:11px; height:11px;"></i> Edit
+          </button>
+          <div style="font-size:.74rem; font-weight:700; color:#6ee7b7; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="shield-user" style="width:15px;height:15px; color:#34d399;"></i> Handling Responders Log
+          </div>
+          <div id="pop-rev-responders" style="font-size:.86rem; color:#f8fafc; line-height:1.6;">—</div>
+        </div>
+
+        <!-- Remarks & Attachments -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.2rem; position:relative;">
+          <button type="button" onclick="jumpToWizardStep(4)" title="Edit Remarks" style="position:absolute; top:.8rem; right:.8rem; font-size:.72rem; padding:.25rem .6rem; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); border-radius:6px; color:#60a5fa; cursor:pointer; display:flex; align-items:center; gap:.3rem; font-weight:700;">
+            <i data-lucide="pencil" style="width:11px; height:11px;"></i> Edit
+          </button>
+          <div style="font-size:.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="file-text" style="width:15px;height:15px;color:var(--primary);"></i> Focal Person Remarks
+          </div>
+          <div id="pop-rev-remarks" style="font-size:.86rem; color:#f8fafc; line-height:1.5;">—</div>
+        </div>
+
+        <!-- Privacy Compliance Badge -->
+        <div style="background:linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(15,23,42,0.8) 100%); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:.75rem 1rem; font-size:.8rem; color:#6ee7b7; display:flex; align-items:center; gap:.6rem;">
+          <i data-lucide="shield-check" style="width:18px;height:18px;flex-shrink:0;color:#34d399;"></i>
+          <span>Verified compliant with <strong>Data Privacy Act of 2012 (RA 10173)</strong>.</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer" style="padding:1rem 1.6rem; background:rgba(11,17,32,0.98); border-top:1px solid rgba(255,255,255,0.09); display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn btn-ghost" onclick="closeSummaryVerifyModal()">
+        <i data-lucide="arrow-left"></i> Edit
+      </button>
+      <button type="button" class="btn btn-primary" id="confirm-submit-btn" onclick="executeFinalIncidentSubmit()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:#10b981; box-shadow:0 0 20px rgba(16,185,129,0.35); font-weight:700; padding:.6rem 1.4rem;">
+        <i data-lucide="check-circle-2"></i> Confirm &amp; Submit Incident Report
+      </button>
+    </div>
+
   </div>
 </div>
+
 
 <!-- ===== Update Status Modal ===== -->
 <div class="modal-overlay" id="status-modal-overlay" onclick="closeStatusModalOutside(event)">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <h3><i data-lucide="edit-3"></i> Update Incident Status</h3>
+      <h3><i data-lucide="activity"></i> Update Operational Progress</h3>
       <button class="modal-close" onclick="closeStatusModal()"><i data-lucide="x"></i></button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="status-incident-id" />
       <div class="form-group">
-        <label>New Status</label>
-        <select id="new-status" onchange="toggleResolutionField()">
-          <option value="active">Active</option>
-          <option value="responding">Responding</option>
-          <option value="resolved">Resolved</option>
-        </select>
+        <label>Action Taken / Update Summary</label>
+        <textarea id="status-action" rows="3" placeholder="Enter action taken or operational progress notes..."></textarea>
       </div>
-      <div class="form-group">
-        <label>Action Taken / Update</label>
-        <textarea id="status-action" rows="2" placeholder="What actions were taken?"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Human Resources</label>
-        <input type="text" id="status-human" placeholder="e.g. 4 BDRRMC responders deployed" />
-      </div>
-      <div class="form-group" id="resolution-field" style="display:none;">
-        <label>Resolution / Last Action <span class="required">*</span></label>
-        <textarea id="status-resolution" rows="2"
-          placeholder="e.g. Turned over to CDRRMO, all residents safely evacuated..."></textarea>
-      </div>
-      <p class="error-msg" id="status-error"></p>
+      <p class="error-msg" id="status-error" style="display:none;"></p>
+      <input type="hidden" id="new-status" value="ongoing" />
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeStatusModal()">Cancel</button>
       <button class="btn btn-primary" onclick="submitStatusUpdate()">
-        <i data-lucide="check"></i> Update
+        <i data-lucide="check"></i> Update Progress
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Resolution Preview & Lock Confirmation Modal ===== -->
+<div class="modal-overlay" id="resolution-modal-overlay" onclick="if(event.target===this)closeResolutionConfirmModal()">
+  <div class="modal" style="max-width:620px; width:92vw; padding:0; overflow:hidden; border-radius:16px; border:1px solid rgba(239,68,68,0.4); box-shadow:0 25px 65px rgba(0,0,0,0.85), 0 0 40px rgba(239,68,68,0.25);">
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.1rem 1.6rem; background:linear-gradient(135deg, rgba(239,68,68,0.22) 0%, rgba(15,23,42,0.98) 100%); border-bottom:1px solid rgba(239,68,68,0.3); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; color:#f87171; box-shadow:0 0 15px rgba(239,68,68,0.3);">
+          <i data-lucide="lock" style="width:22px; height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.1rem; font-weight:800; color:#ffffff; font-family:'Space Grotesk', sans-serif; margin:0;">Resolve &amp; Lock Incident</h3>
+          <p style="font-size:.76rem; color:var(--text-muted); margin:.15rem 0 0;">Review the incident below before permanently locking this record</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body" style="padding:1.25rem 1.6rem; max-height:68vh; overflow-y:auto; background:rgba(11,17,32,0.95); font-size:.88rem;">
+      <input type="hidden" id="res-confirm-incident-id" />
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        
+        <!-- Incident Preview Section -->
+        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(59,130,246,0.25); border-radius:12px; padding:1rem 1.1rem;">
+          <div style="font-size:.68rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.6rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="eye" style="width:12px;height:12px;"></i> Incident Preview
+          </div>
+          <div style="font-size:.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.25rem;" id="res-confirm-ticket">TICKET #—</div>
+          <div style="font-size:1rem; font-weight:700; color:#ffffff; margin-bottom:.5rem;" id="res-confirm-title">—</div>
+          <div style="font-size:.82rem; color:#60a5fa; display:flex; align-items:center; gap:.4rem; margin-bottom:.75rem;" id="res-confirm-location">
+            <i data-lucide="map-pin" style="width:13px; height:13px;"></i> —
+          </div>
+          <!-- People Involved Summary -->
+          <div style="background:rgba(30,41,59,0.6); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:.75rem .9rem;">
+            <div style="font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>People Involved</span>
+              <span id="res-confirm-parties-badge" style="color:#60a5fa; font-weight:700; font-size:.72rem;">—</span>
+            </div>
+            <div id="res-confirm-people-list" style="font-size:.8rem; color:#cbd5e1; line-height:1.6;">—</div>
+          </div>
+        </div>
+
+        <!-- Final Action Taken / Resolution Field -->
+        <div>
+          <label style="font-size:.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:.35rem;">
+            Final Action Taken / Resolution Summary <span style="color:#f87171;">*</span>
+          </label>
+          <textarea id="res-confirm-action" rows="3" placeholder="Enter final resolution details, responders deployment notes, or field resolution summary..." style="width:100%; padding:.65rem .85rem; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#f8fafc; font-size:.85rem; outline:none; transition:border-color .15s; resize:vertical;"></textarea>
+        </div>
+
+        <p class="error-msg" id="res-confirm-error" style="display:none; margin:0;"></p>
+
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer" style="padding:.9rem 1.6rem; background:rgba(11,17,32,0.98); border-top:1px solid rgba(255,255,255,0.09); display:flex; justify-content:flex-end; align-items:center; gap:.75rem;">
+      <button type="button" class="btn btn-ghost" onclick="closeResolutionConfirmModal()">
+        Cancel
+      </button>
+      <button type="button" class="btn" id="res-confirm-submit-btn" onclick="openResolutionFinalConfirm()" style="background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; border:1px solid #ef4444; box-shadow:0 0 20px rgba(239,68,68,0.35); font-weight:700; padding:.6rem 1.3rem; display:flex; align-items:center; gap:.4rem; border-radius:8px; cursor:pointer;">
+        <i data-lucide="lock" style="width:15px; height:15px;"></i> Confirm &amp; Lock Incident
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Final "Are you sure?" Lock Confirmation Popup ===== -->
+<div class="modal-overlay" id="final-lock-confirm-overlay" onclick="if(event.target===this)closeFinalLockConfirm()" style="z-index:10100;">
+  <div class="modal" style="max-width:420px; width:92vw; padding:0; overflow:hidden; border-radius:16px; border:2px solid rgba(239,68,68,0.6); box-shadow:0 25px 65px rgba(0,0,0,0.9), 0 0 40px rgba(239,68,68,0.35); background:#0b1120;">
+    <div style="padding:1.5rem 1.6rem; display:flex; flex-direction:column; align-items:center; gap:1rem; text-align:center;">
+      <div style="width:56px; height:56px; border-radius:50%; background:rgba(239,68,68,0.18); border:2px solid rgba(239,68,68,0.5); display:flex; align-items:center; justify-content:center; color:#ef4444; box-shadow:0 0 20px rgba(239,68,68,0.35);">
+        <i data-lucide="lock" style="width:26px; height:26px;"></i>
+      </div>
+      <div>
+        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; margin-bottom:.4rem;">Are you sure?</div>
+        <div style="font-size:.84rem; color:#fca5a5; line-height:1.55;">
+          Once marked as <strong style="color:#ef4444;">RESOLVED</strong>, this incident record will be <strong style="color:#ffffff;">permanently locked</strong> and cannot be altered anymore.<br/>
+          <span style="color:#94a3b8; font-size:.78rem; margin-top:.35rem; display:block;">This action is irreversible.</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:.75rem; width:100%; margin-top:.25rem;">
+        <button type="button" class="btn btn-ghost" onclick="closeFinalLockConfirm()" style="flex:1;">
+          Cancel
+        </button>
+        <button type="button" class="btn" id="final-lock-execute-btn" onclick="executeFinalResolutionSubmit()" style="flex:1; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#fff; border:1px solid #ef4444; font-weight:700; box-shadow:0 0 15px rgba(239,68,68,0.4);">
+          <i data-lucide="lock" style="width:14px; height:14px;"></i> Yes, Lock It
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ===== Incident Detail Modal ===== -->
 <div class="modal-overlay" id="detail-modal-overlay" onclick="if(event.target===this)closeDetailModal()">
-  <div class="modal" style="max-width:700px; width:100%; border-radius:var(--radius-lg); overflow:hidden;">
-    <div class="modal-header" style="padding:1.25rem 1.5rem; align-items:flex-start; gap:1rem;">
+  <div class="modal modal-lg detail-modal" style="width:100%; border-radius:var(--radius-lg); overflow:hidden;">
+    <div class="modal-header detail-modal-header" style="padding:1.25rem 1.5rem; align-items:flex-start; gap:1rem;">
       <div style="flex:1; min-width:0;">
         <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem; flex-wrap:wrap;">
           <span id="detail-modal-ticket" style="font-family:monospace; font-size:.78rem; background:rgba(59,130,246,.18); color:#60a5fa; border:1px solid rgba(59,130,246,.3); padding:.18rem .6rem; border-radius:6px; font-weight:700; white-space:nowrap;"></span>
-          <span id="detail-modal-validation"></span>
         </div>
         <h3 id="detail-modal-header-title" style="margin:0; font-size:1.18rem; font-weight:700; color:var(--text-main); line-height:1.35; word-break:break-word;">
           Incident Report
@@ -1014,36 +1511,6 @@
     </div>
   </div>
 </div>
-
-<!-- ===== Large Map Picker Popup Modal ===== -->
-<div class="modal-overlay" id="big-map-modal-overlay" style="z-index:99999;" onclick="if(event.target===this)closeBigMapModal()">
-  <div class="modal" style="max-width:92vw;width:1150px;padding:0;overflow:hidden;border-radius:var(--radius-xl);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.22);box-shadow:0 30px 70px rgba(0,0,0,0.75);">
-    <div class="modal-header" style="padding:1.1rem 1.5rem;background:rgba(15, 23, 42, 0.85);border-bottom:1px solid rgba(255, 255, 255, 0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.12rem;color:#ffffff;font-weight:700;">
-          <i data-lucide="crosshair" style="color:#60a5fa;width:20px;height:20px;filter:drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));"></i> Precise GIS Location Picker (Full View)
-        </h3>
-        <p style="margin:.25rem 0 0;font-size:.78rem;color:#94a3b8;">Click anywhere on the high-resolution map to place or adjust the exact incident pin.</p>
-      </div>
-      <button class="modal-close" onclick="closeBigMapModal()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;cursor:pointer;padding:.45rem;border-radius:8px;transition:all 0.2s;">
-        <i data-lucide="x" style="width:18px;height:18px;"></i>
-      </button>
-    </div>
-    <div class="modal-body" style="padding:0;position:relative;">
-      <div id="big-picker-map" style="height:72vh;width:100%;background:#0b0f19;"></div>
-      <div style="position:absolute;bottom:1.35rem;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:1.25rem;align-items:center;background:linear-gradient(135deg, rgba(15,23,42,0.94) 0%, rgba(30,41,59,0.88) 100%);padding:.65rem 1.4rem;border-radius:99px;border:1px solid rgba(255,255,255,0.15);border-top:1px solid rgba(255,255,255,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 16px 40px rgba(0,0,0,0.65), 0 0 25px rgba(59, 130, 246, 0.2);">
-        <div style="font-size:.82rem;color:#cbd5e1;display:flex;gap:1.25rem;font-family:monospace;font-weight:600;">
-          <span>Lat: <strong id="big-map-lat" style="color:#38bdf8;text-shadow:0 0 8px rgba(56, 189, 248, 0.4);">—</strong></span>
-          <span>Lng: <strong id="big-map-lng" style="color:#38bdf8;text-shadow:0 0 8px rgba(56, 189, 248, 0.4);">—</strong></span>
-        </div>
-        <button type="button" class="btn btn-primary" onclick="confirmBigMapPin()" style="font-size:.82rem;padding:.45rem 1.15rem;border-radius:99px;gap:.45rem;background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);box-shadow:0 4px 18px rgba(59, 130, 246, 0.5);font-weight:700;border:none;">
-          <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Confirm &amp; Set Location
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== Custom Date Range Filter Modal ===== -->
 <div class="modal-overlay" id="custom-date-modal-overlay" onclick="closeCustomDateModalOutside(event)">
   <div class="modal" style="max-width:460px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(59,130,246,0.2);">
@@ -1103,20 +1570,1195 @@
   </div>
 </div>
 
+<!-- ===== Resolution & Duplicate Verification Modal ===== -->
+<div class="modal-overlay" id="resolution-verify-modal-overlay" onclick="if(event.target===this)closeResolutionVerifyModal()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header" style="background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.3);">
+      <h3 style="color:var(--success);display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="check-circle-2" style="width:20px;height:20px;"></i> Resolution &amp; Duplicate Check Verification
+      </h3>
+      <button class="modal-close" onclick="closeResolutionVerifyModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="res-verify-incident-id" />
+
+      <!-- Potential Duplicates Warning Box (Hidden per user request) -->
+      <div id="duplicate-check-box" style="display:none!important;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-md);padding:.85rem;margin-bottom:1rem;">
+        <div style="font-size:.78rem;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;display:flex;align-items:center;gap:.35rem;">
+          <i data-lucide="copy-check" style="width:14px;height:14px;"></i> System Duplicate Scan (Same Sitio / 48h Window)
+        </div>
+        <div id="duplicate-scan-results" style="font-size:.82rem;color:var(--text-main);line-height:1.45;">
+          Scanning database for related active tickets...
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Final Action Taken / Resolution Summary <span class="required">*</span></label>
+        <textarea id="res-verify-action" rows="3" placeholder="e.g. Turn over to CDRRMO, all victims safely transported to BHS clinic. Scene clear." required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Resources Returned &amp; Accounted For</label>
+        <input type="text" id="res-verify-resources" placeholder="e.g. 1 Rubber Boat returned to BDRRMO depot, 2 trauma kits replenished" />
+      </div>
+
+      <!-- Immutable Record Notice & Checkbox -->
+      <div style="background:rgba(15,23,42,0.6);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.85rem;margin-top:1rem;">
+        <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin:0;">
+          <input type="checkbox" id="res-verify-confirm" style="margin-top:.2rem;width:16px;height:16px;accent-color:var(--success);" />
+          <span style="font-size:.8rem;color:var(--text-main);line-height:1.4;">
+            <strong>Verification Confirmation:</strong> I confirm that this incident has been verified against duplicates and is officially resolved. Setting status to <strong>Resolved</strong> locks this record with an immutable lock icon.
+          </span>
+        </label>
+      </div>
+
+      <p class="error-msg" id="res-verify-error" style="display:none;margin-top:.75rem;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeResolutionVerifyModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmIncidentResolution()" style="background:var(--success);border-color:var(--success);">
+        <i data-lucide="lock"></i> Verify, Lock &amp; Resolve Incident
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Register / Onboard Tanod Responder Modal ===== -->
+<div class="modal-overlay" id="tanod-modal-overlay" onclick="if(event.target===this)closeAddTanodModal()">
+  <div class="modal" style="max-width:620px; border-radius:16px; overflow:hidden; border:1px solid rgba(59,130,246,0.3); box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);">
+    
+    <!-- Modal Header -->
+    <div class="modal-header" style="background:linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(15,23,42,0.95) 100%); border-bottom:1px solid rgba(16,185,129,0.3); padding:1.1rem 1.6rem; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.35); display:flex; align-items:center; justify-content:center; color:#34d399; box-shadow:0 0 12px rgba(16,185,129,0.25);">
+          <i data-lucide="shield-user" style="width:22px; height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:800; color:#ffffff;">Responder Account Creation</h3>
+          <p style="margin:.15rem 0 0; font-size:.76rem; color:var(--text-muted);">Standardized Onboarding for Barangay Tanods &amp; Field Responders</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:.5rem;">
+        <button type="button" onclick="autoFillTanodDemoData()" style="background:rgba(245,158,11,0.18); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:.4rem .85rem; font-size:.78rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; font-weight:600; transition:all .2s ease;">
+          <i data-lucide="zap" style="width:14px; height:14px; stroke:#fbbf24;"></i> Auto-Populate
+        </button>
+        <button class="modal-close" onclick="closeAddTanodModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; padding:.4rem; border-radius:8px; transition:all .15rem ease;">
+          <i data-lucide="x" style="width:18px; height:18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body" style="padding:1.25rem 1.5rem; max-height:75vh; overflow-y:auto;">
+      <form id="tanod-form" onsubmit="saveTanodResponder(event)">
+        <input type="hidden" id="tanod-edit-id" />
+        
+        <!-- SECTION 1: RESPONDER NAME -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+          <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="user-check" style="width:15px; height:15px;"></i> 1. Responder Name &amp; Identification
+          </div>
+          <div class="form-row" style="flex-wrap:wrap; gap:.5rem;">
+            <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">First Name <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-first-name" placeholder="First name" required data-type="alpha" />
+            </div>
+            <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Middle Name</label>
+              <input type="text" id="tanod-middle-name" placeholder="Middle name" data-type="alpha" />
+            </div>
+            <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Last Name <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-last-name" placeholder="Last name" required data-type="alpha" />
+            </div>
+            <div class="form-group" style="flex:0 0 85px; min-width:75px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Suffix</label>
+              <input type="text" id="tanod-suffix" placeholder="Jr./III" data-type="alpha" />
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: CONTACT & STATION DETAILS -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1rem;">
+          <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="phone-call" style="width:15px; height:15px;"></i> 2. Contact &amp; Station Details
+          </div>
+          <div class="form-row" style="margin-bottom:.75rem;">
+            <div class="form-group" style="flex:1; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Contact Number / Call Sign <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-contact" placeholder="+63-917-555-0123" maxlength="17" required data-type="ph-phone" />
+            </div>
+            <div class="form-group" style="flex:1; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Optional Email</label>
+              <input type="email" id="tanod-email" placeholder="responder@barangay.gov.ph" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:1; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Residential / Station Address</label>
+              <input type="text" id="tanod-address" list="address-suggestions-list" placeholder="" autocomplete="on" />
+              <datalist id="address-suggestions-list">
+                <!-- Address suggestions are populated dynamically from the backend; static examples removed -->
+              </datalist>
+            </div>
+            <div class="form-group" style="flex:1; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Role / Designation <span class="required" style="color:var(--danger);">*</span></label>
+              <select id="tanod-role" required>
+                <option value="Chief Barangay Tanod">Chief Barangay Tanod</option>
+                <option value="Barangay Tanod" selected>Barangay Tanod</option>
+                <option value="BDRRMC Team Lead">BDRRMC Team Lead</option>
+                <option value="BHS First Aid Medic">BHS First Aid Medic</option>
+                <option value="Rescue Boat Operator">Rescue Boat Operator</option>
+                <option value="Field Logistics Officer">Field Logistics Officer</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: EMERGENCY CONTACT -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem;">
+          <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
+            <i data-lucide="shield-alert" style="width:15px; height:15px;"></i> 3. Emergency Contact Person
+          </div>
+          <div class="form-row" style="flex-wrap:wrap; gap:.5rem;">
+            <div class="form-group" style="flex:1; min-width:160px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Contact Person Full Name <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-emergency-name" placeholder="e.g. Maria Elena Reyes" required data-type="alpha" />
+            </div>
+            <div class="form-group" style="flex:1; min-width:140px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Emergency Contact Number <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-emergency-contact" placeholder="+63-917-555-0123" maxlength="17" required data-type="ph-phone" />
+            </div>
+            <div class="form-group" style="flex:1; min-width:140px; margin:0;">
+              <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Relationship to Contact <span class="required" style="color:var(--danger);">*</span></label>
+              <input type="text" id="tanod-emergency-relation" placeholder="e.g. Spouse / Parent / Sibling" required data-type="alpha" />
+            </div>
+          </div>
+        </div>
+
+        <p class="error-msg" id="tanod-error" style="display:none; margin-top:1rem; padding:.6rem; border-radius:8px; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#ef4444; font-size:.82rem;"></p>
+
+      </form>
+    </div>
+
+    <!-- Modal Footer Controls -->
+    <div class="modal-footer" style="padding:.9rem 1.6rem; background:rgba(11,17,32,0.95); border-top:1px solid rgba(255,255,255,0.09); display:flex; justify-content:flex-end; align-items:center; flex-shrink:0;">
+      <button type="submit" form="tanod-form" class="btn btn-primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:#10b981; box-shadow:0 0 15px rgba(16,185,129,0.3); padding:.55rem 1.4rem; font-weight:700;"><i data-lucide="check"></i> Save</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Custom Calendar Date Picker Popup ===== -->
+<div class="cal-popup-overlay" id="cal-popup-overlay" onclick="calOverlayClick(event)">
+  <div class="cal-popup" id="cal-popup">
+    <!-- Nav bar -->
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calShift(-1)"><i data-lucide="chevron-left" style="width:16px;height:16px;"></i></button>
+      <span class="cal-month-label" id="cal-month-label" onclick="calToggleYM()">— —</span>
+      <button class="cal-nav-btn" onclick="calShift(1)"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></button>
+    </div>
+    <!-- Day grid (or year/month picker) -->
+    <div id="cal-body"></div>
+    <!-- Footer -->
+    <div class="cal-popup-footer">
+      <button class="clock-footer-btn clock-footer-cancel" onclick="calClear()">Clear</button>
+      <button class="clock-footer-btn clock-footer-ok" onclick="closeCalPopup()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Custom Clock Picker Popup ===== -->
+<div class="clock-popup-overlay" id="clock-popup-overlay" onclick="clockOverlayClick(event)">
+  <div class="clock-popup" id="clock-popup">
+    <!-- Header: digital display + AM/PM -->
+    <div class="clock-popup-header">
+      <div class="clock-time-display">
+        <span class="clock-seg" id="clk-hr-seg" onclick="clockSelectMode('hour')">12</span>
+        <span class="clock-colon">:</span>
+        <span class="clock-seg" id="clk-min-seg" onclick="clockSelectMode('minute')">00</span>
+      </div>
+      <div class="clock-ampm-toggle">
+        <button class="clock-ampm-btn active" id="clk-am-btn" onclick="clockSetAmPm('AM')">AM</button>
+        <button class="clock-ampm-btn" id="clk-pm-btn" onclick="clockSetAmPm('PM')">PM</button>
+      </div>
+    </div>
+
+    <!-- Mode label -->
+    <div class="clock-popup-mode-label" id="clk-mode-label">Select Hour</div>
+
+    <!-- Analog face -->
+    <div class="clock-face-wrap">
+      <div class="clock-face" id="clock-face">
+        <div class="clock-center-dot"></div>
+        <div class="clock-hand clock-hand-hour" id="clk-hand-hour"></div>
+        <div class="clock-hand clock-hand-minute" id="clk-hand-minute" style="opacity:0.4;"></div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="clock-popup-footer">
+      <button class="clock-footer-btn clock-footer-cancel" onclick="closeClockPopup()">Cancel</button>
+      <button class="clock-footer-btn clock-footer-ok" onclick="confirmClockTime()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---- State ----
+  let clkHour24 = 8;   // 0–23
+  let clkMinute = 0;   // 0–59
+  let clkMode   = 'hour'; // 'hour' | 'minute'
+  let clkAnchorEl = null;
+
+  // ---- Open / Close ----
+  window.openClockPopup = function (anchorEl) {
+    clkAnchorEl = anchorEl;
+    // Parse current value
+    const val = anchorEl.value || '';
+    if (val) {
+      const [h, m] = val.split(':').map(Number);
+      clkHour24 = isNaN(h) ? 8 : h;
+      clkMinute = isNaN(m) ? 0 : m;
+    } else {
+      const now = new Date();
+      clkHour24 = now.getHours();
+      clkMinute = now.getMinutes();
+    }
+    clkMode = 'hour';
+    buildClockFace();
+    updateClockDisplay();
+    positionClockPopup(anchorEl);
+    document.getElementById('clock-popup-overlay').classList.add('active');
+  };
+
+  window.closeClockPopup = function () {
+    document.getElementById('clock-popup-overlay').classList.remove('active');
+  };
+
+  window.confirmClockTime = function () {
+    if (clkAnchorEl) {
+      const hh = String(clkHour24).padStart(2, '0');
+      const mm = String(clkMinute).padStart(2, '0');
+      clkAnchorEl.value = `${hh}:${mm}`;
+      clkAnchorEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    closeClockPopup();
+  };
+
+  window.clockOverlayClick = function (e) {
+    if (e.target === document.getElementById('clock-popup-overlay')) closeClockPopup();
+  };
+
+  // ---- Positioning ----
+  function positionClockPopup(anchor) {
+    const popup = document.getElementById('clock-popup');
+    if (!popup || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const pw = 270, ph = 380;
+    let top = rect.bottom + 6;
+    let left = rect.left;
+    if (top + ph > window.innerHeight - 12) top = rect.top - ph - 6;
+    top = Math.max(12, Math.min(top, window.innerHeight - ph - 12));
+    left = Math.max(12, Math.min(left, window.innerWidth - pw - 12));
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+  }
+
+  // ---- AM/PM ----
+  window.clockSetAmPm = function (ap) {
+    const isAm = ap === 'AM';
+    if (isAm && clkHour24 >= 12) clkHour24 -= 12;
+    if (!isAm && clkHour24 < 12) clkHour24 += 12;
+    updateClockDisplay();
+    buildClockFace();
+  };
+
+  // ---- Mode toggle ----
+  window.clockSelectMode = function (mode) {
+    clkMode = mode;
+    buildClockFace();
+    updateClockDisplay();
+  };
+
+  // ---- Build analog face ----
+  function buildClockFace() {
+    const face = document.getElementById('clock-face');
+    if (!face) return;
+    // Remove old ticks/nums
+    face.querySelectorAll('.clock-tick, .clock-num, .clock-num-item').forEach(e => e.remove());
+
+    const R = 90; // face radius (half of 180px)
+    const cx = R, cy = R;
+
+    if (clkMode === 'hour') {
+      document.getElementById('clk-mode-label').textContent = 'Select Hour';
+      // 12 hour positions (1–12) at radius r = 65px
+      for (let i = 1; i <= 12; i++) {
+        const angleRad = ((i - 3) / 12) * 2 * Math.PI; // -3 offsets so 12 is at top
+        const r = 65;
+        const tx = cx + r * Math.cos(angleRad);
+        const ty = cy + r * Math.sin(angleRad);
+        const isSelected = hourMatchesDot(i);
+
+        const btn = document.createElement('div');
+        btn.className = 'clock-tick clock-num-item' + (isSelected ? ' selected' : '');
+        btn.textContent = i;
+        btn.dataset.val = i;
+        btn.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:${isSelected ? '800':'600'};color:${isSelected ? '#ffffff':'rgba(255,255,255,0.7)'};background:${isSelected ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)':'transparent'};box-shadow:${isSelected ? '0 0 12px rgba(59,130,246,0.7)':'none'};cursor:pointer;user-select:none;transition:all .15s ease;z-index:4;`;
+        face.appendChild(btn);
+      }
+      // Hour hand
+      const h12 = clkHour24 % 12 || 12;
+      const deg = (h12 / 12) * 360 - 90;
+      setHandAngle('clk-hand-hour', deg + 90, 1);
+      setHandAngle('clk-hand-minute', ((clkMinute / 60) * 360) - 90 + 90, 0.4);
+    } else {
+      document.getElementById('clk-mode-label').textContent = 'Select Minute';
+      
+      // 60 minute ticks on outer ring (r = 78px)
+      for (let i = 0; i < 60; i++) {
+        const angleRad = ((i - 15) / 60) * 2 * Math.PI;
+        const isMajor = i % 5 === 0;
+        const r = 78;
+        const tx = cx + r * Math.cos(angleRad);
+        const ty = cy + r * Math.sin(angleRad);
+
+        const dot = document.createElement('div');
+        dot.className = 'clock-tick' + (isMajor ? ' major' : '') + (i === clkMinute ? ' selected' : '');
+        const sz = isMajor ? 6 : 4;
+        dot.style.cssText = `left:${tx}px;top:${ty}px;transform:translate(-50%,-50%);position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:${i === clkMinute ? '#3b82f6' : (isMajor ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)')};cursor:pointer;z-index:4;`;
+        dot.dataset.val = i;
+        face.appendChild(dot);
+      }
+
+      // Major minute numbers (00, 05, 10 ... 55) at inner radius (r = 62px)
+      for (let i = 0; i < 60; i += 5) {
+        const angleRad = ((i - 15) / 60) * 2 * Math.PI;
+        const r = 62;
+        const tx = cx + r * Math.cos(angleRad);
+        const ty = cy + r * Math.sin(angleRad);
+        const isSelected = Math.abs(clkMinute - i) === 0;
+
+        const btn = document.createElement('div');
+        btn.className = 'clock-tick clock-num-item' + (isSelected ? ' selected' : '');
+        btn.textContent = String(i).padStart(2, '0');
+        btn.dataset.val = i;
+        btn.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:${isSelected ? '800':'600'};color:${isSelected ? '#ffffff':'rgba(255,255,255,0.65)'};background:${isSelected ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)':'transparent'};box-shadow:${isSelected ? '0 0 10px rgba(59,130,246,0.6)':'none'};cursor:pointer;user-select:none;transition:all .15s ease;z-index:4;`;
+        face.appendChild(btn);
+      }
+
+      // Minute hand
+      setHandAngle('clk-hand-hour', ((clkHour24 % 12 || 12) / 12) * 360 - 90 + 90, 0.4);
+      setHandAngle('clk-hand-minute', ((clkMinute / 60) * 360) - 90 + 90, 1);
+    }
+
+    // Click handler on face
+    face.onclick = faceClick;
+    face.onmousedown = faceDragStart;
+    face.ontouchstart = faceDragStart;
+  }
+
+  function hourMatchesDot(h12) {
+    return (clkHour24 % 12 || 12) === h12;
+  }
+
+  function setHandAngle(id, deg, opacity) {
+    const el = document.getElementById(id);
+    if (el) { el.style.transform = `rotate(${deg}deg)`; el.style.opacity = opacity; }
+  }
+
+  // ---- Face interaction ----
+  function getAngleFromFace(e) {
+    const face = document.getElementById('clock-face');
+    const rect = face.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return Math.atan2(clientY - cy, clientX - cx); // radians, 0 = right
+  }
+
+  function faceClick(e) {
+    if (e.target.dataset && e.target.dataset.val !== undefined) {
+      const v = parseInt(e.target.dataset.val);
+      applyVal(v);
+      return;
+    }
+    const angle = getAngleFromFace(e); // -π to π, 0=right
+    const norm  = ((angle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI)); // 0=top
+    if (clkMode === 'hour') {
+      let h = Math.round(norm / (2 * Math.PI) * 12);
+      if (h === 0) h = 12;
+      applyVal(h);
+    } else {
+      let m = Math.round(norm / (2 * Math.PI) * 60);
+      if (m === 60) m = 0;
+      applyVal(m);
+    }
+  }
+
+  let isDragging = false;
+  function faceDragStart(e) {
+    isDragging = true;
+    document.addEventListener('mousemove', faceDrag);
+    document.addEventListener('mouseup', faceDragEnd);
+    document.addEventListener('touchmove', faceDrag, { passive: false });
+    document.addEventListener('touchend', faceDragEnd);
+    e.preventDefault();
+  }
+  function faceDrag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const angle = getAngleFromFace(e);
+    const norm  = ((angle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI));
+    if (clkMode === 'hour') {
+      let h = Math.round(norm / (2 * Math.PI) * 12);
+      if (h === 0) h = 12;
+      applyVal(h, true);
+    } else {
+      let m = Math.round(norm / (2 * Math.PI) * 60);
+      if (m === 60) m = 0;
+      applyVal(m, true);
+    }
+  }
+  function faceDragEnd() {
+    isDragging = false;
+    document.removeEventListener('mousemove', faceDrag);
+    document.removeEventListener('mouseup', faceDragEnd);
+    document.removeEventListener('touchmove', faceDrag);
+    document.removeEventListener('touchend', faceDragEnd);
+    // Auto-switch to minutes after picking hour
+    if (clkMode === 'hour') {
+      setTimeout(() => { clkMode = 'minute'; buildClockFace(); updateClockDisplay(); }, 120);
+    }
+  }
+
+  function applyVal(v, isDrag) {
+    if (clkMode === 'hour') {
+      const isAm = clkHour24 < 12;
+      let h24 = v % 12; // 12 → 0
+      if (!isAm) h24 += 12;
+      clkHour24 = h24;
+      if (!isDrag) {
+        // auto-advance to minute
+        setTimeout(() => { clkMode = 'minute'; buildClockFace(); updateClockDisplay(); }, 120);
+      }
+    } else {
+      clkMinute = v;
+    }
+    buildClockFace();
+    updateClockDisplay();
+  }
+
+  // ---- Display update ----
+  function updateClockDisplay() {
+    const isAm = clkHour24 < 12;
+    const h12  = clkHour24 % 12 || 12;
+    document.getElementById('clk-hr-seg').textContent  = String(h12).padStart(2, '0');
+    document.getElementById('clk-min-seg').textContent = String(clkMinute).padStart(2, '0');
+    document.getElementById('clk-hr-seg').classList.toggle('active', clkMode === 'hour');
+    document.getElementById('clk-min-seg').classList.toggle('active', clkMode === 'minute');
+    document.getElementById('clk-am-btn').classList.toggle('active', isAm);
+    document.getElementById('clk-pm-btn').classList.toggle('active', !isAm);
+  }
+
+  // ---- Hook time input ----
+  // Called after incidents.js is loaded (see bottom inline script)
+  window._initClockPickerBinding = function () {
+    const timeField = document.getElementById('inc-time');
+    if (timeField && !timeField._clkBound) {
+      timeField._clkBound = true;
+      timeField.addEventListener('click', (e) => { e.stopPropagation(); openClockPopup(timeField); });
+      timeField.addEventListener('focus', () => openClockPopup(timeField));
+    }
+  };
+
+})();
+</script>
+
+<script>
+/* ===== Custom Calendar Date Picker ===== */
+(function () {
+  let calAnchorEl = null;
+  let calYear  = new Date().getFullYear();
+  let calMonth = new Date().getMonth(); // 0-based
+  let calSelYear  = null;
+  let calSelMonth = null;
+  let calSelDay   = null;
+  let calYMMode   = 'day'; // 'day' | 'month' | 'year'
+  let calYearPage = 0;     // page offset for year grid
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const DOWS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  window.openCalPopup = function (anchorEl) {
+    calAnchorEl = anchorEl;
+    const val = anchorEl.value || '';
+    const now = new Date();
+    if (val) {
+      const [y, m, d] = val.split('-').map(Number);
+      calYear  = y; calMonth = m - 1;
+      calSelYear = y; calSelMonth = m - 1; calSelDay = d;
+    } else {
+      calYear  = now.getFullYear(); calMonth = now.getMonth();
+      calSelYear = null; calSelMonth = null; calSelDay = null;
+    }
+    calYMMode   = 'day';
+    calYearPage = 0;
+    renderCal();
+    positionCal(anchorEl);
+    document.getElementById('cal-popup-overlay').classList.add('active');
+  };
+
+  window.closeCalPopup = function () {
+    document.getElementById('cal-popup-overlay').classList.remove('active');
+  };
+
+  window.calOverlayClick = function (e) {
+    if (e.target === document.getElementById('cal-popup-overlay')) closeCalPopup();
+  };
+
+  window.calClear = function () {
+    if (calAnchorEl) { calAnchorEl.value = ''; calAnchorEl.dispatchEvent(new Event('change',{bubbles:true})); }
+    calSelYear = null; calSelMonth = null; calSelDay = null;
+    renderCal();
+  };
+
+  window.calShift = function (dir) {
+    if (calYMMode === 'year') { calYearPage += dir; renderCal(); return; }
+    calMonth += dir;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    renderCal();
+  };
+
+  window.calToggleYM = function () {
+    if (calYMMode === 'day')   { calYMMode = 'month'; }
+    else if (calYMMode === 'month') { calYMMode = 'year'; }
+    else { calYMMode = 'day'; }
+    renderCal();
+  };
+
+  function positionCal(anchor) {
+    const popup = document.getElementById('cal-popup');
+    if (!popup || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const pw = 280, ph = 340;
+    let top = rect.bottom + 6;
+    let left = rect.left;
+    if (top + ph > window.innerHeight - 12) top = rect.top - ph - 6;
+    top = Math.max(12, Math.min(top, window.innerHeight - ph - 12));
+    left = Math.max(12, Math.min(left, window.innerWidth - pw - 12));
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+  }
+
+  function renderCal() {
+    const label = document.getElementById('cal-month-label');
+    const body  = document.getElementById('cal-body');
+
+    if (calYMMode === 'month') {
+      label.textContent = String(calYear);
+      let html = '<div class="cal-ym-title">Select Month</div><div class="cal-ym-grid">';
+      MONTHS.forEach((mn, i) => {
+        const sel = (calSelYear === calYear && calSelMonth === i) ? ' selected' : '';
+        html += `<div class="cal-ym-cell${sel}" onclick="calPickMonth(${i})">${mn.slice(0,3)}</div>`;
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      return;
+    }
+
+    if (calYMMode === 'year') {
+      const base = Math.floor(calYear / 12) * 12 + calYearPage * 12;
+      label.textContent = `${base} – ${base + 11}`;
+      let html = '<div class="cal-ym-title">Select Year</div><div class="cal-ym-grid">';
+      for (let y = base; y < base + 12; y++) {
+        const sel = (calSelYear === y) ? ' selected' : '';
+        html += `<div class="cal-ym-cell${sel}" onclick="calPickYear(${y})">${y}</div>`;
+      }
+      html += '</div>';
+      body.innerHTML = html;
+      return;
+    }
+
+    // Day grid
+    label.textContent = `${MONTHS[calMonth]} ${calYear}`;
+    const today = new Date();
+    const firstDow = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+
+    let html = '<div class="cal-grid">';
+    DOWS.forEach(d => { html += `<div class="cal-dow">${d}</div>`; });
+
+    // Prev month trailing days
+    for (let i = firstDow - 1; i >= 0; i--) {
+      html += `<div class="cal-day other-month">${daysInPrev - i}</div>`;
+    }
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday   = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+      const isSel     = calSelDay === d && calSelMonth === calMonth && calSelYear === calYear;
+      let cls = 'cal-day';
+      if (isToday && !isSel) cls += ' today';
+      if (isSel)             cls += ' selected';
+      html += `<div class="${cls}" onclick="calPickDay(${d})">${d}</div>`;
+    }
+    // Next month leading days
+    const total = firstDow + daysInMonth;
+    const trailing = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let d = 1; d <= trailing; d++) {
+      html += `<div class="cal-day other-month">${d}</div>`;
+    }
+    html += '</div>';
+    body.innerHTML = html;
+  }
+
+  window.calPickMonth = function (m) {
+    calMonth = m; calSelMonth = m; calYMMode = 'day'; renderCal();
+  };
+  window.calPickYear = function (y) {
+    calYear = y; calSelYear = y; calYMMode = 'month'; calYearPage = 0; renderCal();
+  };
+  window.calPickDay = function (d) {
+    calSelDay = d; calSelMonth = calMonth; calSelYear = calYear;
+    const mm = String(calMonth + 1).padStart(2,'0');
+    const dd = String(d).padStart(2,'0');
+    if (calAnchorEl) {
+      calAnchorEl.value = `${calSelYear}-${mm}-${dd}`;
+      calAnchorEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    renderCal();
+    // auto-close after picking
+    setTimeout(closeCalPopup, 150);
+  };
+
+  // ---- Bind date field ----
+  window._initCalPickerBinding = function () {
+    const dateField = document.getElementById('inc-date');
+    if (dateField && !dateField._calBound) {
+      dateField._calBound = true;
+      dateField.addEventListener('click', (e) => { e.stopPropagation(); openCalPopup(dateField); });
+      dateField.addEventListener('focus', () => openCalPopup(dateField));
+    }
+  };
+
+})();
+</script>
+
+<script>
+/* ===== Victim / Complainant Multi-Entry with Pagination ===== */
+(function () {
+  let victimCount = 0;
+  let victimPage = 1;
+  const ITEMS_PER_PAGE = 2; // 2 items per page keeps vertical height low & zero scrolling!
+
+  window.renderVictimPage = function () {
+    const rows = Array.from(document.querySelectorAll('#victim-list .victim-row'));
+    const total = rows.length;
+
+    const badge = document.getElementById('victim-count-badge');
+    if (badge) badge.textContent = `${total} Logged`;
+
+    const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+    if (victimPage > totalPages) victimPage = totalPages;
+    if (victimPage < 1) victimPage = 1;
+
+    const start = (victimPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+
+    rows.forEach((row, i) => {
+      if (i >= start && i < end) {
+        row.style.display = 'grid';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const info = document.getElementById('victim-pagination-info');
+    const controls = document.getElementById('victim-pagination-controls');
+
+    if (info) {
+      if (total === 0) {
+        info.textContent = 'No victims added yet';
+      } else {
+        info.textContent = `Showing Page ${victimPage} of ${totalPages} (${total} Total Victim${total > 1 ? 's' : ''})`;
+      }
+    }
+
+    if (controls) {
+      if (totalPages <= 1) {
+        controls.innerHTML = '';
+      } else {
+        let btnHtml = `
+          <button type="button" class="page-btn" ${victimPage === 1 ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeVictimPage(${victimPage - 1})" style="padding:.25rem .55rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+            &larr; Prev
+          </button>
+        `;
+        for (let p = 1; p <= totalPages; p++) {
+          const isAct = p === victimPage;
+          btnHtml += `
+            <button type="button" onclick="changeVictimPage(${p})" style="width:28px; height:28px; border-radius:6px; border:1px solid ${isAct ? '#3b82f6' : 'rgba(255,255,255,0.1)'}; background:${isAct ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(30,41,59,0.7)'}; color:${isAct ? '#fff' : '#94a3b8'}; font-size:.75rem; font-weight:700; cursor:pointer;">
+              ${p}
+            </button>
+          `;
+        }
+        btnHtml += `
+          <button type="button" class="page-btn" ${victimPage === totalPages ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeVictimPage(${victimPage + 1})" style="padding:.25rem .55rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+            Next &rarr;
+          </button>
+        `;
+        controls.innerHTML = btnHtml;
+      }
+    }
+  };
+
+  window.changeVictimPage = function (p) {
+    victimPage = p;
+    renderVictimPage();
+  };
+
+  window.addVictimRow = function () {
+    victimCount++;
+    const idx = victimCount;
+    const list = document.getElementById('victim-list');
+    if (!list) return;
+
+    const row = document.createElement('div');
+    row.className = 'victim-row';
+    row.id = `victim-row-${idx}`;
+    row.innerHTML = `
+      <div>
+        <span class="vr-label"><span class="victim-index-badge">#${idx}</span>First Name *</span>
+        <input type="text" id="vfirst-${idx}" placeholder="First name" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Middle Name</span>
+        <input type="text" id="vmiddle-${idx}" placeholder="Middle name" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Last Name *</span>
+        <input type="text" id="vlast-${idx}" placeholder="Last name" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Suffix</span>
+        <input type="text" id="vsuffix-${idx}" placeholder="Jr. / III" autocomplete="off" />
+      </div>
+      <button type="button" class="victim-remove-btn" onclick="removeVictimRow(${idx})" title="Remove">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    `;
+    list.appendChild(row);
+    if (window.lucide) lucide.createIcons();
+
+    const total = document.querySelectorAll('#victim-list .victim-row').length;
+    victimPage = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+    renderVictimPage();
+
+    const input = row.querySelector(`#vfirst-${idx}`);
+    if (input) input.focus();
+  };
+
+  window.removeVictimRow = function (idx) {
+    const row = document.getElementById(`victim-row-${idx}`);
+    if (row) row.remove();
+    renumberVictims();
+    renderVictimPage();
+  };
+
+  function renumberVictims() {
+    document.querySelectorAll('#victim-list .victim-row').forEach((row, i) => {
+      const badge = row.querySelector('.victim-index-badge');
+      if (badge) badge.textContent = `#${i + 1}`;
+    });
+  }
+
+  window.getVictims = function () {
+    const rows = document.querySelectorAll('#victim-list .victim-row');
+    const victims = [];
+    rows.forEach(row => {
+      const id  = row.id.replace('victim-row-', '');
+      const fn  = (document.getElementById(`vfirst-${id}`)?.value  || '').trim();
+      const mn  = (document.getElementById(`vmiddle-${id}`)?.value || '').trim();
+      const ln  = (document.getElementById(`vlast-${id}`)?.value   || '').trim();
+      const sx  = (document.getElementById(`vsuffix-${id}`)?.value || '').trim();
+      if (fn || ln) {
+        victims.push({ first_name: fn, middle_name: mn || null, last_name: ln, suffix: sx || null });
+      }
+    });
+    return victims;
+  };
+
+  window.clearVictims = function () {
+    const list = document.getElementById('victim-list');
+    if (list) list.innerHTML = '';
+    victimCount = 0;
+    victimPage = 1;
+    renderVictimPage();
+  };
+})();
+
+/* ===== Suspect / Respondent Multi-Entry with Pagination ===== */
+(function () {
+  let suspectCount = 0;
+  let suspectPage = 1;
+  const ITEMS_PER_PAGE = 2;
+
+  window.renderSuspectPage = function () {
+    const rows = Array.from(document.querySelectorAll('#suspect-list .victim-row'));
+    const total = rows.length;
+
+    const badge = document.getElementById('suspect-count-badge');
+    if (badge) badge.textContent = `${total} Logged`;
+    const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+    if (suspectPage > totalPages) suspectPage = totalPages;
+    if (suspectPage < 1) suspectPage = 1;
+
+    const start = (suspectPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+
+    rows.forEach((row, i) => {
+      if (i >= start && i < end) {
+        row.style.display = 'grid';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const info = document.getElementById('suspect-pagination-info');
+    const controls = document.getElementById('suspect-pagination-controls');
+
+    if (info) {
+      if (total === 0) {
+        info.textContent = 'No suspects added yet';
+      } else {
+        info.textContent = `Showing Page ${suspectPage} of ${totalPages} (${total} Total Suspect${total > 1 ? 's' : ''})`;
+      }
+    }
+
+    if (controls) {
+      if (totalPages <= 1) {
+        controls.innerHTML = '';
+      } else {
+        let btnHtml = `
+          <button type="button" class="page-btn" ${suspectPage === 1 ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeSuspectPage(${suspectPage - 1})" style="padding:.25rem .55rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+            &larr; Prev
+          </button>
+        `;
+        for (let p = 1; p <= totalPages; p++) {
+          const isAct = p === suspectPage;
+          btnHtml += `
+            <button type="button" onclick="changeSuspectPage(${p})" style="width:28px; height:28px; border-radius:6px; border:1px solid ${isAct ? '#ef4444' : 'rgba(255,255,255,0.1)'}; background:${isAct ? 'linear-gradient(135deg, #ef4444, #b91c1c)' : 'rgba(30,41,59,0.7)'}; color:${isAct ? '#fff' : '#94a3b8'}; font-size:.75rem; font-weight:700; cursor:pointer;">
+              ${p}
+            </button>
+          `;
+        }
+        btnHtml += `
+          <button type="button" class="page-btn" ${suspectPage === totalPages ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeSuspectPage(${suspectPage + 1})" style="padding:.25rem .55rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+            Next &rarr;
+          </button>
+        `;
+        controls.innerHTML = btnHtml;
+      }
+    }
+  };
+
+  window.changeSuspectPage = function (p) {
+    suspectPage = p;
+    renderSuspectPage();
+  };
+
+  window.addSuspectRow = function (initialData) {
+    suspectCount++;
+    const idx = suspectCount;
+    const list = document.getElementById('suspect-list');
+    if (!list) return;
+
+    const row = document.createElement('div');
+    row.className = 'suspect-row victim-row';
+    row.id = `suspect-row-${idx}`;
+    row.innerHTML = `
+      <div>
+        <span class="vr-label"><span class="victim-index-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">#${idx}</span>First Name</span>
+        <input type="text" id="sfirst-${idx}" placeholder="First name" value="${initialData?.first_name || ''}" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Middle Name</span>
+        <input type="text" id="smiddle-${idx}" placeholder="Middle name" value="${initialData?.middle_name || ''}" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Last Name</span>
+        <input type="text" id="slast-${idx}" placeholder="Last name" value="${initialData?.last_name || ''}" autocomplete="off" />
+      </div>
+      <div>
+        <span class="vr-label">Suffix</span>
+        <input type="text" id="ssuffix-${idx}" placeholder="Jr. / III" value="${initialData?.suffix || ''}" autocomplete="off" />
+      </div>
+      <button type="button" class="victim-remove-btn" onclick="removeSuspectRow(${idx})" title="Remove">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    `;
+    list.appendChild(row);
+    if (window.lucide) lucide.createIcons();
+
+    const total = document.querySelectorAll('#suspect-list .victim-row').length;
+    suspectPage = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+    renderSuspectPage();
+
+    const input = row.querySelector(`#sfirst-${idx}`);
+    if (input && !initialData) input.focus();
+  };
+
+  window.removeSuspectRow = function (idx) {
+    const row = document.getElementById(`suspect-row-${idx}`);
+    if (row) row.remove();
+    renumberSuspects();
+    renderSuspectPage();
+  };
+
+  function renumberSuspects() {
+    document.querySelectorAll('#suspect-list .suspect-row').forEach((row, i) => {
+      const badge = row.querySelector('.victim-index-badge');
+      if (badge) badge.textContent = `#${i + 1}`;
+    });
+  }
+
+  window.getSuspects = function () {
+    const rows = document.querySelectorAll('#suspect-list .suspect-row');
+    const suspects = [];
+    rows.forEach(row => {
+      const id  = row.id.replace('suspect-row-', '');
+      const fn  = (document.getElementById(`sfirst-${id}`)?.value  || '').trim();
+      const mn  = (document.getElementById(`smiddle-${id}`)?.value || '').trim();
+      const ln  = (document.getElementById(`slast-${id}`)?.value   || '').trim();
+      const sx  = (document.getElementById(`ssuffix-${id}`)?.value || '').trim();
+      if (fn || ln) {
+        suspects.push({ first_name: fn, middle_name: mn || null, last_name: ln, suffix: sx || null });
+      }
+    });
+    return suspects;
+  };
+
+  window.clearSuspects = function () {
+    const list = document.getElementById('suspect-list');
+    if (list) list.innerHTML = '';
+    suspectCount = 0;
+    suspectPage = 1;
+    renderSuspectPage();
+  };
+})();
+
+/* ===== Responders Log Handling with Live Search & Pagination ===== */
+let responderPage = 1;
+const RESPONDERS_PER_PAGE = 6; // 6 cards per page (2x3 grid) keeps grid neat and clutter-free!
+
+window.filterRespondersGrid = function () {
+  responderPage = 1;
+  renderResponderSelectionGrid();
+};
+
+window.changeResponderPage = function (p) {
+  responderPage = p;
+  renderResponderSelectionGrid();
+};
+
+window.renderResponderSelectionGrid = function () {
+  const container = document.getElementById('responder-select-grid');
+  if (!container) return;
+
+  const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
+  if (!registry.length) {
+    container.innerHTML = '<div style="font-size:.78rem;color:var(--text-muted);padding:.5rem;grid-column:1/-1;">No registered responders in system yet. Click "Onboard New Responder Account" to add one.</div>';
+    const info = document.getElementById('responder-pagination-info');
+    if (info) info.textContent = 'Showing 0 responders';
+    const controls = document.getElementById('responder-pagination-controls');
+    if (controls) controls.innerHTML = '';
+    return;
+  }
+
+  const query = (document.getElementById('responder-search-input')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('responder-status-filter')?.value || 'all';
+
+  // Filter responders dynamically
+  const filtered = registry.filter(r => {
+    const matchQuery = !query || r.name.toLowerCase().includes(query) || (r.role && r.role.toLowerCase().includes(query));
+    const matchStatus = statusFilter === 'all' || (r.status && r.status.toLowerCase() === statusFilter.toLowerCase());
+    return matchQuery && matchStatus;
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / RESPONDERS_PER_PAGE) || 1;
+
+  if (responderPage > totalPages) responderPage = totalPages;
+  if (responderPage < 1) responderPage = 1;
+
+  const start = (responderPage - 1) * RESPONDERS_PER_PAGE;
+  const pageItems = filtered.slice(start, start + RESPONDERS_PER_PAGE);
+
+  if (!pageItems.length) {
+    container.innerHTML = `<div style="font-size:.78rem;color:var(--text-muted);padding:.5rem;grid-column:1/-1;">No responders match "${escHtml(query)}"</div>`;
+  } else {
+    container.innerHTML = pageItems.map(r => {
+      const isSelected = (window._selectedResponders || []).includes(r.id);
+      return `
+        <div class="responder-card-item ${isSelected ? 'selected' : ''}" onclick="toggleResponderSelect('${r.id}')"
+          style="padding:.5rem .75rem;background:${isSelected ? 'rgba(52,211,153,0.14)' : 'rgba(15,23,42,0.65)'};border:1px solid ${isSelected ? '#34d399' : 'rgba(255,255,255,0.08)'};border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s ease;"
+          onmouseover="if(!this.classList.contains('selected')){this.style.borderColor='rgba(52,211,153,0.4)';this.style.background='rgba(52,211,153,0.06)';}"
+          onmouseout="if(!this.classList.contains('selected')){this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(15,23,42,0.65)';}">
+          <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:.4rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</div>
+            <div style="font-size:.7rem;color:#60a5fa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.role)} · <span style="color:${r.status === 'Active' ? '#34d399' : r.status === 'Dispatched' ? '#fbbf24' : '#94a3b8'};">${escHtml(r.status)}</span></div>
+          </div>
+          <div style="width:18px;height:18px;border-radius:4px;border:1px solid ${isSelected ? '#34d399' : 'var(--border-color)'};background:${isSelected ? '#34d399' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            ${isSelected ? '<i data-lucide="check" style="width:12px;height:12px;color:#0f172a;stroke-width:3;"></i>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (window.lucide) lucide.createIcons();
+
+  // Update pagination info & buttons
+  const selectedCount = (window._selectedResponders || []).length;
+  const info = document.getElementById('responder-pagination-info');
+  if (info) {
+    info.textContent = `Page ${responderPage} of ${totalPages} (${total} Responders${query ? ' Found' : ''} · ${selectedCount} Selected)`;
+  }
+
+  const controls = document.getElementById('responder-pagination-controls');
+  if (controls) {
+    if (totalPages <= 1) {
+      controls.innerHTML = '';
+    } else {
+      let btnHtml = `
+        <button type="button" ${responderPage === 1 ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeResponderPage(${responderPage - 1})" style="padding:.2rem .5rem; font-size:.72rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+          &larr; Prev
+        </button>
+      `;
+      for (let p = 1; p <= totalPages; p++) {
+        const isAct = p === responderPage;
+        btnHtml += `
+          <button type="button" onclick="changeResponderPage(${p})" style="width:24px; height:24px; border-radius:6px; border:1px solid ${isAct ? '#34d399' : 'rgba(255,255,255,0.1)'}; background:${isAct ? 'linear-gradient(135deg, #34d399, #059669)' : 'rgba(30,41,59,0.7)'}; color:${isAct ? '#0f172a' : '#94a3b8'}; font-size:.72rem; font-weight:800; cursor:pointer;">
+            ${p}
+          </button>
+        `;
+      }
+      btnHtml += `
+        <button type="button" ${responderPage === totalPages ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''} onclick="changeResponderPage(${responderPage + 1})" style="padding:.2rem .5rem; font-size:.72rem; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#cbd5e1; cursor:pointer;">
+          Next &rarr;
+        </button>
+      `;
+      controls.innerHTML = btnHtml;
+    }
+  }
+};
+
+window.toggleResponderSelect = function (id) {
+  if (!window._selectedResponders) window._selectedResponders = [];
+  const idx = window._selectedResponders.indexOf(id);
+  if (idx > -1) {
+    window._selectedResponders.splice(idx, 1);
+  } else {
+    window._selectedResponders.push(id);
+  }
+  renderResponderSelectionGrid();
+};
+
+window.getSelectedResponders = function () {
+  const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
+  const ids = window._selectedResponders || [];
+  return registry.filter(r => ids.includes(r.id));
+};
+
+window.clearSelectedResponders = function () {
+  window._selectedResponders = [];
+  renderResponderSelectionGrid();
+};
+</script>
+
+<!-- ===== Incident Activity Log Detail Modal ===== -->
+<div class="modal-overlay" id="inc-log-detail-modal-overlay" onclick="closeIncidentLogDetailModalOutside(event)">
+  <div class="modal" style="max-width:560px;border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
+          <i data-lucide="history" style="width:20px;height:20px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;">Activity Log Record</h3>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Incident lifecycle audit movement detail</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeIncidentLogDetailModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" id="inc-log-modal-body" style="font-size:.88rem;padding:1.5rem;max-height:75vh;overflow-y:auto;">
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/js/api.js"></script>
-<script src="assets/js/auth.js"></script>
-<script src="assets/js/incidents.js"></script>
+<script src="assets/js/api.js?v=4.1"></script>
+<script src="assets/js/auth.js?v=4.1"></script>
+<script src="assets/js/incidents.js?v=5.9"></script>
+<script src="assets/js/i18n.js?v=4.1"></script>
+<script src="assets/js/weather.js?v=4.1"></script>
 <script>
   requireAuth();
   const user = getUser();
   if (user) {
-    document.getElementById("user-display-name").textContent = user.full_name || user.username;
-    document.getElementById("user-role-badge").textContent = user.role;
+    const nameEl = document.getElementById("user-display-name");
+    const roleEl = document.getElementById("user-role-badge");
+    if (nameEl) nameEl.textContent = user.full_name || user.username;
+    if (roleEl) roleEl.textContent = user.role;
   }
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
   loadIncidents();
-  loadPendingCount();
 </script>
+<!-- ===== Dispatch Responder Modal ===== -->
+<div class="modal-overlay" id="dispatch-form-overlay" onclick="if(event.target===this)closeDispatchFormPanel()">
+  <div class="modal" style="max-width:420px;width:92vw;border-radius:16px;border:1px solid rgba(59,130,246,0.35);background:#0b1120;box-shadow:0 25px 65px rgba(0,0,0,0.85);">
+    <div class="modal-header" style="padding:1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.09);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.65rem;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="user-plus" style="width:18px;height:18px;color:#60a5fa;"></i>
+        </div>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;color:#f8fafc;">Dispatch Responder</h3>
+      </div>
+      <button class="modal-close" onclick="closeDispatchFormPanel()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;cursor:pointer;padding:.35rem;border-radius:7px;">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.4rem;">
+      <form id="dispatch-form" onsubmit="submitDispatchForm(event)" novalidate>
+        <input type="hidden" id="dispatch-incident-id" />
+        <div class="form-group" style="margin-bottom:.85rem;">
+          <label style="font-size:.8rem;font-weight:600;color:#e2e8f0;margin-bottom:.35rem;display:block;">
+            Responder Name <span style="color:var(--danger);">*</span>
+          </label>
+          <input type="text" id="dispatch-responder-name" placeholder="e.g. PO1 Juan Dela Cruz" style="width:100%;box-sizing:border-box;" />
+          <div style="font-size:.72rem;color:#64748b;margin-top:.3rem;">Enter the full name of the responder being deployed.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-size:.8rem;font-weight:600;color:#e2e8f0;margin-bottom:.35rem;display:block;">Notes / Instructions (optional)</label>
+          <textarea id="dispatch-notes" rows="2" placeholder="e.g. Proceed to Purok 4 bridge — assess flood depth" style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+        </div>
+        <div id="dispatch-error" style="display:none;color:#f87171;font-size:.8rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.75rem;"></div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+          <button type="button" class="btn btn-outline-sm" onclick="closeDispatchFormPanel()">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="navigation" style="width:14px;height:14px;"></i> Dispatch
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

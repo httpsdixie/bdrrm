@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional
-from database import supabase
-from auth.dependencies import get_current_user
+from ..database import supabase
+from ..auth.dependencies import get_current_user
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/directory", tags=["Emergency Directory"])
@@ -36,18 +36,108 @@ class ContactUpdate(BaseModel):
     sort_order: Optional[int] = None
 
 
+DEFAULT_HOTLINES = [
+    {
+        "id": "h-1",
+        "name": "Barangay Linao BDRRMC Command Center",
+        "agency": "BDRRMC",
+        "category": "command",
+        "hotline": "(053) 561-2345 / 0917-123-4567",
+        "secondary_number": "0917-123-4567",
+        "address": "Barangay Hall, Sitio 1, Linao, Ormoc City",
+        "available_24h": True,
+        "sort_order": 1
+    },
+    {
+        "id": "h-2",
+        "name": "CDRRMO Ormoc Emergency Operations Center",
+        "agency": "CDRRMO",
+        "category": "command",
+        "hotline": "(053) 561-8888 / 911",
+        "secondary_number": "911",
+        "address": "City Hall Compound, Ormoc City",
+        "available_24h": True,
+        "sort_order": 2
+    },
+    {
+        "id": "h-3",
+        "name": "Ormoc City Fire Station (BFP)",
+        "agency": "BFP",
+        "category": "fire",
+        "hotline": "(053) 561-2222 / 0928-555-1199",
+        "secondary_number": "0928-555-1199",
+        "address": "Aunubing St., Ormoc City",
+        "available_24h": True,
+        "sort_order": 3
+    },
+    {
+        "id": "h-4",
+        "name": "Ormoc City PNP Central Police Station",
+        "agency": "PNP",
+        "category": "fire",
+        "hotline": "(053) 561-3333 / 0998-598-8123",
+        "secondary_number": "0998-598-8123",
+        "address": "Lilia Ave, Ormoc City",
+        "available_24h": True,
+        "sort_order": 4
+    },
+    {
+        "id": "h-5",
+        "name": "Barangay Linao Health Station",
+        "agency": "City Health",
+        "category": "medical",
+        "hotline": "0917-888-4321",
+        "secondary_number": None,
+        "address": "Purok 3, Barangay Linao, Ormoc City",
+        "available_24h": True,
+        "sort_order": 5
+    },
+    {
+        "id": "h-6",
+        "name": "Ormoc District Hospital (OMVH)",
+        "agency": "DOH / OMVH",
+        "category": "medical",
+        "hotline": "(053) 561-4444",
+        "secondary_number": None,
+        "address": "Brgy. Cogon, Ormoc City",
+        "available_24h": True,
+        "sort_order": 6
+    }
+]
+
+def auto_seed_contacts():
+    """Seed default institutional hotlines into Supabase database if empty."""
+    try:
+        seed_payload = []
+        for item in DEFAULT_HOTLINES:
+            row = item.copy()
+            if "id" in row:
+                del row["id"]
+            seed_payload.append(row)
+        res = supabase.table("emergency_contacts").insert(seed_payload).execute()
+        return res.data or []
+    except Exception as e:
+        print("Auto-seed contacts notice:", e)
+        return DEFAULT_HOTLINES
+
+
 # ===== Public — no auth needed =====
 
 @router.get("/public")
 def get_public_directory():
     """Public endpoint — anyone can view the emergency directory."""
-    result = (
-        supabase.table("emergency_contacts")
-        .select("id, name, agency, category, hotline, secondary_number, address, available_24h, sort_order")
-        .order("sort_order")
-        .execute()
-    )
-    return result.data or []
+    try:
+        result = (
+            supabase.table("emergency_contacts")
+            .select("id, name, agency, category, hotline, secondary_number, address, available_24h, sort_order")
+            .order("sort_order")
+            .execute()
+        )
+        if result.data and len(result.data) > 0:
+            return result.data
+        return auto_seed_contacts()
+    except Exception:
+        return DEFAULT_HOTLINES
 
 
 # ===== Authenticated =====
@@ -55,13 +145,18 @@ def get_public_directory():
 @router.get("/")
 def get_all_contacts(current_user: dict = Depends(get_current_user)):
     """Full directory including notes and email — officers/admins."""
-    result = (
-        supabase.table("emergency_contacts")
-        .select("*")
-        .order("sort_order")
-        .execute()
-    )
-    return result.data or []
+    try:
+        result = (
+            supabase.table("emergency_contacts")
+            .select("*")
+            .order("sort_order")
+            .execute()
+        )
+        if result.data and len(result.data) > 0:
+            return result.data
+        return auto_seed_contacts()
+    except Exception:
+        return DEFAULT_HOTLINES
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)

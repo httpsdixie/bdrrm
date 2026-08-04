@@ -1,17 +1,53 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional
-from database import supabase
-from auth.dependencies import get_current_user
+from ..database import supabase
+from ..auth.dependencies import get_current_user
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/map", tags=["Map Layers"])
+
+ONGOING_STATUSES = {"ongoing", "active", "responding"}
 
 
 # =============================================
 # Public endpoint — no auth required
 # Returns all layers needed for the public map
 # =============================================
+
+DEFAULT_BARANGAY_PUROKS = [
+    {"name": "Purok 1",  "latitude": 11.0150, "longitude": 124.5888},
+    {"name": "Purok 2",  "latitude": 11.0146, "longitude": 124.5895},
+    {"name": "Purok 3",  "latitude": 11.0151, "longitude": 124.5902},
+    {"name": "Purok 4",  "latitude": 11.0157, "longitude": 124.5910},
+    {"name": "Purok 5",  "latitude": 11.0142, "longitude": 124.5905},
+    {"name": "Purok 6",  "latitude": 11.0181, "longitude": 124.5921},
+    {"name": "Purok 7",  "latitude": 11.0188, "longitude": 124.5925},
+    {"name": "Purok 8",  "latitude": 11.0195, "longitude": 124.5932},
+    {"name": "Purok 9",  "latitude": 11.0135, "longitude": 124.5918},
+    {"name": "Purok 10", "latitude": 11.0128, "longitude": 124.5924},
+    {"name": "Purok 11", "latitude": 11.0163, "longitude": 124.5930},
+    {"name": "Purok 12", "latitude": 11.0170, "longitude": 124.5941},
+    {"name": "Purok 13", "latitude": 11.0155, "longitude": 124.5950},
+    {"name": "Purok 14", "latitude": 11.0205, "longitude": 124.5940},
+    {"name": "Purok 15", "latitude": 11.0212, "longitude": 124.5948},
+    {"name": "Purok 16", "latitude": 11.0175, "longitude": 124.5900},
+    {"name": "Purok 17", "latitude": 11.0190, "longitude": 124.5892},
+]
+
+@router.get("/puroks")
+def get_puroks_list():
+    """
+    Retrieve constituent Purok registry and geographical centerpoints from Database.
+    Returns dynamic database list of Puroks.
+    """
+    try:
+        res = supabase.table("puroks").select("*").order("name").execute()
+        if res.data and len(res.data) > 0:
+            return res.data
+    except Exception:
+        pass
+    return DEFAULT_BARANGAY_PUROKS
 
 def clamp_lat(lat):
     try:
@@ -68,7 +104,7 @@ def get_public_map_data():
     incidents = (
         supabase.table("incidents")
         .select("id, title, type, severity, status, latitude, longitude")
-        .in_("status", ["active", "responding"])
+        .in_("status", list(ONGOING_STATUSES))
         .execute()
     ).data or []
 
@@ -122,8 +158,8 @@ def get_all_map_layers(current_user: dict = Depends(get_current_user)):
     """Full map data for authenticated officers/admins."""
     incidents = (
         supabase.table("incidents")
-        .select("id, title, type, severity, status, latitude, longitude, description, created_at, users(full_name)")
-        .in_("status", ["active", "responding"])
+        .select("id, title, type, severity, status, latitude, longitude, description, created_at, users!incidents_reported_by_fkey(full_name)")
+        .in_("status", list(ONGOING_STATUSES))
         .execute()
     ).data or []
 
@@ -153,7 +189,7 @@ def get_all_map_layers(current_user: dict = Depends(get_current_user)):
 
     road_closures = (
         supabase.table("road_closures")
-        .select("*, users!incidents_reported_by_fkey(full_name)")
+        .select("*")
         .eq("is_active", True)
         .execute()
     ).data or []
@@ -353,7 +389,7 @@ class RoadClosureCreate(BaseModel):
 def get_road_closures(current_user: dict = Depends(get_current_user)):
     result = (
         supabase.table("road_closures")
-        .select("*, users!incidents_reported_by_fkey(full_name)")
+        .select("*")
         .order("created_at", desc=True)
         .execute()
     )

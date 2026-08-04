@@ -72,53 +72,6 @@ function showDirectorySkeletons() {
     </div>`;
 }
 
-const FALLBACK_DIRECTORY = [
-  {
-    id: "dir-1",
-    name: "BDRRMC Linao Emergency Operations Center",
-    agency: "Barangay Linao DRRM Command",
-    category: "disaster",
-    hotline: "0917-123-4567",
-    secondary_number: "(053) 561-0000",
-    address: "Barangay Hall Complex, Brgy Linao, Ormoc City",
-    email: "drrm.linao@ormoc.gov.ph",
-    available_24h: true
-  },
-  {
-    id: "dir-2",
-    name: "Bureau of Fire Protection (BFP) Ormoc Station",
-    agency: "BFP Ormoc City",
-    category: "fire",
-    hotline: "(053) 255-2222",
-    secondary_number: "911",
-    address: "National Highway, Ormoc City",
-    email: "bfp_ormoc@fire.gov.ph",
-    available_24h: true
-  },
-  {
-    id: "dir-3",
-    name: "Ormoc City Police Station 1 Sub-Station",
-    agency: "Philippine National Police",
-    category: "police",
-    hotline: "(053) 561-9111",
-    secondary_number: "0998-598-1234",
-    address: "Linao Junction, Brgy Linao, Ormoc City",
-    email: "pnp.ormoc1@pnp.gov.ph",
-    available_24h: true
-  },
-  {
-    id: "dir-4",
-    name: "Barangay Linao Health Station (BHS)",
-    agency: "City Health Department",
-    category: "medical",
-    hotline: "(053) 561-2244",
-    secondary_number: "0912-345-6789",
-    address: "Main Street, Brgy Linao, Ormoc City",
-    email: "bhs.linao@health.gov.ph",
-    available_24h: true
-  }
-];
-
 let dirPagination = { currentPage: 1, pageSize: 6, filtered: [] };
 
 // ---- Load ----
@@ -132,9 +85,9 @@ async function loadDirectory(btnEl) {
     dirPagination.currentPage = 1;
     renderDirectoryPaginated();
   } catch (err) {
-    console.warn('Backend unavailable, using fallback directory contacts:', err);
-    allContacts = [...FALLBACK_DIRECTORY];
-    dirPagination.filtered = [...allContacts];
+    console.warn('Failed to load directory:', err);
+    allContacts = [];
+    dirPagination.filtered = [];
     dirPagination.currentPage = 1;
     renderDirectoryPaginated();
   } finally {
@@ -602,13 +555,23 @@ async function submitContact() {
 }
 
 async function deleteContact(id) {
-  if (!confirm('Delete this contact? This cannot be undone.')) return;
-  try {
-    await apiFetch(`/directory/${id}`, { method:'DELETE' });
-    await loadDirectory();
-  } catch (err) {
-    alert('Delete failed: ' + err.message);
-  }
+  confirmAction({
+    title: 'Delete Directory Contact',
+    message: 'Are you sure you want to delete this emergency contact? This action cannot be undone.',
+    confirmText: 'Delete Contact',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/directory/${id}`, { method: 'DELETE' });
+        showToast("Directory contact removed successfully.", "info", "Contact Deleted");
+        await loadDirectory();
+      } catch (err) {
+        showToast(err.message || 'Delete failed', 'danger', 'Error');
+      }
+    }
+  });
 }
 
 // Global Listener to clear invalid highlight when user starts typing/selecting

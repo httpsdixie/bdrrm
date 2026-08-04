@@ -1,8 +1,29 @@
 -- =============================================
--- Barangay DRRM — Default Emergency Contacts Seed Data
--- Run this script in the Supabase SQL Editor
+-- Barangay DRRM — Wipe All Data (Preserves Admin User)
+-- Paste and run this in Supabase SQL Editor
 -- =============================================
 
+TRUNCATE TABLE
+  resource_logs,
+  asset_units,
+  evac_history_log,
+  evacuation_tracking,
+  resource_dispatch,
+  incident_audit_trail,
+  incidents,
+  resources,
+  evacuation_centers,
+  emergency_contacts,
+  road_closures,
+  responder_stations,
+  hospitals,
+  hazard_zones
+RESTART IDENTITY CASCADE;
+
+-- Delete all secondary user accounts except 'admin'
+DELETE FROM users WHERE username != 'admin';
+
+-- Re-seed essential institutional emergency hotlines so directory is never empty
 INSERT INTO emergency_contacts (name, agency, category, hotline, secondary_number, address, available_24h, sort_order)
 VALUES
   ('Barangay Linao BDRRMC Command Center', 'BDRRMC', 'command', '(053) 561-2345 / 0917-123-4567', '0917-123-4567', 'Barangay Hall, Sitio 1, Linao, Ormoc City', true, 1),

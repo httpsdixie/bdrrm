@@ -6,23 +6,23 @@
   <title>Barangay Linao — Public Safety Map</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=2.5" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-main); color: var(--text-main); height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; }
 
     .pub-header {
-      background: var(--bg-card-solid);
+      background: linear-gradient(180deg, rgba(11, 15, 25, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
       color: var(--text-main);
       padding: 0.75rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-      z-index: 1050;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+      z-index: 2000;
       position: relative;
       flex-shrink: 0;
     }
@@ -33,9 +33,16 @@
     .pub-header p  { font-size: .75rem; color: var(--text-muted); margin-top: .1rem; }
     .pub-badge {
       display: inline-flex; align-items: center; gap: .4rem;
-      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 99px; padding: 0 .8rem; height: 30px; box-sizing: border-box; line-height: 1;
       font-size: .75rem; color: var(--text-main); font-weight: 600; font-family: inherit;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+    }
+    .pub-badge:hover {
+      background: rgba(59, 130, 246, 0.16) !important;
+      border-color: rgba(96, 165, 250, 0.6) !important;
+      color: #ffffff !important;
+      transform: translateY(-1px);
     }
     .pub-badge svg { width: 13px; height: 13px; color: var(--primary); }
     .pub-badge .dot {
@@ -74,13 +81,13 @@
 
     /* Layer toggles floating card */
     .pub-toggles {
-      position: absolute; top: 1rem; right: 1rem; z-index: 1000;
-      background: var(--bg-card-solid); border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 0; width: 250px; overflow: hidden;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      position: absolute; top: 1.25rem; right: 1.25rem; z-index: 1000;
+      background: linear-gradient(165deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.92) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      padding: 0; width: 260px; overflow: hidden;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       transition: right .25s cubic-bezier(.4,0,.2,1);
     }
     .pub-toggles.shift-left { right: 376px !important; }
@@ -98,9 +105,9 @@
     .pub-toggle-title {
       font-size: .72rem; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: .06em;
-      padding: .75rem 1rem;
-      background: rgba(15, 23, 42, 0.85);
-      border-bottom: 1px solid var(--border-color);
+      padding: .65rem .85rem;
+      background: rgba(15, 23, 42, 0.75);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer; user-select: none;
       display: flex; align-items: center; justify-content: space-between;
     }
@@ -123,7 +130,8 @@
       transition: background 0.15s ease;
     }
     .pub-layer-row:hover {
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(59, 130, 246, 0.12);
+      color: #ffffff;
     }
     .pub-layer-left { display: flex; align-items: center; gap: 0.55rem; }
     .layer-panel-footer {
@@ -168,13 +176,56 @@
       line-height: 1.4;
     }
     .pub-disclaimer strong { color: var(--danger); font-weight: 700; }
+
+    .pub-badge-tooltip {
+      position: relative !important;
+      cursor: pointer !important;
+    }
+    .pub-badge-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      min-width: 200px;
+      max-width: 260px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f8fafc;
+      font-size: 0.76rem;
+      font-weight: 500;
+      line-height: 1.45;
+      text-align: center;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 99999;
+      white-space: normal;
+    }
+    .pub-badge-tooltip:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .pub-badge-tooltip.tooltip-right::after {
+      left: auto;
+      right: 0;
+      transform: translateY(-6px);
+      text-align: left;
+    }
+    .pub-badge-tooltip.tooltip-right:hover::after {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
 
   <!-- Public header — no login -->
   <div class="pub-header">
-    <div class="pub-header-left">
+    <a href="landing.html" class="pub-header-left" style="text-decoration:none;color:inherit;cursor:pointer;transition:opacity 0.2s ease;" title="Back to Main Landing Page">
       <div class="brand-icon">
         <i data-lucide="shield-alert"></i>
       </div>
@@ -182,11 +233,11 @@
         <h1>Barangay Linao Public Safety Map</h1>
         <p>Ormoc City, Leyte &nbsp;·&nbsp; BDRRMC Information System</p>
       </div>
-    </div>
+    </a>
     <div style="display:flex;align-items:center;gap:.75rem;">
       <!-- Weather Pill -->
       <div class="weather-pill-wrapper">
-        <button class="pub-badge weather-pill" onclick="toggleWeatherDropdown()" title="Click for Ormoc City Weather Details">
+        <button class="pub-badge weather-pill pub-badge-tooltip" onclick="toggleWeatherDropdown()" data-tooltip="Real-time weather conditions & forecast for Barangay Linao, Ormoc City">
           <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
           <span id="weather-pill-temp">--°C</span>
           <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
@@ -206,14 +257,14 @@
         </div>
       </div>
 
-      <button class="pub-badge" id="heatmap-btn" onclick="toggleHeatmap()" style="cursor:pointer;" title="Toggle Incident Heatmap Layer">
-        <i data-lucide="flame"></i> Incident Heatmap
+      <button class="pub-badge pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" style="cursor:pointer;" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest danger.">
+        <i data-lucide="flame"></i> High-Risk Areas
       </button>
-      <div class="pub-badge">
-        <div class="dot"></div> Live Data
+      <div class="pub-badge pub-badge-tooltip" data-tooltip="Connected to the official Barangay Linao DRRM database for safety updates.">
+        <div class="dot"></div> System Online
       </div>
-      <div class="pub-badge">
-        <i data-lucide="eye"></i> View Only
+      <div class="pub-badge pub-badge-tooltip tooltip-right" data-tooltip="Public browse mode: view safety updates here. Reporting and editing are disabled on this page.">
+        <i data-lucide="eye"></i> Browse Only
       </div>
     </div>
   </div>
@@ -227,7 +278,7 @@
           <div style="width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;">
             <i data-lucide="layers" style="width:12px;height:12px;color:var(--primary);"></i>
           </div>
-          <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LAYERS</span>
+          <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;">
           <span id="active-layer-count" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">8/8</span>
@@ -236,54 +287,54 @@
       </div>
 
       <div id="pub-toggles-body">
-        <!-- Section: Incidents & Evacuation -->
+        <!-- Section: Disasters & Evacuation -->
         <div class="layer-group-label">
-          <i data-lucide="alert-triangle" style="width:12px;height:12px;color:#ef4444;"></i> Emergency & Incidents
+          <i data-lucide="siren" style="width:12px;height:12px;color:#ef4444;"></i> Emergencies & Shelters
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span> Active Incidents</div>
+        <div class="pub-layer-row" title="Shows active disaster reports and emergency calls">
+          <div class="pub-layer-left"><span class="legend-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span> Active Emergencies</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('incidents',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#3b82f6;"></span> Evacuation Centers</div>
+        <div class="pub-layer-row" title="Shows designated safe evacuation centers for residents">
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#3b82f6;"></span> Evacuation Shelters</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('evac',this)"><span class="toggle-slider"></span></label>
         </div>
 
         <div class="layer-group-sep"></div>
 
-        <!-- Section: Hazard & Risk Zones -->
+        <!-- Section: Disaster Danger Areas -->
         <div class="layer-group-label">
-          <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard & Risk Zones
+          <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Danger & Risk Areas
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span> Flood Hazard Zones</div>
+        <div class="pub-layer-row" title="Shows flood-prone areas across Barangay Linao">
+          <div class="pub-layer-left"><span class="legend-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span> Flood-Prone Areas</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('flood',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-poly" style="background:#f97316;border:1px solid #fb923c;"></span> Landslide Zones</div>
+        <div class="pub-layer-row" title="Shows landslide-susceptible slopes and hillsides">
+          <div class="pub-layer-left"><span class="legend-poly" style="background:#f97316;border:1px solid #fb923c;"></span> Landslide Areas</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('landslide',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span> High Risk Overlay</div>
+        <div class="pub-layer-row" title="Shows combined high-risk disaster zones">
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span> High-Risk Zones</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('risk',this)"><span class="toggle-slider"></span></label>
         </div>
 
         <div class="layer-group-sep"></div>
 
-        <!-- Section: Key Infrastructure -->
+        <!-- Section: Help & Emergency Stations -->
         <div class="layer-group-label">
-          <i data-lucide="building-2" style="width:12px;height:12px;color:#10b981;"></i> Infrastructure & Services
+          <i data-lucide="hospital" style="width:12px;height:12px;color:#10b981;"></i> Help & Health Facilities
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#10b981;"></span> Hospitals & BHS</div>
+        <div class="pub-layer-row" title="Shows nearby hospitals and barangay health stations">
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#10b981;"></span> Hospitals & Clinics</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('hospitals',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#8b5cf6;"></span> Responder Stations</div>
+        <div class="pub-layer-row" title="Shows police, fire, and BDRRMC responder outposts">
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#2563eb;"></span> Police & Fire Outposts</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('stations',this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="pub-layer-row">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#eab308;"></span> Road Closures</div>
+        <div class="pub-layer-row" title="Shows impassable or blocked roads">
+          <div class="pub-layer-left"><span class="legend-dot" style="background:#eab308;"></span> Blocked Roads</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('roads',this)"><span class="toggle-slider"></span></label>
         </div>
 
@@ -299,7 +350,7 @@
 
     <!-- Unified Map Navigation & Geolocation Controls -->
     <div class="map-controls-stack">
-      <button class="map-ctrl-btn" onclick="locateUser()" id="locate-btn" title="Pinpoint My Location">
+      <button class="map-ctrl-btn" onclick="locateUser()" id="locate-btn" title="Recenter to Barangay Linao">
         <i data-lucide="crosshair" style="width:17px;height:17px;"></i>
       </button>
       <div class="map-ctrl-divider"></div>
@@ -328,11 +379,11 @@
         <div class="basemap-grid">
           <div class="basemap-card active" data-key="streets" onclick="switchBaseMap('streets')">
             <div class="basemap-thumb thumb-streets"></div>
-            <span>Google Streets</span>
+            <span>Streets View</span>
           </div>
           <div class="basemap-card" data-key="satellite" onclick="switchBaseMap('satellite')">
             <div class="basemap-thumb thumb-satellite"></div>
-            <span>Google Satellite</span>
+            <span>Satellite View</span>
           </div>
           <div class="basemap-card" data-key="osm" onclick="switchBaseMap('osm')">
             <div class="basemap-thumb thumb-osm"></div>
@@ -340,56 +391,47 @@
           </div>
           <div class="basemap-card" data-key="topo" onclick="switchBaseMap('topo')">
             <div class="basemap-thumb thumb-topo"></div>
-            <span>OpenTopoMap</span>
+            <span>Topographic</span>
           </div>
           <div class="basemap-card" data-key="cyclosm" onclick="switchBaseMap('cyclosm')">
             <div class="basemap-thumb thumb-cyclosm"></div>
             <span>CyclOSM</span>
           </div>
-          <div class="basemap-card" data-key="bing" onclick="switchBaseMap('bing')">
-            <div class="basemap-thumb thumb-bing"></div>
-            <span>Bing Aerial</span>
-          </div>
           <div class="basemap-card" data-key="dark" onclick="switchBaseMap('dark')">
             <div class="basemap-thumb thumb-dark"></div>
-            <span>Dark Mode</span>
+            <span>Dark Vector</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Info panel for citizens (read-only) -->
-    <div class="info-panel" id="info-panel" style="
-      position:absolute; top:0; right:0; bottom:0; width:340px;
-      background: var(--bg-card-solid); border-left:1px solid var(--border-color);
-      box-shadow:-8px 0 30px rgba(0,0,0,.6); z-index:1100;
-      display:flex; flex-direction:column;
-      transform:translateX(100%);
-      transition:transform .25s cubic-bezier(.4,0,.2,1);">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.25rem;border-bottom:1px solid var(--border-color);background:rgba(15,23,42,0.6);flex-shrink:0;">
+    <div class="info-panel" id="info-panel">
+      <div class="info-panel-header">
         <div>
-          <div id="panel-type-badge" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.25rem .65rem;border-radius:99px;margin-bottom:.35rem;"></div>
-          <div id="panel-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);line-height:1.3;">—</div>
+          <div class="info-panel-type" id="panel-type-badge"></div>
+          <div class="info-panel-title" id="panel-title">—</div>
         </div>
-        <button onclick="closeInfoPanel()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;padding:.4rem;border-radius:var(--radius-sm);transition:all .15s ease;">
-          <i data-lucide="x" style="width:18px;height:18px;"></i>
-        </button>
+        <button class="info-panel-close" onclick="closeInfoPanel()"><i data-lucide="x"></i></button>
       </div>
-      <div id="panel-body" style="flex:1;overflow-y:auto;padding:1.25rem;color:var(--text-main);"></div>
-      <div id="panel-actions"></div>
+      <div class="info-panel-body" id="panel-body"></div>
+      <div class="info-panel-actions" id="panel-actions"></div>
     </div>
 
     <!-- Emergency Hotlines Widget (Top Left - Expanded by Default) -->
     <div id="pub-hotlines" class="pub-hotlines-card">
-      <div class="pub-hotlines-header" onclick="togglePubHotlines()" title="Click to collapse / expand">
-        <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
-          <i data-lucide="phone-call" style="width: 13px; height: 13px; color: var(--primary);"></i> Emergency Hotlines
-        </span>
-        <button class="pub-hotlines-close-btn" onclick="event.stopPropagation(); togglePubHotlines()" title="Collapse / Expand">
-          <i data-lucide="chevron-down" id="pub-hotlines-chevron" style="width: 14px; height: 14px; transition: transform 0.2s ease;"></i>
-        </button>
+      <div class="pub-hotlines-header" onclick="togglePubHotlines()" title="Click to expand / collapse">
+        <div style="display:flex;align-items:center;gap:.5rem;min-width:0;">
+          <div style="width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i data-lucide="phone-call" style="width:12px;height:12px;color:var(--primary);"></i>
+          </div>
+          <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;white-space:nowrap;">EMERGENCY HOTLINES</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
+          <i data-lucide="chevron-up" id="pub-hotlines-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
+        </div>
       </div>
-      <div id="pub-hotlines-body" style="max-height: 180px; overflow-y: auto;">
+      <div id="pub-hotlines-body" style="max-height: 230px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
         <div id="pub-hotlines-list">
           <div style="padding: 0.45rem 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding-bottom:.45rem; border-bottom:1px solid var(--border-color);">
@@ -417,14 +459,57 @@
   <style>
     .pub-hotlines-card {
       position: absolute; top: 1.25rem; left: 1.25rem; z-index: 1000;
-      background: var(--bg-card-solid); border: 1px solid var(--border-color);
-      border-radius: var(--radius-md); width: 260px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      background: linear-gradient(165deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.92) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px; width: 305px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       overflow: hidden; transition: all 0.25s cubic-bezier(.4,0,.2,1);
     }
     .pub-hotlines-card.collapsed #pub-hotlines-body { display: none; }
     .pub-hotlines-card.collapsed #pub-hotlines-chevron { transform: rotate(180deg); }
+
+    .pub-hotline-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.65rem;
+      padding: 0.65rem 0.9rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.18s ease;
+    }
+    .pub-hotline-item:last-child { border-bottom: none; }
+    .pub-hotline-item:hover { background: rgba(59, 130, 246, 0.08); }
+
+    .pub-hotline-cat-tag {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.15rem 0.45rem; border-radius: 99px;
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; line-height: 1;
+    }
+    .pub-hotline-cat-tag svg { width: 10px; height: 10px; }
+
+    .pub-hotline-name {
+      font-size: 0.82rem; font-weight: 700; color: #f8fafc;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .pub-hotline-num {
+      font-size: 0.78rem; font-weight: 700; color: #60a5fa; margin-top: 0.1rem;
+      letter-spacing: 0.02em;
+    }
+
+    .pub-hotline-call-btn {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.25) 0%, rgba(29, 78, 216, 0.15) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.45); color: #60a5fa;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    }
+    .pub-hotline-call-btn:hover {
+      background: #2563eb; color: #ffffff;
+      border-color: #2563eb;
+      transform: scale(1.06);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+    }
+    .pub-hotline-call-btn svg { width: 14px; height: 14px; }
 
     .map-controls-stack {
       top: auto !important;
@@ -437,7 +522,7 @@
       transition: bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     .map-controls-stack.basemap-open {
-      bottom: 19rem !important;
+      bottom: 19.8rem !important;
     }
 
     .basemap-picker-wrapper {
@@ -456,7 +541,7 @@
         left: 1rem !important;
       }
       .map-controls-stack.basemap-open {
-        bottom: 17rem !important;
+        bottom: 18.5rem !important;
       }
       .basemap-picker-wrapper {
         bottom: 1rem !important;
@@ -491,11 +576,14 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script>
     // Fast non-blocking apiFetch for public map (1000ms timeout max, never blocks UI)
+    // Use a configured API_BASE if provided by the page (assets/js/api.js sets API_BASE),
+    // otherwise fall back to sensible defaults.
     async function apiFetch(endpoint) {
+      const BASE = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : window.location.protocol + '//' + window.location.host);
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1000);
-        const res = await fetch('http://127.0.0.1:8000' + endpoint, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch(BASE.replace(/\/$/, '') + endpoint, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!res.ok) return null;
         return await res.json();
@@ -504,13 +592,72 @@
       }
     }
     function getUser() { return null; }
+
+    function showToast(message, type = 'info', title = 'View Only', duration = 4500) {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+      }
+
+      const icons = {
+        success: 'check-circle',
+        danger: 'alert-triangle',
+        error: 'x-circle',
+        warning: 'alert-circle',
+        info: 'info'
+      };
+
+      const titles = {
+        success: 'Success',
+        danger: 'Error',
+        error: 'Error',
+        warning: 'Warning',
+        info: 'Information'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const iconName = icons[type] || 'info';
+      const toastTitle = title || titles[type] || 'Notification';
+
+      toast.innerHTML = `
+        <i data-lucide="${iconName}" class="toast-icon"></i>
+        <div class="toast-body">
+          <div class="toast-title">${toastTitle}</div>
+          <div class="toast-msg">${message}</div>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      if (window.lucide) window.lucide.createIcons();
+
+      const timer = setTimeout(() => dismissToast(toast), duration);
+      toast.dataset.timer = timer;
+    }
+
+    function dismissToast(toastEl) {
+      if (!toastEl || toastEl.classList.contains('toast-hiding')) return;
+      if (toastEl.dataset.timer) clearTimeout(parseInt(toastEl.dataset.timer));
+      toastEl.classList.add('toast-hiding');
+      setTimeout(() => {
+        if (toastEl.parentElement) toastEl.parentElement.removeChild(toastEl);
+      }, 250);
+    }
   </script>
   <script src="assets/js/weather.js"></script>
-  <script src="assets/js/map.js"></script>
+  <script src="assets/js/map.js?v=2.5"></script>
   <script>
     lucide.createIcons();
     initMap(false); // false = public mode
     if (typeof loadWeather === 'function') loadWeather();
+
+    setTimeout(() => {
+      if (typeof showToast === 'function') {
+        showToast('You can browse this map and see current updates. Reports and edits are not available on this public page.', 'info', 'Public View');
+      }
+    }, 700);
 
     // Prevent Leaflet map click/drag interference on layer panel
     const togglesEl = document.getElementById('pub-toggles');
@@ -595,26 +742,37 @@
 
     function togglePubHotlines() {
       const card = document.getElementById('pub-hotlines');
+      const chev = document.getElementById('pub-hotlines-chevron');
       if (card) {
         card.classList.toggle('collapsed');
+        if (chev) {
+          chev.style.transform = card.classList.contains('collapsed') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
         try {
           localStorage.setItem('pub_hotlines_collapsed', card.classList.contains('collapsed') ? 'true' : 'false');
         } catch(e) {}
       }
     }
 
-    // Restore state on load (default to OPEN unless explicitly collapsed by user)
+    // Restore state on load (default to COLLAPSED to prevent viewport overlap)
     (function restoreHotlinesState() {
       const card = document.getElementById('pub-hotlines');
+      const chev = document.getElementById('pub-hotlines-chevron');
       if (card) {
         try {
           const isCollapsed = localStorage.getItem('pub_hotlines_collapsed');
-          if (isCollapsed === 'true') {
+          // Default to collapsed unless explicitly set to false by user
+          if (isCollapsed !== 'false') {
             card.classList.add('collapsed');
+            if (chev) chev.style.transform = 'rotate(180deg)';
           } else {
             card.classList.remove('collapsed');
+            if (chev) chev.style.transform = 'rotate(0deg)';
           }
-        } catch(e) {}
+        } catch(e) {
+          card.classList.add('collapsed');
+          if (chev) chev.style.transform = 'rotate(180deg)';
+        }
       }
     })();
 
@@ -628,42 +786,92 @@
       }
       if (!list) return;
 
+      // No static/default hotline entries allowed. Start with an empty list and render only data from the backend directory API.
       const DEFAULT_HOTLINES = [
-        { name: "Ormoc City CDRRMO", hotline: "(053) 255-2830" },
-        { name: "Barangay Linao BDRRMO", hotline: "0917-234-5678" },
-        { name: "Ormoc City Fire Station", hotline: "(053) 255-2114" },
-        { name: "Ormoc City Police Station", hotline: "(053) 255-2222" },
-        { name: "Ormoc District Hospital", hotline: "(053) 561-2244" }
+        { id: 'h-1', name: 'Barangay Linao BDRRMC Command', agency: 'BDRRMC', category: 'command', hotline: '(053) 561-2345 / 0917-123-4567' },
+        { id: 'h-2', name: 'CDRRMO Ormoc Emergency Operations', agency: 'CDRRMO', category: 'command', hotline: '(053) 561-8888 / 911' },
+        { id: 'h-3', name: 'Ormoc City Fire Station (BFP)', agency: 'BFP', category: 'fire', hotline: '(053) 561-2222 / 0928-555-1199' },
+        { id: 'h-4', name: 'Ormoc City PNP Central Station', agency: 'PNP', category: 'fire', hotline: '(053) 561-3333 / 0998-598-8123' },
+        { id: 'h-5', name: 'Barangay Linao Health Center', agency: 'Health Dept', category: 'medical', hotline: '0917-888-4321' },
+        { id: 'h-6', name: 'Ormoc District Hospital (OMVH)', agency: 'OMVH', category: 'medical', hotline: '(053) 561-4444' }
       ];
 
       function renderList(contacts) {
-        if (!contacts || !contacts.length) contacts = DEFAULT_HOTLINES;
-        list.innerHTML = contacts.slice(0, 6).map(c => `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.45rem .85rem; border-bottom:1px solid var(--border-color);">
-            <div style="min-width:0; flex:1;">
-              <div style="font-size:.78rem; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.name}">${c.name}</div>
-              <div style="font-size:.75rem; font-weight:700; color:#60a5fa; margin-top:.1rem;">${c.hotline}</div>
-            </div>
-            <a href="tel:${c.hotline.replace(/[^0-9+]/g,'')}" title="Call ${c.name}" style="flex-shrink:0; width:26px; height:26px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; display:flex; align-items:center; justify-content:center; text-decoration:none;">
-              <i data-lucide="phone" style="width:12px; height:12px;"></i>
-            </a>
-          </div>`).join('');
+        let items = (contacts && Array.isArray(contacts) && contacts.length) ? contacts : DEFAULT_HOTLINES;
+        
+        // Deduplicate contacts by hotline number or name to avoid repetitive entries
+        const uniqueContacts = [];
+        const seen = new Set();
+        for (const c of items) {
+          const normKey = ((c.name || '') + '|' + (c.hotline || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (!seen.has(normKey)) {
+            seen.add(normKey);
+            uniqueContacts.push(c);
+          }
+        }
+
+        const itemsToRender = uniqueContacts.length ? uniqueContacts : DEFAULT_HOTLINES;
+
+        // Group by category like Map Layers
+        const groups = {
+          command: { title: "BARANGAY & CITY COMMAND", icon: "shield", color: "#60a5fa", items: [] },
+          fire: { title: "FIRE, RESCUE & POLICE", icon: "siren", color: "#f97316", items: [] },
+          medical: { title: "MEDICAL & HOSPITALS", icon: "hospital", color: "#10b981", items: [] }
+        };
+
+        itemsToRender.forEach(c => {
+          const n = (c.name || '').toLowerCase();
+          const cat = (c.category || '').toLowerCase();
+          if (n.includes('hospital') || n.includes('health') || n.includes('medical') || cat === 'medical') {
+            groups.medical.items.push(c);
+          } else if (n.includes('fire') || n.includes('police') || n.includes('coast') || n.includes('bfp') || n.includes('pnp') || cat === 'fire' || cat === 'police') {
+            groups.fire.items.push(c);
+          } else {
+            groups.command.items.push(c);
+          }
+        });
+
+        let html = '';
+        for (const k in groups) {
+          const grp = groups[k];
+          if (!grp.items.length) continue;
+
+          html += `
+          <div class="layer-group-label" style="padding:0.4rem 0.85rem 0.15rem; font-size:0.63rem; margin-top:0.15rem;">
+            <i data-lucide="${grp.icon}" style="width:11px;height:11px;color:${grp.color};"></i> ${grp.title}
+          </div>`;
+
+          grp.items.forEach(c => {
+            const phoneClean = (c.hotline || '').replace(/[^0-9+]/g, '');
+            html += `
+            <div class="pub-hotline-item">
+              <div style="min-width:0; flex:1;">
+                <div class="pub-hotline-name" title="${c.name}">${c.name}</div>
+                <div class="pub-hotline-num">${c.hotline}</div>
+              </div>
+              <a href="tel:${phoneClean}" title="Call ${c.name}" class="pub-hotline-call-btn">
+                <i data-lucide="phone-call"></i>
+              </a>
+            </div>`;
+          });
+        }
+
+        list.innerHTML = html;
         if (window.lucide) lucide.createIcons();
       }
 
-      // Render hotlines instantly (0ms delay)
-      renderList(DEFAULT_HOTLINES);
+      list.innerHTML = `<div style="padding:0.85rem;font-size:.9rem;color:var(--text-muted);">Loading hotlines&hellip;</div>`;
 
       try {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 1200);
-        const res = await fetch('http://127.0.0.1:8000/directory/public', { signal: controller.signal });
-        clearTimeout(tid);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length) renderList(data);
+        const data = await apiFetch('/directory/public');
+        if (data && data.length) {
+          renderList(data);
+          return;
         }
-      } catch(_) {}
+        renderList(DEFAULT_HOTLINES);
+      } catch (e) {
+        renderList(DEFAULT_HOTLINES);
+      }
     }
     loadPubHotlines();
   </script>

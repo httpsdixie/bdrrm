@@ -6,6 +6,7 @@
   <title>Emergency Directory — Barangay DRRM</title>
   <link rel="stylesheet" href="assets/css/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
   <style>
     /* Category color map for sleek dark theme */
     .cat-disaster  { --cat-color:#60a5fa; --cat-bg:rgba(59,130,246,0.15); --cat-border:rgba(59,130,246,0.35); }
@@ -375,11 +376,15 @@
 <body>
 
 <div class="layout">
+  <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">
+    <a href="landing.html" class="brand" style="text-decoration:none;color:inherit;">
       <i data-lucide="shield-alert" class="brand-icon"></i>
-      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
-    </div>
+      <div>
+        <h2>Barangay DRRM</h2>
+        <span>Linao, Ormoc City</span>
+      </div>
+    </a>
     <nav>
       <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
       <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
@@ -397,18 +402,49 @@
       <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
       <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
       <a href="directory.html" class="active"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+      <a href="landing.html"><i data-lucide="globe"></i> Public Portal</a>
     </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+    <div class="sidebar-footer">
+      <div>Barangay DRRM v1.0</div>
+      <div style="font-size:.65rem;color:var(--text-muted);margin-top:.2rem;">
+        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showPrivacyPolicyModal()">Terms &amp; RA 10173 Privacy</span>
+      </div>
+    </div>
   </aside>
 
   <div class="main-content">
     <div class="topbar">
       <div class="topbar-left">
         <h2>Emergency Directory</h2>
-        <span class="dash-timestamp">Centralized Hotlines &amp; Contacts</span>
+        <div class="dash-timestamp">
+          <span class="sync-item"><i data-lucide="phone-call"></i> Centralized Hotlines &amp; Emergency Directory</span>
+        </div>
       </div>
       <div class="user-info">
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-header">
+              <i data-lucide="cloud-sun"></i>
+              <span>Ormoc City Weather</span>
+              <button class="weather-refresh" onclick="loadWeather(event)" title="Refresh Weather">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-body" id="weather-body">
+              <div class="weather-loading"><i data-lucide="loader" class="spin"></i></div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-icon-sm" onclick="loadDirectory(this)" id="refresh-btn" title="Refresh">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -691,6 +727,8 @@
 <script src="assets/js/api.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/directory.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/weather.js"></script>
 <script>
   requireAuth();
   const user = getUser();

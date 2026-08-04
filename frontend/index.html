@@ -13,11 +13,12 @@
     <div class="auth-card">
 
       <div class="logo">
-        <div class="logo-icon">
+        <a href="landing.html" class="logo-icon" title="Return to Public Portal">
           <i data-lucide="shield-alert"></i>
-        </div>
-        <h1>Barangay DRRM</h1>
-        <p class="subtitle">Barangay Linao, Ormoc City<br>Disaster Risk Reduction &amp; Management</p>
+        </a>
+
+        <h1 style="margin-top:0.5rem;">Barangay DRRM</h1>
+        <p class="subtitle">Barangay Linao, Ormoc City<br>Disaster Risk Reduction &amp; Management System</p>
       </div>
 
       <form id="login-form" novalidate>
@@ -27,24 +28,35 @@
           <div class="input-icon-wrap">
             <i data-lucide="user"></i>
             <input
+              class="no-capitalize"
               type="text"
               id="username"
               placeholder="Enter your username"
               autocomplete="username"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               required
             />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="password">Password</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.45rem;">
+            <label for="password" style="margin:0;">Password</label>
+            <a href="javascript:void(0)" onclick="openForgotPasswordModal()" style="color:#60a5fa;font-size:0.78rem;font-weight:600;text-decoration:none;transition:color 0.2s ease;" onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Forgot Password?</a>
+          </div>
           <div class="input-icon-wrap input-icon-wrap-right">
             <i data-lucide="lock"></i>
             <input
+              class="no-capitalize"
               type="password"
               id="password"
               placeholder="Enter your password"
               autocomplete="current-password"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               required
             />
             <button type="button" class="input-toggle-btn" id="toggle-password" title="Show password">
@@ -55,17 +67,202 @@
 
         <p class="error-msg" id="login-error"></p>
 
-        <button type="submit" class="btn btn-primary" id="login-btn" style="margin-top: 0.75rem;">
+        <button type="submit" class="btn btn-primary" id="login-btn" style="margin-top: 0.75rem;width:100%;padding:0.75rem;font-size:0.95rem;">
           <i data-lucide="log-in"></i> Sign In
         </button>
 
       </form>
 
-      <p class="auth-note">
-        <i data-lucide="info" style="width:13px;height:13px;"></i>
-        Default login: <strong>admin</strong> / <strong>admin1234</strong>
-      </p>
+      <div class="auth-note" onclick="quickFillDemo()" style="cursor:pointer;transition:all 0.2s ease;margin-top:1.2rem;user-select:none;" onmouseover="this.style.borderColor='rgba(96,165,250,0.5)';this.style.background='rgba(59,130,246,0.1)';" onmouseout="this.style.borderColor='var(--border-color)';this.style.background='rgba(15,23,42,0.4)';" title="Click to auto-fill demo credentials">
+        <span>Click to auto-fill: <strong style="color:#ffffff;">admin</strong> / <strong style="color:#ffffff;">@Admin2026!</strong></span>
+      </div>
 
+      <div style="margin-top:0.75rem;text-align:center;font-size:.72rem;color:var(--text-muted);line-height:1.3;">
+        By signing in, you agree to the <strong>Data Privacy Act of 2012 (RA 10173)</strong> guidelines &amp; official LGU BDRRMC Terms of Use.
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Password Recovery Stepper Modal ===== -->
+  <div class="modal-overlay" id="forgot-password-modal-overlay">
+    <div class="modal" style="max-width:440px;padding:0;overflow:hidden;border-radius:20px;">
+      <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.9);">
+        <div style="display:flex;align-items:center;gap:0.65rem;">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.18);border:1px solid rgba(59,130,246,0.4);display:inline-flex;align-items:center;justify-content:center;color:#60a5fa;">
+            <i data-lucide="key-round" style="width:20px;height:20px;"></i>
+          </div>
+          <div>
+            <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;">Password Recovery</h3>
+            <p style="font-size:0.74rem;color:var(--text-muted);margin:0;">Account security verification manager</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" onclick="closeForgotPasswordModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Stepper Progress Bar (3 Steps) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 1.25rem;background:rgba(15,23,42,0.6);border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.72rem;font-weight:600;">
+        <div id="step-indicator-1" style="display:flex;align-items:center;gap:0.3rem;color:#60a5fa;">
+          <span id="step-num-1" style="width:18px;height:18px;border-radius:50%;background:#2563eb;color:#ffffff;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;">1</span> Username
+        </div>
+        <div style="flex:1;height:2px;background:rgba(255,255,255,0.1);margin:0 0.4rem;" id="step-line-1"></div>
+        <div id="step-indicator-2" style="display:flex;align-items:center;gap:0.3rem;color:#64748b;">
+          <span id="step-num-2" style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.1);color:#64748b;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;">2</span> Verify OTP
+        </div>
+        <div style="flex:1;height:2px;background:rgba(255,255,255,0.1);margin:0 0.4rem;" id="step-line-2"></div>
+        <div id="step-indicator-3" style="display:flex;align-items:center;gap:0.3rem;color:#64748b;">
+          <span id="step-num-3" style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.1);color:#64748b;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;">3</span> New Password
+        </div>
+      </div>
+
+      <div class="modal-body" style="padding:1.25rem 1.5rem;">
+        
+        <!-- STEP 1: Enter Username -->
+        <div id="forgot-step-1">
+          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.1rem;line-height:1.4;">
+            Enter your system <strong>Username</strong> to initiate account password recovery.
+          </p>
+
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label for="forgot-username">Username</label>
+            <div class="input-icon-wrap">
+              <i data-lucide="user"></i>
+              <input class="no-capitalize" type="text" id="forgot-username" placeholder="e.g. admin" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" />
+            </div>
+          </div>
+
+          <p class="error-msg" id="forgot-error-1" style="display:none;margin-bottom:0.75rem;"></p>
+
+          <button type="button" class="btn btn-primary" id="btn-forgot-step1" onclick="submitForgotStep1()" style="width:100%;padding:0.75rem;">
+            Continue <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- STEP 2: Verify 6-Digit OTP -->
+        <div id="forgot-step-2" style="display:none;">
+          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.1rem;line-height:1.4;">
+            Enter the 6-digit passcode from your <strong>Google Authenticator</strong> or TOTP App.
+          </p>
+
+          <div class="form-group" style="margin-bottom:0.75rem;">
+            <label for="forgot-totp">6-Digit OTP Code</label>
+            <input 
+              type="text" 
+              id="forgot-totp" 
+              maxlength="6" 
+              inputmode="numeric"
+              pattern="[0-9]*"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+              placeholder="123456" 
+              autocomplete="off"
+              style="text-align:center;letter-spacing:0.4em;font-size:1.25rem;font-weight:700;font-family:monospace;padding:0.55rem;background:rgba(15,23,42,0.9);border:1px solid rgba(59,130,246,0.4);border-radius:10px;color:#ffffff;width:100%;box-sizing:border-box;" 
+            />
+          </div>
+
+          <div style="font-size:0.72rem;color:#94a3b8;background:rgba(255,255,255,0.04);padding:0.4rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);margin-bottom:1rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+            <i data-lucide="key-round" style="width:13px;height:13px;color:#fbbf24;"></i> Demo Authenticator Code: <strong style="color:#ffffff;font-family:monospace;">123456</strong>
+          </div>
+
+          <p class="error-msg" id="forgot-error-2" style="display:none;margin-bottom:0.75rem;"></p>
+
+          <div style="display:flex;gap:0.65rem;margin-top:1.25rem;">
+            <button type="button" class="btn btn-outline" onclick="goToForgotStep(1)" style="flex:1;">
+              <i data-lucide="arrow-left"></i> Back
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-forgot-step2" onclick="submitForgotStep2()" style="flex:1.5;">
+              Verify OTP <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Set New Password -->
+        <div id="forgot-step-3" style="display:none;">
+          <input type="hidden" id="reset-token-hidden" />
+
+          <div class="form-group" style="margin-bottom:0.75rem;">
+            <label for="reset-password">New Password</label>
+            <div class="input-icon-wrap input-icon-wrap-right">
+              <i data-lucide="lock"></i>
+              <input class="no-capitalize" type="password" id="reset-password" placeholder="Enter new password" oninput="checkPasswordRules(this.value)" autocapitalize="none" autocorrect="off" spellcheck="false" />
+              <button type="button" class="input-toggle-btn" onclick="togglePasswordVisibility('reset-password', this)">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Password Requirements Checklist -->
+          <div style="font-size:0.72rem;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);padding:0.6rem 0.85rem;border-radius:10px;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.35rem 0.5rem;">
+            <span id="rule-length" style="color:#94a3b8;"><i data-lucide="circle-dashed" style="width:11px;height:11px;vertical-align:middle;"></i> 8+ Chars</span>
+            <span id="rule-upper" style="color:#94a3b8;"><i data-lucide="circle-dashed" style="width:11px;height:11px;vertical-align:middle;"></i> 1 Uppercase</span>
+            <span id="rule-num" style="color:#94a3b8;"><i data-lucide="circle-dashed" style="width:11px;height:11px;vertical-align:middle;"></i> 1 Number</span>
+            <span id="rule-spec" style="color:#94a3b8;"><i data-lucide="circle-dashed" style="width:11px;height:11px;vertical-align:middle;"></i> 1 Special Symbol</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label for="reset-password-confirm">Confirm New Password</label>
+            <div class="input-icon-wrap">
+              <i data-lucide="shield-alert"></i>
+              <input class="no-capitalize" type="password" id="reset-password-confirm" placeholder="Re-enter new password" autocapitalize="none" autocorrect="off" spellcheck="false" />
+            </div>
+          </div>
+
+          <p class="error-msg" id="forgot-error-3" style="display:none;margin-bottom:0.75rem;"></p>
+
+          <div style="display:flex;gap:0.65rem;margin-top:1.25rem;">
+            <button type="button" class="btn btn-outline" onclick="goToForgotStep(2)" style="flex:1;">
+              <i data-lucide="arrow-left"></i> Back
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-submit-reset" onclick="submitPasswordReset()" style="flex:1.5;">
+              <i data-lucide="check"></i> Save Password
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 2FA TOTP Modal ===== -->
+  <div class="modal-overlay" id="totp-modal-overlay">
+    <div class="modal" style="max-width:380px;text-align:center;">
+      <div class="modal-header" style="justify-content:center;border-bottom:none;padding-bottom:0;padding-top:1.25rem;">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(59,130,246,0.18);border:1px solid rgba(59,130,246,0.4);display:inline-flex;align-items:center;justify-content:center;color:#60a5fa;">
+          <i data-lucide="shield-check" style="width:24px;height:24px;"></i>
+        </div>
+      </div>
+      <div style="padding:0.75rem 1.25rem 1.25rem;">
+        <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin-bottom:0.35rem;">Authenticator App 2FA</h3>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.4;">
+          Enter the 6-digit passcode from your <strong>Google Authenticator</strong> or TOTP App.
+        </p>
+
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <input 
+            type="text" 
+            id="totp-code-input" 
+            maxlength="6" 
+            inputmode="numeric"
+            pattern="[0-9]*"
+            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+            placeholder="123456" 
+            autocomplete="off"
+            style="text-align:center;letter-spacing:0.4em;font-size:1.35rem;font-weight:700;font-family:monospace;padding:0.6rem;background:rgba(15,23,42,0.9);border:1px solid rgba(59,130,246,0.4);border-radius:10px;color:#ffffff;width:100%;box-sizing:border-box;" 
+          />
+        </div>
+
+        <div style="font-size:0.72rem;color:#94a3b8;background:rgba(255,255,255,0.04);padding:0.4rem 0.6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);margin-bottom:1rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+          <i data-lucide="key-round" style="width:13px;height:13px;color:#fbbf24;"></i> Demo Authenticator Code: <strong style="color:#ffffff;font-family:monospace;">123456</strong>
+        </div>
+
+        <p class="error-msg" id="totp-error" style="margin-bottom:0.75rem;"></p>
+
+        <div style="display:flex;gap:0.6rem;">
+          <button type="button" class="btn btn-outline" onclick="closeTotpModal()" style="flex:1;">Cancel</button>
+          <button type="button" class="btn btn-primary" id="totp-verify-btn" onclick="submitTotpCode()" style="flex:1;">
+            <i data-lucide="check"></i> Verify
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

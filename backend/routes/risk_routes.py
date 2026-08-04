@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from database import supabase
-from auth.dependencies import get_current_user
+from ..database import supabase
+from ..auth.dependencies import get_current_user
 from datetime import datetime, timezone, timedelta
 import math
 
@@ -151,8 +151,8 @@ def get_risk_analysis(current_user: dict = Depends(get_current_user)):
         dates = [i.get("created_at", "") for i in c["incidents"] if i.get("created_at")]
         latest = max(dates) if dates else None
 
-        # Active incidents in this cluster
-        active_count = sum(1 for i in c["incidents"] if i.get("status") in ("active", "responding"))
+        # Ongoing incidents in this cluster
+        active_count = sum(1 for i in c["incidents"] if i.get("status") in ("ongoing", "active", "responding"))
 
         risk_zones.append({
             "latitude":    cell[0],

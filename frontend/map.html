@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GIS Map — Barangay DRRM</title>
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=2.5" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
+  <script src="assets/js/components.js"></script>
   <style>
     /* ---- Map layout ---- */
     .map-page { display:flex; flex-direction:column; height:calc(100vh - var(--topbar-height)); overflow:hidden; }
@@ -17,9 +19,7 @@
       position: absolute; top: 1rem; right: 1rem; z-index: 1000;
       background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(11, 15, 25, 0.98) 100%);
       border: 1px solid rgba(255, 255, 255, 0.14);
-      border-top: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 18px; width: 256px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       overflow: hidden;
@@ -96,8 +96,6 @@
       font-weight: 700; color: #ffffff; cursor: pointer;
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.86) 100%);
       border: 1px solid rgba(255, 255, 255, 0.14);
-      border-top: 1px solid rgba(255, 255, 255, 0.24);
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -247,12 +245,14 @@
     }
     .weather-header svg { width: 13px; height: 13px; color: #f9a825; }
     .weather-refresh {
-      margin-left: auto; background: none; border: none; cursor: pointer;
-      color: var(--text-muted); display: flex; align-items: center;
-      padding: .15rem; border-radius: 4px; transition: color .15s;
+      margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid rgba(59, 130, 246, 0.35); background: rgba(15, 23, 42, 0.6);
+      color: #60a5fa; cursor: pointer; transition: all .2s ease; flex-shrink: 0;
     }
-    .weather-refresh:hover { color: var(--primary); }
-    .weather-refresh svg { width: 12px; height: 12px; }
+    .weather-refresh:hover { background: rgba(59, 130, 246, 0.25); color: #ffffff; border-color: rgba(96, 165, 250, 0.6); }
+    .weather-refresh:hover svg { color: #ffffff; transform: rotate(45deg); }
+    .weather-refresh svg { width: 13px; height: 13px; transition: transform .3s ease; }
     .weather-loading {
       display: flex; align-items: center; justify-content: center;
       padding: 1rem; color: var(--text-muted);
@@ -429,40 +429,22 @@
 <body>
 
 <div class="layout">
-  <aside class="sidebar">
-    <div class="brand">
-      <i data-lucide="shield-alert" class="brand-icon"></i>
-      <div><h2>Barangay DRRM</h2><span>Linao, Ormoc City</span></div>
-    </div>
-    <nav>
-      <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
-      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-      <a href="map.html" class="active"><i data-lucide="map"></i> GIS Map</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
-      <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
-      <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
-      <a href="resources.html"><i data-lucide="truck"></i> Resources</a>
-
-      <div class="nav-section-divider"></div>
-
-      <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
-      <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
-    </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
-  </aside>
+  <!-- Sidebar (Rendered via components.js) -->
+  <aside class="sidebar"></aside>
 
   <div class="main-content map-page">
     <div class="topbar">
-      <h2>GIS Map — Barangay Linao</h2>
+      <div class="topbar-left">
+        <h2>GIS Map — Barangay Linao</h2>
+        <div class="dash-timestamp">
+          <span class="sync-item"><i data-lucide="map-pin"></i> Spatial Hazard GIS &amp; Real-time Layer Overlays</span>
+        </div>
+      </div>
       <div class="user-info">
+
         <!-- Weather pill -->
         <div class="weather-pill-wrapper">
-          <button class="pub-badge weather-pill" onclick="toggleWeatherDropdown()" title="Click for Ormoc City Weather Details">
+          <button class="pub-badge weather-pill pub-badge-tooltip" onclick="toggleWeatherDropdown()" data-tooltip="Real-time weather conditions & forecast for Barangay Linao, Ormoc City">
             <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
             <span id="weather-pill-temp">--°C</span>
             <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
@@ -524,8 +506,8 @@
         <button class="map-btn" onclick="openRoadClosureModal()">
           <i data-lucide="road"></i> Road Closure
         </button>
-        <button class="map-btn" id="heatmap-btn" onclick="toggleHeatmap()">
-          <i data-lucide="flame"></i> Incident Heatmap
+        <button class="map-btn pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest danger.">
+          <i data-lucide="flame"></i> High-Risk Areas
         </button>
         <span id="risk-badge" style="display:none;align-items:center;gap:.3rem;padding:.35rem .75rem;background:#d93025;color:#fff;border-radius:6px;font-size:.75rem;font-weight:700;box-shadow:0 2px 8px rgba(217,48,37,.4);">
           <i data-lucide="shield-alert" style="width:13px;height:13px;"></i>
@@ -540,7 +522,7 @@
             <div style="width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;">
               <i data-lucide="layers" style="width:12px;height:12px;color:var(--primary);"></i>
             </div>
-            <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LAYERS</span>
+            <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
           </div>
           <div style="display:flex;align-items:center;gap:.4rem;">
             <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">8/8</span>
@@ -549,77 +531,77 @@
         </div>
         <div class="layer-panel-body" id="layer-panel-body">
 
-          <!-- Section: Incidents & Response -->
+          <!-- Section: Emergencies & Shelters -->
           <div class="layer-group-label">
-            <i data-lucide="alert-triangle" style="width:12px;height:12px;color:#ef4444;"></i> Emergency & Incidents
+            <i data-lucide="siren" style="width:12px;height:12px;color:#ef4444;"></i> Emergencies & Shelters
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-dot-pulse" style="background:#ef4444;box-shadow:0 0 8px #ef4444;"></span>
-              <span>Active Incidents</span>
+              <span>Active Emergencies</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-incidents" checked onchange="toggleLayer('incidents')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-dot" style="background:#eab308;box-shadow:0 0 5px rgba(234,179,8,.4);"></span>
-              <span>Road Closures</span>
+              <span>Blocked Roads</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-roads" checked onchange="toggleLayer('roads')"><span class="toggle-slider"></span></label>
           </label>
 
           <div class="layer-group-sep"></div>
 
-          <!-- Section: Hazard & Risk Zones -->
+          <!-- Section: Danger & Risk Areas -->
           <div class="layer-group-label">
-            <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard & Risk Zones
+            <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Danger & Risk Areas
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span>
-              <span>Flood Hazard Zones</span>
+              <span>Flood-Prone Areas</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-flood" checked onchange="toggleLayer('flood')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-poly" style="background:#f97316;border:1px solid #fb923c;"></span>
-              <span>Landslide Zones</span>
+              <span>Landslide Areas</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span>
-              <span>High Risk Overlay</span>
+              <span>High-Risk Zones</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-risk" checked onchange="toggleLayer('risk')"><span class="toggle-slider"></span></label>
           </label>
 
           <div class="layer-group-sep"></div>
 
-          <!-- Section: Key Infrastructure -->
+          <!-- Section: Help & Health Facilities -->
           <div class="layer-group-label">
-            <i data-lucide="building-2" style="width:12px;height:12px;color:#10b981;"></i> Infrastructure & Services
+            <i data-lucide="hospital" style="width:12px;height:12px;color:#10b981;"></i> Help & Health Facilities
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-dot" style="background:#3b82f6;box-shadow:0 0 5px rgba(59,130,246,.4);"></span>
-              <span>Evacuation Centers</span>
+              <span>Evacuation Shelters</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-evac" checked onchange="toggleLayer('evac')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
               <span class="layer-dot" style="background:#10b981;box-shadow:0 0 5px rgba(16,185,129,.4);"></span>
-              <span>Hospitals & BHS</span>
+              <span>Hospitals & Clinics</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-hospitals" checked onchange="toggleLayer('hospitals')"><span class="toggle-slider"></span></label>
           </label>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#8b5cf6;box-shadow:0 0 5px rgba(139,92,246,.4);"></span>
-              <span>Responder Stations</span>
+              <span class="layer-dot" style="background:#2563eb;box-shadow:0 0 5px rgba(37,99,235,.4);"></span>
+              <span>Police & Fire Outposts</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-stations" checked onchange="toggleLayer('stations')"><span class="toggle-slider"></span></label>
           </label>
@@ -637,7 +619,7 @@
 
       <!-- Unified Map Navigation & Geolocation Controls -->
       <div class="map-controls-stack">
-        <button class="map-ctrl-btn" onclick="locateUser()" id="locate-btn" title="Pinpoint My Location">
+        <button class="map-ctrl-btn" onclick="locateUser()" id="locate-btn" title="Recenter to Barangay Linao">
           <i data-lucide="crosshair" style="width:17px;height:17px;"></i>
         </button>
         <div class="map-ctrl-divider"></div>
@@ -654,7 +636,7 @@
       <div class="basemap-picker-wrapper" id="basemap-picker">
         <button class="basemap-trigger" onclick="toggleBasemapPicker()" id="basemap-trigger" title="Change Basemap">
           <div class="basemap-trigger-thumb thumb-streets" id="basemap-trigger-thumb"></div>
-          <span id="basemap-trigger-label">Google Streets</span>
+          <span id="basemap-trigger-label">Streets View</span>
           <i data-lucide="layers" style="width:14px;height:14px;color:var(--primary);margin-left:2px;"></i>
         </button>
 
@@ -666,11 +648,11 @@
           <div class="basemap-grid">
             <div class="basemap-card active" data-key="streets" onclick="switchBaseMap('streets')">
               <div class="basemap-thumb thumb-streets"></div>
-              <span>Google Streets</span>
+              <span>Streets View</span>
             </div>
             <div class="basemap-card" data-key="satellite" onclick="switchBaseMap('satellite')">
               <div class="basemap-thumb thumb-satellite"></div>
-              <span>Google Satellite</span>
+              <span>Satellite View</span>
             </div>
             <div class="basemap-card" data-key="osm" onclick="switchBaseMap('osm')">
               <div class="basemap-thumb thumb-osm"></div>
@@ -678,19 +660,15 @@
             </div>
             <div class="basemap-card" data-key="topo" onclick="switchBaseMap('topo')">
               <div class="basemap-thumb thumb-topo"></div>
-              <span>OpenTopoMap</span>
+              <span>Topographic</span>
             </div>
             <div class="basemap-card" data-key="cyclosm" onclick="switchBaseMap('cyclosm')">
               <div class="basemap-thumb thumb-cyclosm"></div>
               <span>CyclOSM</span>
             </div>
-            <div class="basemap-card" data-key="bing" onclick="switchBaseMap('bing')">
-              <div class="basemap-thumb thumb-bing"></div>
-              <span>Bing Aerial</span>
-            </div>
             <div class="basemap-card" data-key="dark" onclick="switchBaseMap('dark')">
               <div class="basemap-thumb thumb-dark"></div>
-              <span>Dark Mode</span>
+              <span>Dark Vector</span>
             </div>
           </div>
         </div>
@@ -709,11 +687,26 @@
         <div class="info-panel-actions" id="panel-actions"></div>
       </div>
 
-      <!-- ===== Layer Management Panel (left slide-in) ===== -->
+      <!-- ===== Layer Management & GIS Directory Panel (left slide-in) ===== -->
       <div class="manage-panel" id="manage-panel">
         <div class="manage-panel-header">
-          <span><i data-lucide="layers"></i> Layer Management</span>
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <i data-lucide="layers" style="color:var(--primary);width:18px;height:18px;"></i>
+            <span style="font-weight:800;color:#fff;font-size:.95rem;">GIS Layer Information</span>
+          </div>
           <button class="info-panel-close" onclick="toggleManagePanel()"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- GIS Overview Summary Banner -->
+        <div id="gis-summary-bar" style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);padding:.75rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+          <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:.5rem .75rem;">
+            <div style="font-size:.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Total Monitored</div>
+            <div style="font-size:1.05rem;font-weight:800;color:#60a5fa;" id="stat-total-items">-- Layer Items</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:.5rem .75rem;">
+            <div style="font-size:.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Active Hazards / Risks</div>
+            <div style="font-size:1.05rem;font-weight:800;color:#f87171;" id="stat-active-hazards">-- Active Hazards</div>
+          </div>
         </div>
 
         <!-- Tab bar -->
@@ -730,9 +723,7 @@
         <div id="mpane-hazard" class="manage-pane">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="mhz-search" placeholder="Search hazard zones..." oninput="mFilterHazard()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenHazardForm()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="mhz-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Zones</div>
           </div>
           <div id="mhz-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -743,9 +734,7 @@
         <div id="mpane-evac" class="manage-pane" style="display:none;">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="mev-search" placeholder="Search evacuation centers..." oninput="mFilterEvac()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenEvacForm()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="mevac-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Centers</div>
           </div>
           <div id="mevac-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -756,9 +745,7 @@
         <div id="mpane-incidents" class="manage-pane" style="display:none;">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="minc-search" placeholder="Search incidents..." oninput="mFilterIncidents()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenIncidentForm()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="minc-count-chip" class="badge badge-orange" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Active</div>
           </div>
           <div id="minc-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -769,9 +756,7 @@
         <div id="mpane-hospitals" class="manage-pane" style="display:none;">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="mhosp-search" placeholder="Search hospitals..." oninput="mFilterHospitals()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenHospitalForm()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="mhosp-count-chip" class="badge badge-green" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Facilities</div>
           </div>
           <div id="mhosp-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -782,9 +767,7 @@
         <div id="mpane-stations" class="manage-pane" style="display:none;">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="msta-search" placeholder="Search stations..." oninput="mFilterStations()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="mOpenStationForm()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="msta-count-chip" class="badge badge-blue" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Outposts</div>
           </div>
           <div id="msta-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -795,9 +778,7 @@
         <div id="mpane-roads" class="manage-pane" style="display:none;">
           <div class="manage-pane-toolbar">
             <input type="text" class="manage-search" id="mrd-search" placeholder="Search road closures..." oninput="mFilterRoads()" />
-            <button class="btn btn-primary" style="font-size:.78rem;padding:.4rem .75rem;" onclick="openRoadClosureModal()">
-              <i data-lucide="plus"></i> Add
-            </button>
+            <div id="mrd-count-chip" class="badge badge-orange" style="font-size:.72rem;padding:.35rem .6rem;flex-shrink:0;">-- Blockages</div>
           </div>
           <div id="mrd-list" class="manage-list">
             <div class="manage-loading"><i data-lucide="loader" class="spin"></i></div>
@@ -870,13 +851,15 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>if (typeof L === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"><\/script>');</script>
 <!-- Leaflet.heat for incident heatmap -->
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/auth.js"></script>
-<script src="assets/js/map.js"></script>
+<script src="assets/js/map.js?v=2.5"></script>
 <script src="assets/js/map-manage.js"></script>
 <script src="assets/js/weather.js"></script>
+<script src="assets/js/i18n.js"></script>
 <script>
   requireAuth();
   const user = getUser();

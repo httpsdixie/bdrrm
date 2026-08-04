@@ -67,10 +67,10 @@ Open `frontend/index.html` in VS Code with **Live Server** extension.
 ---
 
 ## Default Login
-| Field    | Value      |
-|----------|------------|
-| Username | `admin`    |
-| Password | `admin1234` |
+| Field    | Value           |
+|----------|-----------------|
+| Username | `admin`         |
+| Password | `@Admin2026!`   |
 
 ---
 

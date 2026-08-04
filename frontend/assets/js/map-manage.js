@@ -16,15 +16,26 @@ function escH(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g, '&#39;');
 }
 
-// Helper to calculate polyline/polygon centroid
-function getPolyCenter(coords) {
-  if (!coords || !coords.length) return [11.0167, 124.5915];
-  let sumLat = 0, sumLng = 0;
-  coords.forEach(([lng, lat]) => {
-    sumLat += lat;
-    sumLng += lng;
-  });
-  return [sumLat / coords.length, sumLng / coords.length];
+// Use global getPolyCenter from map.js (normalizes input to GeoJSON [lng,lat] and returns [lat,lng])
+// Provide a minimal fallback only if the global helper is missing
+if (typeof window !== 'undefined' && typeof window.getPolyCenter === 'undefined') {
+  function getPolyCenter(coords) {
+    if (!coords || !coords.length) return [];
+    let sumLat = 0, sumLng = 0, count = 0;
+    coords.forEach(pt => {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        const a = Number(pt[0]);
+        const b = Number(pt[1]);
+        if (isNaN(a) || isNaN(b)) return;
+        // assume [lng,lat]
+        sumLat += b;
+        sumLng += a;
+        count++;
+      }
+    });
+    if (count === 0) return [];
+    return [sumLat / count, sumLng / count];
+  }
 }
 
 // Move map smoothly to a layer item location
@@ -45,9 +56,6 @@ function mMoveToMap(lat, lng, zoom = 17, title = '') {
 
 // Helper to get fallback data if available
 function getFallback() {
-  if (typeof FALLBACK_LINAO_DATA !== 'undefined' && FALLBACK_LINAO_DATA) {
-    return FALLBACK_LINAO_DATA;
-  }
   return { hazard_zones: [], evacuation_centers: [], incidents: [], hospitals: [], responder_stations: [], road_closures: [] };
 }
 
@@ -126,23 +134,26 @@ async function mLoadHazard() {
   try {
     mAllHazard = await apiFetch('/map/hazard-zones');
   } catch(e) {
-    console.warn('Backend unavailable for hazard zones, using sample data:', e);
+    console.warn('Backend unavailable for hazard zones — showing no data:', e);
     const fb = getFallback();
     mAllHazard = fb.hazard_zones || [];
   }
   mRenderHazard(mAllHazard);
+  updateGISSummaryStats();
 }
 
 function mRenderHazard(data) {
   const el = document.getElementById('mhz-list');
   if (!el) return;
   if (!data || !data.length) { 
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No hazard zones yet.</p>`; 
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No hazard zones found.</p>`; 
     if (window.lucide) lucide.createIcons(); 
     return; 
   }
   el.innerHTML = data.map(z => {
     const center = getPolyCenter(z.coordinates);
+    // Skip rendering items without valid coordinates to avoid showing static defaults
+    if (!center || !center.length) return '';
     return `
     <div class="manage-item">
       <div class="manage-item-left" style="cursor:pointer;" onclick="mMoveToMap(${center[0]}, ${center[1]}, 16, '${escH(z.name)}')">
@@ -153,9 +164,9 @@ function mRenderHazard(data) {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${center[0]}, ${center[1]}, 16, '${escH(z.name)}')"><i data-lucide="navigation"></i></button>
-        <button class="action-btn" title="Edit" onclick="mOpenHazardForm('${z.id}')"><i data-lucide="pencil"></i></button>
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteHazard('${z.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${center[0]}, ${center[1]}, 16, '${escH(z.name)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -219,21 +230,30 @@ function mOpenHazardForm(zoneOrId = null) {
 }
 
 async function mDeleteHazard(id) {
-  if (!confirm('Delete this hazard zone?')) return;
-  try {
-    await apiFetch(`/map/hazard-zones/${id}`, { method:'DELETE' });
-    await mLoadHazard();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderHazardZones === 'function') renderHazardZones(data.hazard_zones || []);
-    } catch(e) {}
-  } catch(e) { 
-    mAllHazard = mAllHazard.filter(z => String(z.id) !== String(id));
-    const fb = getFallback();
-    fb.hazard_zones = fb.hazard_zones.filter(z => String(z.id) !== String(id));
-    mRenderHazard(mAllHazard);
-    if (typeof renderHazardZones === 'function') renderHazardZones(fb.hazard_zones);
-  }
+  confirmAction({
+    title: 'Delete Hazard Zone',
+    message: 'Are you sure you want to delete this hazard zone from the GIS map layer?',
+    confirmText: 'Delete Hazard Zone',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/map/hazard-zones/${id}`, { method:'DELETE' });
+        await mLoadHazard();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderHazardZones === 'function') renderHazardZones(data.hazard_zones || []);
+        } catch(e) {}
+      } catch(e) { 
+        mAllHazard = mAllHazard.filter(z => String(z.id) !== String(id));
+        const fb = getFallback();
+        fb.hazard_zones = fb.hazard_zones.filter(z => String(z.id) !== String(id));
+        mRenderHazard(mAllHazard);
+        if (typeof renderHazardZones === 'function') renderHazardZones(fb.hazard_zones);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -243,18 +263,19 @@ async function mLoadEvac() {
   try {
     mAllEvac = await apiFetch('/evacuation-centers/');
   } catch(e) {
-    console.warn('Backend unavailable for evacuation centers, using sample data:', e);
+    console.warn('Backend unavailable for evacuation centers — showing no data:', e);
     const fb = getFallback();
     mAllEvac = fb.evacuation_centers || [];
   }
   mRenderEvac(mAllEvac);
+  updateGISSummaryStats();
 }
 
 function mRenderEvac(data) {
   const el = document.getElementById('mevac-list');
   if (!el) return;
   if (!data || !data.length) {
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No evacuation centers yet.</p>`;
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No evacuation centers found.</p>`;
     if (window.lucide) lucide.createIcons();
     return;
   }
@@ -264,13 +285,13 @@ function mRenderEvac(data) {
         <span class="manage-item-dot" style="background:#3b82f6;"></span>
         <div class="manage-item-info">
           <div class="manage-item-name">${escH(c.name)}</div>
-          <div class="manage-item-sub">${c.current_occupancy||0}/${c.capacity||0} occupied · <span style="text-transform:capitalize;">${c.status||'open'}</span></div>
+          <div class="manage-item-sub">Capacity: ${c.capacity||0} · <span style="text-transform:capitalize;">${c.status||'open'}</span></div>
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${c.latitude}, ${c.longitude}, 17, '${escH(c.name)}')"><i data-lucide="navigation"></i></button>
-        <button class="action-btn" title="Edit" onclick="mOpenEvacForm('${c.id}')"><i data-lucide="pencil"></i></button>
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteEvac('${c.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${c.latitude}, ${c.longitude}, 17, '${escH(c.name)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`).join('');
   if (window.lucide) lucide.createIcons();
@@ -305,8 +326,7 @@ function mOpenEvacForm(evacOrId = null) {
       <i data-lucide="map-pin" style="width:14px;height:14px;"></i> Pin on Map (Click Anywhere)
     </button>
     <div class="form-row">
-      <div class="form-group"><label>Capacity *</label><input type="number" id="mf-ev-cap" min="1" value="${c?.capacity||100}" /></div>
-      <div class="form-group"><label>Current Occupancy</label><input type="number" id="mf-ev-occ" min="0" value="${c?.current_occupancy||0}" /></div>
+      <div class="form-group" style="width:100%;"><label>Capacity *</label><input type="number" id="mf-ev-cap" min="1" value="${c?.capacity||100}" /></div>
     </div>
     <div class="form-group">
       <label>Status</label>
@@ -326,21 +346,30 @@ function mOpenEvacForm(evacOrId = null) {
 }
 
 async function mDeleteEvac(id) {
-  if (!confirm('Delete this evacuation center?')) return;
-  try {
-    await apiFetch(`/evacuation-centers/${id}`, { method:'DELETE' });
-    await mLoadEvac();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderEvacCenters === 'function') renderEvacCenters(data.evacuation_centers || [], true);
-    } catch(e) {}
-  } catch(e) {
-    mAllEvac = mAllEvac.filter(c => String(c.id) !== String(id));
-    const fb = getFallback();
-    fb.evacuation_centers = fb.evacuation_centers.filter(c => String(c.id) !== String(id));
-    mRenderEvac(mAllEvac);
-    if (typeof renderEvacCenters === 'function') renderEvacCenters(fb.evacuation_centers, true);
-  }
+  confirmAction({
+    title: 'Delete Evacuation Center',
+    message: 'Are you sure you want to delete this evacuation center from the system?',
+    confirmText: 'Delete Facility',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/evacuation-centers/${id}`, { method:'DELETE' });
+        await mLoadEvac();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderEvacCenters === 'function') renderEvacCenters(data.evacuation_centers || [], true);
+        } catch(e) {}
+      } catch(e) {
+        mAllEvac = mAllEvac.filter(c => String(c.id) !== String(id));
+        const fb = getFallback();
+        fb.evacuation_centers = fb.evacuation_centers.filter(c => String(c.id) !== String(id));
+        mRenderEvac(mAllEvac);
+        if (typeof renderEvacCenters === 'function') renderEvacCenters(fb.evacuation_centers, true);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -350,18 +379,19 @@ async function mLoadIncidents() {
   try {
     mAllIncidents = await apiFetch('/incidents/');
   } catch(e) {
-    console.warn('Backend unavailable for incidents, using sample data:', e);
+    console.warn('Backend unavailable for incidents — showing no data:', e);
     const fb = getFallback();
     mAllIncidents = fb.incidents || [];
   }
   mRenderIncidents(mAllIncidents);
+  updateGISSummaryStats();
 }
 
 function mRenderIncidents(data) {
   const el = document.getElementById('minc-list');
   if (!el) return;
   if (!data || !data.length) {
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No incidents yet.</p>`;
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No incidents found.</p>`;
     if (window.lucide) lucide.createIcons();
     return;
   }
@@ -376,9 +406,9 @@ function mRenderIncidents(data) {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${inc.latitude}, ${inc.longitude}, 17, '${escH(inc.title)}')"><i data-lucide="navigation"></i></button>
-        <button class="action-btn" title="Edit" onclick="mOpenIncidentForm('${inc.id}')"><i data-lucide="pencil"></i></button>
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteIncident('${inc.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${inc.latitude}, ${inc.longitude}, 17, '${escH(inc.title)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`).join('');
   if (window.lucide) lucide.createIcons();
@@ -452,21 +482,30 @@ function mOpenIncidentForm(incOrId = null) {
 }
 
 async function mDeleteIncident(id) {
-  if (!confirm('Delete this incident?')) return;
-  try {
-    await apiFetch(`/incidents/${id}`, { method:'DELETE' });
-    await mLoadIncidents();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderIncidents === 'function') renderIncidents(data.incidents || [], true);
-    } catch(e) {}
-  } catch(e) {
-    mAllIncidents = mAllIncidents.filter(inc => String(inc.id) !== String(id));
-    const fb = getFallback();
-    fb.incidents = fb.incidents.filter(inc => String(inc.id) !== String(id));
-    mRenderIncidents(mAllIncidents);
-    if (typeof renderIncidents === 'function') renderIncidents(fb.incidents, true);
-  }
+  confirmAction({
+    title: 'Delete Incident Record',
+    message: 'Are you sure you want to delete this incident report?',
+    confirmText: 'Delete Incident',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/incidents/${id}`, { method:'DELETE' });
+        await mLoadIncidents();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderIncidents === 'function') renderIncidents(data.incidents || [], true);
+        } catch(e) {}
+      } catch(e) {
+        mAllIncidents = mAllIncidents.filter(inc => String(inc.id) !== String(id));
+        const fb = getFallback();
+        fb.incidents = fb.incidents.filter(inc => String(inc.id) !== String(id));
+        mRenderIncidents(mAllIncidents);
+        if (typeof renderIncidents === 'function') renderIncidents(fb.incidents, true);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -476,18 +515,19 @@ async function mLoadHospitals() {
   try {
     mAllHospitals = await apiFetch('/map/hospitals');
   } catch(e) {
-    console.warn('Backend unavailable for hospitals, using sample data:', e);
+    console.warn('Backend unavailable for hospitals — showing no data:', e);
     const fb = getFallback();
     mAllHospitals = fb.hospitals || [];
   }
   mRenderHospitals(mAllHospitals);
+  updateGISSummaryStats();
 }
 
 function mRenderHospitals(data) {
   const el = document.getElementById('mhosp-list');
   if (!el) return;
   if (!data || !data.length) { 
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No hospitals yet.</p>`; 
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No hospitals found.</p>`; 
     if (window.lucide) lucide.createIcons(); 
     return; 
   }
@@ -497,13 +537,13 @@ function mRenderHospitals(data) {
         <span class="manage-item-dot" style="background:#2e7d32;"></span>
         <div class="manage-item-info">
           <div class="manage-item-name">${escH(h.name)}</div>
-          <div class="manage-item-sub">${h.address ? escH(h.address) : '—'}</div>
+          <div class="manage-item-sub">${h.address ? escH(h.address) : 'Emergency & Healthcare'}</div>
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${h.latitude}, ${h.longitude}, 17, '${escH(h.name)}')"><i data-lucide="navigation"></i></button>
-        <button class="action-btn" title="Edit" onclick="mOpenHospitalForm('${h.id}')"><i data-lucide="pencil"></i></button>
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteHospital('${h.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${h.latitude}, ${h.longitude}, 17, '${escH(h.name)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`).join('');
   if (window.lucide) lucide.createIcons();
@@ -545,21 +585,30 @@ function mOpenHospitalForm(hOrId = null) {
 }
 
 async function mDeleteHospital(id) {
-  if (!confirm('Delete this hospital?')) return;
-  try {
-    await apiFetch(`/map/hospitals/${id}`, { method:'DELETE' });
-    await mLoadHospitals();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderHospitals === 'function') renderHospitals(data.hospitals || [], true);
-    } catch(e) {}
-  } catch(e) {
-    mAllHospitals = mAllHospitals.filter(h => String(h.id) !== String(id));
-    const fb = getFallback();
-    fb.hospitals = fb.hospitals.filter(h => String(h.id) !== String(id));
-    mRenderHospitals(mAllHospitals);
-    if (typeof renderHospitals === 'function') renderHospitals(fb.hospitals, true);
-  }
+  confirmAction({
+    title: 'Delete Hospital Entry',
+    message: 'Are you sure you want to remove this medical facility entry?',
+    confirmText: 'Delete Hospital',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/map/hospitals/${id}`, { method:'DELETE' });
+        await mLoadHospitals();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderHospitals === 'function') renderHospitals(data.hospitals || [], true);
+        } catch(e) {}
+      } catch(e) {
+        mAllHospitals = mAllHospitals.filter(h => String(h.id) !== String(id));
+        const fb = getFallback();
+        fb.hospitals = fb.hospitals.filter(h => String(h.id) !== String(id));
+        mRenderHospitals(mAllHospitals);
+        if (typeof renderHospitals === 'function') renderHospitals(fb.hospitals, true);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -569,18 +618,19 @@ async function mLoadStations() {
   try {
     mAllStations = await apiFetch('/map/responder-stations');
   } catch(e) {
-    console.warn('Backend unavailable for responder stations, using sample data:', e);
+    console.warn('Backend unavailable for responder stations — showing no data:', e);
     const fb = getFallback();
     mAllStations = fb.responder_stations || [];
   }
   mRenderStations(mAllStations);
+  updateGISSummaryStats();
 }
 
 function mRenderStations(data) {
   const el = document.getElementById('msta-list');
   if (!el) return;
   if (!data || !data.length) { 
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No stations yet.</p>`; 
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No responder stations found.</p>`; 
     if (window.lucide) lucide.createIcons(); 
     return; 
   }
@@ -595,9 +645,9 @@ function mRenderStations(data) {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${s.latitude}, ${s.longitude}, 17, '${escH(s.name)}')"><i data-lucide="navigation"></i></button>
-        <button class="action-btn" title="Edit" onclick="mOpenStationForm('${s.id}')"><i data-lucide="pencil"></i></button>
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteStation('${s.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${s.latitude}, ${s.longitude}, 17, '${escH(s.name)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`).join('');
   if (window.lucide) lucide.createIcons();
@@ -652,21 +702,30 @@ function mOpenStationForm(sOrId = null) {
 }
 
 async function mDeleteStation(id) {
-  if (!confirm('Delete this station?')) return;
-  try {
-    await apiFetch(`/map/responder-stations/${id}`, { method:'DELETE' });
-    await mLoadStations();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderStations === 'function') renderStations(data.responder_stations || [], true);
-    } catch(e) {}
-  } catch(e) {
-    mAllStations = mAllStations.filter(st => String(st.id) !== String(id));
-    const fb = getFallback();
-    fb.responder_stations = fb.responder_stations.filter(st => String(st.id) !== String(id));
-    mRenderStations(mAllStations);
-    if (typeof renderStations === 'function') renderStations(fb.responder_stations, true);
-  }
+  confirmAction({
+    title: 'Delete Responder Station',
+    message: 'Are you sure you want to delete this responder station?',
+    confirmText: 'Delete Station',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/map/responder-stations/${id}`, { method:'DELETE' });
+        await mLoadStations();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderStations === 'function') renderStations(data.responder_stations || [], true);
+        } catch(e) {}
+      } catch(e) {
+        mAllStations = mAllStations.filter(st => String(st.id) !== String(id));
+        const fb = getFallback();
+        fb.responder_stations = fb.responder_stations.filter(st => String(st.id) !== String(id));
+        mRenderStations(mAllStations);
+        if (typeof renderStations === 'function') renderStations(fb.responder_stations, true);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -676,18 +735,19 @@ async function mLoadRoads() {
   try {
     mAllRoads = await apiFetch('/map/road-closures');
   } catch(e) {
-    console.warn('Backend unavailable for road closures, using sample data:', e);
+    console.warn('Backend unavailable for road closures — showing no data:', e);
     const fb = getFallback();
     mAllRoads = fb.road_closures || [];
   }
   mRenderRoads(mAllRoads);
+  updateGISSummaryStats();
 }
 
 function mRenderRoads(data) {
   const el = document.getElementById('mrd-list');
   if (!el) return;
   if (!data || !data.length) { 
-    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No road closures.</p>`; 
+    el.innerHTML = `<p style="padding:1rem;font-size:.8rem;color:var(--text-muted);">No road closures found.</p>`; 
     if (window.lucide) lucide.createIcons(); 
     return; 
   }
@@ -701,9 +761,9 @@ function mRenderRoads(data) {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="action-btn" title="Move map to location" onclick="mMoveToMap(${r.latitude}, ${r.longitude}, 17, '${escH(r.title)}')"><i data-lucide="navigation"></i></button>
-        ${r.is_active ? `<button class="action-btn" title="Mark Resolved" onclick="mResolveRoad('${r.id}')"><i data-lucide="check"></i></button>` : ''}
-        <button class="action-btn action-btn-danger" title="Delete" onclick="mDeleteRoad('${r.id}')"><i data-lucide="trash-2"></i></button>
+        <button class="btn btn-outline-sm" style="font-size:.72rem;padding:.25rem .5rem;gap:.3rem;border-color:rgba(96,165,250,0.3);color:#60a5fa;" title="Locate on map" onclick="mMoveToMap(${r.latitude}, ${r.longitude}, 17, '${escH(r.title)}')">
+          <i data-lucide="navigation" style="width:13px;height:13px;"></i> Locate
+        </button>
       </div>
     </div>`).join('');
   if (window.lucide) lucide.createIcons();
@@ -717,38 +777,56 @@ function mFilterRoads() {
 }
 
 async function mResolveRoad(id) {
-  if (!confirm('Mark as resolved?')) return;
-  try {
-    await apiFetch(`/map/road-closures/${id}/resolve`, { method:'PATCH' });
-    await mLoadRoads();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderRoadClosures === 'function') renderRoadClosures(data.road_closures || [], true);
-    } catch(e) {}
-  } catch(e) {
-    const r = mAllRoads.find(item => String(item.id) === String(id));
-    if (r) r.is_active = false;
-    mRenderRoads(mAllRoads);
-    if (typeof renderRoadClosures === 'function') renderRoadClosures(mAllRoads, true);
-  }
+  confirmAction({
+    title: 'Resolve Road Closure',
+    message: 'Mark this road closure as resolved?',
+    confirmText: 'Mark Resolved',
+    cancelText: 'Cancel',
+    type: 'info',
+    icon: 'check-circle',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/map/road-closures/${id}/resolve`, { method:'PATCH' });
+        await mLoadRoads();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderRoadClosures === 'function') renderRoadClosures(data.road_closures || [], true);
+        } catch(e) {}
+      } catch(e) {
+        const r = mAllRoads.find(item => String(item.id) === String(id));
+        if (r) r.is_active = false;
+        mRenderRoads(mAllRoads);
+        if (typeof renderRoadClosures === 'function') renderRoadClosures(mAllRoads, true);
+      }
+    }
+  });
 }
 
 async function mDeleteRoad(id) {
-  if (!confirm('Delete this road closure?')) return;
-  try {
-    await apiFetch(`/map/road-closures/${id}`, { method:'DELETE' });
-    await mLoadRoads();
-    try {
-      const data = await apiFetch('/map/layers');
-      if (typeof renderRoadClosures === 'function') renderRoadClosures(data.road_closures || [], true);
-    } catch(e) {}
-  } catch(e) {
-    mAllRoads = mAllRoads.filter(r => String(r.id) !== String(id));
-    const fb = getFallback();
-    fb.road_closures = fb.road_closures.filter(r => String(r.id) !== String(id));
-    mRenderRoads(mAllRoads);
-    if (typeof renderRoadClosures === 'function') renderRoadClosures(fb.road_closures, true);
-  }
+  confirmAction({
+    title: 'Delete Road Closure',
+    message: 'Delete this road closure record?',
+    confirmText: 'Delete Record',
+    cancelText: 'Cancel',
+    type: 'danger',
+    icon: 'trash-2',
+    onConfirm: async () => {
+      try {
+        await apiFetch(`/map/road-closures/${id}`, { method:'DELETE' });
+        await mLoadRoads();
+        try {
+          const data = await apiFetch('/map/layers');
+          if (typeof renderRoadClosures === 'function') renderRoadClosures(data.road_closures || [], true);
+        } catch(e) {}
+      } catch(e) {
+        mAllRoads = mAllRoads.filter(r => String(r.id) !== String(id));
+        const fb = getFallback();
+        fb.road_closures = fb.road_closures.filter(r => String(r.id) !== String(id));
+        mRenderRoads(mAllRoads);
+        if (typeof renderRoadClosures === 'function') renderRoadClosures(fb.road_closures, true);
+      }
+    }
+  });
 }
 
 // =============================================
@@ -808,13 +886,12 @@ async function mSubmitEvac() {
 
   const address = document.getElementById('mf-ev-address').value.trim() || null;
   const capacity = parseInt(document.getElementById('mf-ev-cap').value) || 100;
-  const current_occupancy = parseInt(document.getElementById('mf-ev-occ').value) || 0;
   const statusVal = document.getElementById('mf-ev-status').value;
   const contact_person = document.getElementById('mf-ev-contactp').value.trim() || null;
   const contact_number = document.getElementById('mf-ev-contactn').value.trim() || null;
 
   if (mEditingId) {
-    const body = { name, address, latitude: lat, longitude: lng, capacity, current_occupancy, status: statusVal, contact_person, contact_number };
+    const body = { name, address, latitude: lat, longitude: lng, capacity, status: statusVal, contact_person, contact_number };
     try {
       await apiFetch(`/evacuation-centers/${mEditingId}`, { method:'PATCH', body: JSON.stringify(body) });
       await mLoadEvac();
@@ -842,7 +919,7 @@ async function mSubmitEvac() {
     } catch(err) {
       console.warn('Saving evacuation center locally:', err);
       const fb = getFallback();
-      const newCenter = { id: 'evac-' + Date.now(), ...body, current_occupancy, status: statusVal };
+      const newCenter = { id: 'evac-' + Date.now(), ...body, status: statusVal };
       mAllEvac.push(newCenter);
       fb.evacuation_centers.push(newCenter);
       mRenderEvac(mAllEvac);
@@ -1262,4 +1339,32 @@ if (typeof window !== 'undefined') {
       }
     }, 300);
   });
+}
+
+function updateGISSummaryStats() {
+  const total = (mAllHazard.length || 0) + (mAllEvac.length || 0) + (mAllIncidents.length || 0) + (mAllHospitals.length || 0) + (mAllStations.length || 0) + (mAllRoads.length || 0);
+  const activeHaz = (mAllHazard.length || 0) + mAllIncidents.filter(i => i.status !== 'resolved').length + mAllRoads.filter(r => r.is_active).length;
+  
+  const elTotal = document.getElementById('stat-total-items');
+  const elHaz = document.getElementById('stat-active-hazards');
+  if (elTotal) elTotal.textContent = `${total} Layer Items`;
+  if (elHaz) elHaz.textContent = `${activeHaz} Active Hazards`;
+
+  const chipHz = document.getElementById('mhz-count-chip');
+  if (chipHz) chipHz.textContent = `${mAllHazard.length} Zones`;
+
+  const chipEvac = document.getElementById('mevac-count-chip');
+  if (chipEvac) chipEvac.textContent = `${mAllEvac.length} Centers`;
+
+  const chipInc = document.getElementById('minc-count-chip');
+  if (chipInc) chipInc.textContent = `${mAllIncidents.filter(i => i.status !== 'resolved').length} Active`;
+
+  const chipHosp = document.getElementById('mhosp-count-chip');
+  if (chipHosp) chipHosp.textContent = `${mAllHospitals.length} Facilities`;
+
+  const chipSta = document.getElementById('msta-count-chip');
+  if (chipSta) chipSta.textContent = `${mAllStations.length} Outposts`;
+
+  const chipRd = document.getElementById('mrd-count-chip');
+  if (chipRd) chipRd.textContent = `${mAllRoads.filter(r => r.is_active).length} Active`;
 }

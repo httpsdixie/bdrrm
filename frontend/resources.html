@@ -6,11 +6,13 @@
   <title>Resources — Barangay DRRM</title>
   <link rel="stylesheet" href="assets/css/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
   <!-- Export / Import Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     /* Category Pill Filter Bar Styling */
     .category-pill-bar {
@@ -356,13 +358,13 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">
+    <a href="landing.html" class="brand" style="text-decoration:none;color:inherit;">
       <i data-lucide="shield-alert" class="brand-icon"></i>
       <div>
         <h2>Barangay DRRM</h2>
         <span>Linao, Ormoc City</span>
       </div>
-    </div>
+    </a>
     <nav>
       <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
       <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
@@ -379,44 +381,97 @@
 
       <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
       <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+
+      <a href="landing.html"><i data-lucide="globe"></i> Public Portal</a>
     </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+    <div class="sidebar-footer">
+      <div>Barangay DRRM v1.0</div>
+      <div style="font-size:.65rem;color:var(--text-muted);margin-top:.2rem;">
+        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showPrivacyPolicyModal()">Terms &amp; RA 10173 Privacy</span>
+      </div>
+    </div>
   </aside>
 
   <!-- Main Content -->
   <div class="main-content">
     <div class="topbar">
-      <h2>Resource Logistics</h2>
+      <div class="topbar-left">
+        <h2>Resource Logistics</h2>
+        <div class="dash-timestamp">
+          <span class="sync-item"><i data-lucide="truck"></i> Equipment Inventory &amp; COA Property Audit</span>
+        </div>
+      </div>
       <div class="user-info">
-        <!-- Export Dropdown -->
-        <div class="export-dropdown-wrap" id="export-dropdown-wrap">
-          <button class="btn btn-ghost" onclick="toggleExportDropdown(event)" id="btn-export">
-            <i data-lucide="download"></i> Export <i data-lucide="chevron-down" style="width:14px;height:14px;margin-left:.1rem;"></i>
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
           </button>
-          <div class="export-dropdown-menu" id="export-dropdown-menu" style="display:none;">
-            <button onclick="exportResourcesPDF(); toggleExportDropdown()">
-              <i data-lucide="file-text"></i> Export as PDF
-            </button>
-            <button onclick="exportResourcesCSV(); toggleExportDropdown()">
-              <i data-lucide="file-spreadsheet"></i> Export as CSV
-            </button>
-            <button onclick="exportResourcesExcel(); toggleExportDropdown()">
-              <i data-lucide="table-2"></i> Export as Excel (.xlsx)
-            </button>
-            <div class="export-dropdown-divider"></div>
-            <button onclick="exportDispatchCSV(); toggleExportDropdown()">
-              <i data-lucide="send"></i> Export Dispatch Log (CSV)
-            </button>
-            <button onclick="exportActivityLogCSV(); toggleExportDropdown()">
-              <i data-lucide="clock"></i> Export Activity Log (CSV)
-            </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-dropdown-header">
+              <div>
+                <div class="weather-dropdown-title"><i data-lucide="map-pin" style="width:14px;height:14px;color:#60a5fa;display:inline;vertical-align:middle;margin-right:2px;"></i> Barangay Linao</div>
+                <div class="weather-dropdown-sub">PAGASA Telemetry · Ormoc Station</div>
+              </div>
+              <button class="weather-refresh-btn" onclick="fetchWeatherData(true)" title="Refresh weather data">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-dropdown-body">
+              <div class="weather-main-row">
+                <div class="weather-temp-lg" id="weather-card-temp">--°C</div>
+                <div class="weather-meta">
+                  <div class="weather-condition-text" id="weather-card-desc">Loading weather...</div>
+                  <div class="weather-meta-sub" id="weather-card-feels">Feels like --°C</div>
+                </div>
+              </div>
+              <div class="weather-grid">
+                <div class="weather-grid-item">
+                  <i data-lucide="wind"></i>
+                  <div>
+                    <span class="w-label">Wind</span>
+                    <strong id="weather-card-wind">-- km/h</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="droplets"></i>
+                  <div>
+                    <span class="w-label">Humidity</span>
+                    <strong id="weather-card-humidity">--%</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="cloud-rain"></i>
+                  <div>
+                    <span class="w-label">Rain Prob.</span>
+                    <strong id="weather-card-pop">--%</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="eye"></i>
+                  <div>
+                    <span class="w-label">Visibility</span>
+                    <strong id="weather-card-vis">-- km</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="weather-alert-banner" id="weather-card-alert" style="display:none;">
+                <i data-lucide="alert-triangle"></i>
+                <span id="weather-card-alert-text">No active weather warnings</span>
+              </div>
+            </div>
+            <div class="weather-dropdown-footer">
+              <span id="weather-card-updated">Updated: Just now</span>
+              <a href="https://bagong.pagasa.dost.gov.ph/" target="_blank" rel="noopener">PAGASA Radar &rarr;</a>
+            </div>
           </div>
         </div>
-        <button class="btn btn-ghost" onclick="openImportModal()" id="btn-import">
-          <i data-lucide="upload"></i> Import CSV
-        </button>
+
         <button class="btn-icon-sm" id="refresh-btn" onclick="loadResources(); loadDispatchLog(); if(document.getElementById('tab-logs').classList.contains('active')) loadResourceLogs();" title="Refresh">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -493,13 +548,13 @@
           <button class="tab-btn active" id="tab-inventory" onclick="switchTab('inventory')">
             <i data-lucide="package"></i> Inventory
           </button>
-          <button class="tab-btn" id="tab-dispatch" onclick="switchTab('dispatch')">
+          <button class="tab-btn" id="tab-dispatch" onclick="switchTab('dispatch')" style="display:none;">
             <i data-lucide="send"></i> Dispatch Log
           </button>
-          <button class="tab-btn" id="tab-maintenance" onclick="switchTab('maintenance')">
+          <button class="tab-btn" id="tab-maintenance" onclick="switchTab('maintenance')" style="display:none;">
             <i data-lucide="wrench"></i> Maintenance
           </button>
-          <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')">
+          <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')" style="display:none;">
             <i data-lucide="clock"></i> Activity Log
           </button>
         </div>
@@ -824,163 +879,94 @@
   <div class="modal" style="max-width:920px;width:92vw;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
 
     <!-- Modal Header -->
-    <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
+    <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
       <div>
         <h3 id="resource-modal-title" style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.15rem;color:var(--text-main);">
           <i data-lucide="package" style="color:var(--primary);width:22px;height:22px;"></i> Add Resource
         </h3>
-        <p style="margin:.25rem 0 0;font-size:.78rem;color:var(--text-muted);">Step-by-Step Equipment Registration Wizard</p>
+        <p style="margin:.25rem 0 0;font-size:.78rem;color:var(--text-muted);">COA Asset Entry — simplified form</p>
       </div>
-      <button class="modal-close" onclick="closeResourceModal()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:.4rem;">
-        <i data-lucide="x" style="width:20px;height:20px;"></i>
-      </button>
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillResourceDemoData()" title="Quick auto-populate demo resource data" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
+        </button>
+        <button class="modal-close" onclick="closeResourceModal()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:.4rem;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
     </div>
 
-    <!-- Stepper Navigation -->
-    <div class="wizard-stepper" style="padding:.85rem 1.5rem;background:rgba(15,23,42,0.4);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
-      <div class="wizard-step-item active" id="wizard-step-indicator-1" onclick="goToWizardStep(1)">
-        <div class="wizard-step-badge">1</div>
-        <span class="wizard-step-title">Basic Details</span>
-      </div>
-      <div class="wizard-step-line" id="wizard-step-line-1"></div>
-      <div class="wizard-step-item" id="wizard-step-indicator-2" onclick="goToWizardStep(2)">
-        <div class="wizard-step-badge">2</div>
-        <span class="wizard-step-title">Hazard Tags</span>
-      </div>
-      <div class="wizard-step-line" id="wizard-step-line-2"></div>
-      <div class="wizard-step-item" id="wizard-step-indicator-3" onclick="goToWizardStep(3)">
-        <div class="wizard-step-badge">3</div>
-        <span class="wizard-step-title">Inventory &amp; Code</span>
-      </div>
-    </div>
+    <!-- Stepper removed: simplified single-step COA form -->
 
     <div class="modal-body" style="padding:1.5rem 1.75rem;max-height:65vh;overflow-y:auto;">
       <form id="resource-form" novalidate onsubmit="return false;">
         <input type="hidden" id="r-id" />
-        <input type="hidden" id="r-id" />
 
-        <!-- STEP 1: Basic Details -->
-        <div class="wizard-step-pane active" id="wizard-pane-1">
-          <div class="step-section-header">
-            <div class="step-section-title">
-              <i data-lucide="box" style="color:var(--primary);"></i> Step 1 of 3: Equipment General Details
-            </div>
-            <div class="step-section-desc">Enter the equipment title, resource classification, and storage location.</div>
+        <!-- Simplified COA-focused Resource Form -->
+        <div class="step-section-header" style="margin-bottom:1rem;padding-bottom:0.35rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div class="step-section-title">
+            <i data-lucide="building-2" style="color:var(--primary);"></i> COA Asset Entry
           </div>
+          <div class="step-section-desc">Enter COA-compliant asset details below.</div>
+        </div>
 
-          <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Resource / Equipment Name <span class="required">*</span></label>
-            <input type="text" id="r-name" placeholder="e.g. Submersible De-Watering Trash Pump (Heavy Duty)" required oninput="updateAssetSummaryPreview()" />
-          </div>
-
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Ownership Tier <span class="required">*</span></label>
-              <select id="r-ownership" required onchange="updateAssetSummaryPreview()">
-                <option value="barangay">Barangay Inventory</option>
-                <option value="private">Private Sector Asset</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Resource Type <span class="required">*</span></label>
-              <select id="r-type" required onchange="updateAssetSummaryPreview()">
-                <option value="">Select equipment type</option>
-                <option value="rescue_boat">Rescue Boat / Watercraft</option>
-                <option value="ambulance">Ambulance / Response Vehicle</option>
-                <option value="fire_truck">Fire Truck / Hose Unit</option>
-                <option value="vehicle">Utility Vehicle / Patrol</option>
-                <option value="medical_kit">Medical Trauma Kit</option>
-                <option value="food_pack">Food Pack / Relief Supplies</option>
-                <option value="tent">Shelter Tent</option>
-                <option value="fuel">Fuel / Solar Generator</option>
-                <option value="other">Other Heavy Equipment</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Storage / Depot Location</label>
-            <input type="text" id="r-location" placeholder="e.g. Barangay Hall Bodega / Operations Depot" oninput="updateAssetSummaryPreview()" />
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label>Barangay Property Number <span class="required">*</span></label>
+          <div style="display:flex;gap:.4rem;align-items:center;">
+            <input type="text" id="r-property-code" placeholder="BRG-2024-0001"
+              style="background:rgba(15,23,42,0.8);color:var(--primary);font-family:monospace;font-weight:700;letter-spacing:.04em;flex:1;" oninput="updateAssetSummaryPreview()" />
+            <button type="button" class="btn btn-ghost" onclick="autoGenResourceCode()" title="Generate New Property Code" style="padding:.5rem .75rem;font-size:.78rem;display:flex;align-items:center;gap:.35rem;white-space:nowrap;">
+              <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> Auto-Gen
+            </button>
           </div>
         </div>
 
-        <!-- STEP 2: Emergency Hazard Tag System -->
-        <div class="wizard-step-pane" id="wizard-pane-2">
-          <div class="step-section-header">
-            <div class="step-section-title">
-              <i data-lucide="tags" style="color:var(--primary);"></i> Step 2 of 3: Emergency Tag System (Hazard Applicability)
-            </div>
-            <div class="step-section-desc">Select all disaster or emergency types where this asset can be deployed. Click chips to toggle.</div>
-          </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label>Description <span class="required">*</span></label>
+          <textarea id="r-name" rows="2" placeholder="Brief description of the asset (this will be used as the resource title)" required oninput="updateAssetSummaryPreview()"></textarea>
+        </div>
 
-          <!-- Preset Hazard Tags Chips -->
-          <div class="form-group" style="margin-bottom:1rem;">
-            <label style="font-size:.85rem;color:var(--text-muted);">Quick Selection Presets:</label>
-            <div class="hazard-tag-picker" id="hazard-tag-picker" style="gap:.5rem;margin-top:.4rem;">
-              <!-- Rendered dynamically by JS -->
-            </div>
-          </div>
-
-          <!-- Custom Tag Input Row -->
-          <div class="form-group" style="margin-bottom:1.2rem;">
-            <label style="font-size:.85rem;color:var(--text-muted);">Custom Tag Input:</label>
-            <div style="display:flex;gap:.6rem;align-items:center;margin-top:.3rem;">
-              <input type="text" id="r-custom-tag-input" placeholder="Type custom hazard tag (e.g. Volcanic Ashfall, Tsunami)..." 
-                style="font-size:.88rem;padding:.55rem .85rem;flex:1;" onkeydown="handleCustomTagKeydown(event)" />
-              <button type="button" class="btn btn-ghost" onclick="addCustomTagFromInput()" style="padding:.55rem 1rem;font-size:.85rem;white-space:nowrap;">
-                <i data-lucide="plus"></i> Add Tag
-              </button>
-            </div>
-          </div>
-
-          <!-- Selected Active Tags Container -->
+        <div class="form-row" style="gap:1rem;margin-bottom:1rem;">
           <div class="form-group">
-            <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.05em;margin-bottom:.35rem;">Active Hazard Applicability Tags:</div>
-            <div class="selected-tags-box" id="selected-tags-box" style="padding:.75rem 1rem;background:rgba(15,23,42,0.7);border:1px dashed rgba(59,130,246,0.3);border-radius:10px;min-height:48px;display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;">
-              <span style="font-size:.8rem;color:var(--text-muted);font-style:italic;">No emergency tags selected yet</span>
-            </div>
+            <label>Acquisition Date</label>
+            <input type="date" id="r-acq-date" onchange="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
+          </div>
+          <div class="form-group">
+            <label>Estimated Life (Years)</label>
+            <input type="number" id="r-est-life" min="1" max="50" value="5" placeholder="5" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
           </div>
         </div>
 
-        <!-- STEP 3: Inventory Count & Property Identification -->
-        <div class="wizard-step-pane" id="wizard-pane-3">
-          <div class="step-section-header">
-            <div class="step-section-title">
-              <i data-lucide="layers" style="color:var(--primary);"></i> Step 3 of 3: Inventory Count & Property Identification
-            </div>
-            <div class="step-section-desc">Specify total quantity available, confirm property codes, and review final registration.</div>
+        <div class="form-row" style="gap:1rem;margin-bottom:1rem;align-items:end;">
+          <div class="form-group" style="flex:1;">
+            <label>Responsibility Center</label>
+            <!-- Show fixed responsibility center in a plain text box (not a dropdown) -->
+            <input type="text" id="r-resp-center" value="Linao" readonly oninput="updateAssetSummaryPreview()" style="cursor:text;" />
           </div>
 
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Total Quantity Count <span class="required">*</span></label>
-              <input type="number" id="r-quantity" min="1" placeholder="e.g. 5" required oninput="updateAssetSummaryPreview()" />
-            </div>
-            <div class="form-group">
-              <label>Barangay Property Code</label>
-              <div style="display:flex;gap:.4rem;align-items:center;">
-                <input type="text" id="r-property-code" placeholder="Auto-generated on save" readonly
-                  style="background:rgba(15,23,42,0.8);cursor:default;color:var(--primary);font-family:monospace;font-weight:700;letter-spacing:.04em;flex:1;" />
-                <button type="button" class="btn btn-ghost" onclick="autoGenResourceCode()" title="Generate New Property Code" style="padding:.5rem .75rem;font-size:.78rem;display:flex;align-items:center;gap:.35rem;white-space:nowrap;">
-                  <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> Auto-Gen
-                </button>
-              </div>
-            </div>
+          <div class="form-group" style="flex:1;">
+            <label>Acquisition Cost (₱)</label>
+            <input type="number" id="r-acq-cost" min="0" step="0.01" placeholder="e.g. 150000" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
           </div>
+        </div>
 
-          <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Manufacturer Serial Number <span style="font-size:.78rem;color:var(--text-muted);font-weight:normal;">(Optional)</span></label>
-            <input type="text" id="r-serial-number" placeholder="e.g. HUSQVARNA-2026-X99" oninput="updateAssetSummaryPreview()" />
+        <div class="form-row" style="gap:1rem;margin-bottom:1rem;align-items:end;">
+          <div class="form-group" style="flex:1;">
+            <label>Accu. Depreciation (₱)</label>
+            <input type="number" id="r-acc-dep" min="0" step="0.01" placeholder="Enter accumulated depreciation" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview()" />
           </div>
+          <div class="form-group" style="flex:1;">
+            <label>Net Book Value (₱)</label>
+            <input type="number" id="r-net-book" readonly style="background:rgba(30,41,59,0.7);color:#4ade80;font-weight:700;" placeholder="₱0.00" />
+          </div>
+        </div>
 
-          <!-- Real-Time Asset Summary Card -->
-          <div class="asset-summary-card" id="asset-summary-card">
-            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
-              <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Live Asset Registration Summary
-            </div>
-            <div id="summary-card-content" style="font-size:.85rem;color:var(--text-main);">
-              <!-- Rendered live by JS -->
-            </div>
+        <div class="asset-summary-card" id="asset-summary-card" style="margin-top:1rem;background:rgba(15,23,42,0.8);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:1rem;">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
+            <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> COA Asset Summary Review
+          </div>
+          <div id="summary-card-content" style="font-size:.85rem;color:var(--text-main);">
+            <!-- Rendered live by JS -->
           </div>
         </div>
 
@@ -988,18 +974,11 @@
       </form>
     </div>
 
-    <!-- Wizard Navigation Footer -->
-    <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:space-between; align-items:center; background:rgba(15, 23, 42, 0.9);">
-      <button type="button" class="btn btn-ghost" id="wizard-btn-prev" onclick="prevWizardStep()" style="visibility:hidden;">
-        <i data-lucide="arrow-left"></i> Previous Step
-      </button>
-
+    <!-- Simplified Footer: only Save and Cancel for the single-step form -->
+    <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:flex-start; align-items:center; gap:.75rem; background:rgba(15, 23, 42, 0.9);">
       <div style="display:flex;gap:.75rem;">
         <button type="button" class="btn btn-ghost" onclick="closeResourceModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" id="wizard-btn-next" onclick="nextWizardStep()">
-          Next Step <i data-lucide="arrow-right"></i>
-        </button>
-        <button type="button" class="btn btn-success" id="resource-submit-btn" onclick="submitResource()" style="display:none;">
+        <button type="button" class="btn btn-success" id="resource-submit-btn" onclick="submitResource()">
           <i data-lucide="check-circle"></i> <span id="resource-submit-label">Save Resource</span>
         </button>
       </div>
@@ -1010,7 +989,7 @@
 <!-- ===== Equipment Borrowing Ticket (Dispatch Wizard Modal) ===== -->
 <div class="modal-overlay" id="dispatch-modal-overlay" onclick="closeDispatchModalOutside(event)">
   <div class="modal">
-    <div class="modal-header">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
       <div>
         <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;">
           <i data-lucide="clipboard-list" style="color:var(--primary);width:22px;height:22px;"></i> Equipment Borrowing Ticket
@@ -1024,7 +1003,12 @@
           </span>
         </div>
       </div>
-      <button class="modal-close" onclick="closeDispatchModal()"><i data-lucide="x"></i></button>
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillDispatchDemoData()" title="Quick auto-populate sample dispatch ticket" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
+        </button>
+        <button class="modal-close" onclick="closeDispatchModal()"><i data-lucide="x"></i></button>
+      </div>
     </div>
 
     <div class="modal-body" style="padding: 1.5rem 1.75rem;">
@@ -1052,15 +1036,36 @@
             <div class="step-section-desc">Specify who is borrowing the equipment, select inventory items, and count.</div>
           </div>
 
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Borrower Full Name <span class="required">*</span></label>
-              <input type="text" id="d-borrower-name" placeholder="e.g. Juan Dela Cruz (Brgy Responder)" required oninput="updateDispatchTicketPreview()" />
+          <!-- Structured Borrower Name Inputs (First, Middle, Last, Suffix) + Contact -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1.25rem;">
+            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
+              <i data-lucide="user-check" style="width:15px; height:15px;"></i> Borrower Name &amp; Identification
             </div>
-            <div class="form-group">
-              <label>Contact Number</label>
-              <input type="text" id="d-borrower-contact" placeholder="e.g. 0917-555-0199" oninput="updateDispatchTicketPreview()" />
+            <div class="form-row" style="flex-wrap:wrap; gap:.5rem; margin-bottom:.75rem;">
+              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">First Name <span class="required" style="color:var(--danger);">*</span></label>
+                <input type="text" id="d-borrower-first-name" placeholder="First name" required oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
+              </div>
+              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Middle Name</label>
+                <input type="text" id="d-borrower-middle-name" placeholder="Middle name" oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
+              </div>
+              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
+                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Last Name <span class="required" style="color:var(--danger);">*</span></label>
+                <input type="text" id="d-borrower-last-name" placeholder="Last name" required oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
+              </div>
+              <div class="form-group" style="flex:0 0 85px; min-width:75px; margin:0;">
+                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Suffix</label>
+                <input type="text" id="d-borrower-suffix" placeholder="Jr./III" oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
+              </div>
             </div>
+            <div class="form-row" style="gap:1rem; margin:0;">
+              <div class="form-group" style="flex:1; margin:0;">
+                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Contact Number</label>
+                <input type="text" id="d-borrower-contact" placeholder="e.g. 0917-555-0199" oninput="updateDispatchTicketPreview()" />
+              </div>
+            </div>
+            <input type="hidden" id="d-borrower-name" />
           </div>
 
           <div class="form-group" style="margin-bottom:1.25rem;">
@@ -1124,6 +1129,14 @@
               <!-- Rendered live by JS -->
             </div>
           </div>
+
+          <!-- Legal & Property Custodianship Acknowledgement Checkbox -->
+          <div class="form-group" style="margin-top:.85rem;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);padding:.65rem .85rem;border-radius:8px;">
+            <label style="font-size:.78rem;color:var(--text-main);display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;margin:0;">
+              <input type="checkbox" id="d-coa-terms-consent" checked style="margin-top:.15rem;accent-color:#f59e0b;" />
+              <span>I hereby acknowledge official responsibility for the care, maintenance, and prompt return of this government equipment in compliance with COA property rules and BDRRMC terms of use.</span>
+            </label>
+          </div>
         </div>
 
         <p class="error-msg" id="dispatch-error" style="margin-top:1rem;display:none;"></p>
@@ -1132,13 +1145,12 @@
 
     <!-- Wizard Navigation Footer -->
     <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:space-between; align-items:center; background:rgba(15, 23, 42, 0.9);">
-      <button type="button" class="btn btn-ghost" id="dispatch-btn-prev" onclick="prevDispatchWizardStep()" style="visibility:hidden;">
-        <i data-lucide="arrow-left"></i> Previous Step
+      <button type="button" class="btn btn-ghost" id="dispatch-wizard-btn-prev" onclick="prevDispatchWizardStep()" style="visibility:hidden;">
+        <i data-lucide="arrow-left"></i> Back
       </button>
 
       <div style="display:flex;gap:.75rem;">
-        <button type="button" class="btn btn-ghost" onclick="closeDispatchModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" id="dispatch-btn-next" onclick="nextDispatchWizardStep()">
+        <button type="button" class="btn btn-primary" id="dispatch-wizard-btn-next" onclick="nextDispatchWizardStep()">
           Next Step <i data-lucide="arrow-right"></i>
         </button>
         <button type="button" class="btn btn-primary" id="dispatch-submit-btn" onclick="submitDispatch()" style="display:none;">
@@ -1152,9 +1164,16 @@
 <!-- ===== Restock Modal ===== -->
 <div class="modal-overlay" id="restock-modal-overlay" onclick="closeRestockModalOutside(event)">
   <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <h3><i data-lucide="plus-circle"></i> Restock Resource Inventory</h3>
-      <button class="modal-close" onclick="closeRestockModal()"><i data-lucide="x"></i></button>
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <h3 style="margin:0; display:flex; align-items:center; gap:.5rem;">
+        <i data-lucide="plus-circle" style="color:var(--primary);"></i> Restock Resource Inventory
+      </h3>
+      <div style="display:flex; align-items:center; gap:.6rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillRestockDemoData()" title="Quick auto-populate sample restock quantity &amp; notes" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(59,130,246,0.5); color:#60a5fa; background:rgba(59,130,246,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
+        </button>
+        <button class="modal-close" onclick="closeRestockModal()"><i data-lucide="x"></i></button>
+      </div>
     </div>
     <div class="modal-body">
       <form id="restock-form" novalidate>
@@ -1188,7 +1207,7 @@
 <!-- ===== Maintenance Ticket Wizard Modal ===== -->
 <div class="modal-overlay" id="maintenance-modal-overlay" onclick="closeMaintenanceModalOutside(event)">
   <div class="modal">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;align-items:flex-start;gap:1rem;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;align-items:flex-start;gap:1rem;display:flex;justify-content:space-between;">
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;">
           <span style="font-family:monospace;font-size:.78rem;background:rgba(245,158,11,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.3);padding:.18rem .6rem;border-radius:6px;font-weight:700;white-space:nowrap;">
@@ -1200,7 +1219,12 @@
         </h3>
         <div style="font-size:.8rem;color:var(--text-muted);margin-top:.2rem;">Equipment maintenance, repair &amp; out-of-service tracking</div>
       </div>
-      <button class="modal-close" onclick="closeMaintenanceModal()" style="margin-top:-.25rem;"><i data-lucide="x"></i></button>
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <button type="button" class="btn btn-outline-sm" onclick="autoFillMaintenanceDemoData()" title="Quick auto-populate sample maintenance ticket" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
+        </button>
+        <button class="modal-close" onclick="closeMaintenanceModal()" style="margin-top:-.25rem;"><i data-lucide="x"></i></button>
+      </div>
     </div>
 
     <div class="modal-body" style="padding:1.5rem 1.75rem;">
@@ -1241,11 +1265,11 @@
               <label>Issue / Maintenance Type <span class="required">*</span></label>
               <select id="maint-type" required onchange="updateMaintPreview()">
                 <option value="">Select type...</option>
-                <option value="maintenance">🔧 Scheduled Maintenance / Repair</option>
-                <option value="damage">⚠️ Damage Report — Physical Damage</option>
-                <option value="inspection">🔍 Inspection / Safety Check</option>
-                <option value="calibration">⚙️ Calibration / Servicing</option>
-                <option value="unavailable">🚫 Out of Service — Other Reason</option>
+                <option value="maintenance">Scheduled Maintenance / Repair</option>
+                <option value="damage">Damage Report — Physical Damage</option>
+                <option value="inspection">Inspection / Safety Check</option>
+                <option value="calibration">Calibration / Servicing</option>
+                <option value="unavailable">Out of Service — Other Reason</option>
               </select>
             </div>
             <div class="form-group">
@@ -1315,12 +1339,11 @@
     </div>
 
     <div class="modal-footer" style="padding:1rem 1.75rem;display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,0.9);">
-      <button type="button" class="btn btn-ghost" id="maint-btn-prev" onclick="prevMaintWizardStep()" style="visibility:hidden;">
-        <i data-lucide="arrow-left"></i> Previous Step
+      <button type="button" class="btn btn-ghost" id="maint-wizard-btn-prev" onclick="prevMaintWizardStep()" style="visibility:hidden;">
+        <i data-lucide="arrow-left"></i> Back
       </button>
       <div style="display:flex;gap:.75rem;">
-        <button type="button" class="btn btn-ghost" onclick="closeMaintenanceModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" id="maint-btn-next" onclick="nextMaintWizardStep()">
+        <button type="button" class="btn btn-primary" id="maint-wizard-btn-next" onclick="nextMaintWizardStep()">
           Next Step <i data-lucide="arrow-right"></i>
         </button>
         <button type="button" class="btn btn-warning" id="maint-submit-btn" onclick="submitMaintenanceTicket()" style="display:none;">
@@ -1413,6 +1436,103 @@
       <button class="modal-close" onclick="closeLogDetailModal()"><i data-lucide="x"></i></button>
     </div>
     <div class="modal-body" id="log-modal-body" style="font-size:.88rem;padding:1.5rem;max-height:75vh;overflow-y:auto;">
+    </div>
+  </div>
+</div>
+
+<!-- ===== Digital Identification & COA Audit Tag Modal ===== -->
+<div class="modal-overlay" id="asset-qr-modal-overlay" onclick="closeAssetQRModalOutside(event)">
+  <div class="modal" style="max-width:680px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(59,130,246,0.25);">
+    <div class="modal-header" style="padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.95));border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.35),rgba(37,99,235,0.2));border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;box-shadow:0 0 15px rgba(59,130,246,0.3);">
+          <i data-lucide="qr-code" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;" id="qr-modal-asset-title">Digital Asset Identification</h3>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Government Accounting & COA Audit Property Tag</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeAssetQRModal()"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="modal-body" style="padding:1.5rem;background:rgba(15,23,42,0.9);max-height:75vh;overflow-y:auto;">
+      
+      <!-- Official Sticker Container (Printable Card) -->
+      <div id="coa-sticker-printable-card" style="background:#ffffff;color:#0f172a;border-radius:12px;padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.5);border:3px double #0f172a;position:relative;">
+        
+        <!-- Header -->
+        <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:.75rem;margin-bottom:1rem;">
+          <div style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#475569;">Republic of the Philippines • City of Ormoc</div>
+          <div style="font-size:1.05rem;font-weight:900;text-transform:uppercase;color:#0f172a;letter-spacing:.03em;margin-top:.15rem;">Barangay Linao Disaster Risk Reduction Office</div>
+          <div style="font-size:.75rem;font-weight:700;background:#0f172a;color:#ffffff;display:inline-block;padding:.2rem .75rem;border-radius:99px;margin-top:.4rem;letter-spacing:.05em;">COA PROPERTY & ASSET IDENTIFICATION TAG</div>
+        </div>
+
+        <!-- Layout Grid: QR Code Left + Specs Right -->
+        <div style="display:grid;grid-template-columns:170px 1fr;gap:1.25rem;align-items:center;">
+          <div style="text-align:center;">
+            <div id="coa-qr-code-graphic" style="background:#ffffff;padding:8px;border:1px solid #cbd5e1;border-radius:8px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></div>
+            <div style="font-size:.7rem;font-weight:800;font-family:monospace;color:#334155;margin-top:.4rem;letter-spacing:.05em;" id="coa-qr-prop-code-display">BRG-2024-0000</div>
+          </div>
+
+          <div style="font-size:.82rem;line-height:1.5;color:#1e293b;">
+            <div style="margin-bottom:.4rem;">
+              <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Asset Title:</strong><br />
+              <span id="coa-qr-asset-name" style="font-weight:800;font-size:.95rem;color:#0f172a;">—</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;">
+              <div>
+                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Property Code:</strong><br />
+                <span id="coa-qr-prop-code" style="font-family:monospace;font-weight:700;color:#2563eb;">—</span>
+              </div>
+              <div>
+                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Responsibility Center:</strong><br />
+                <span id="coa-qr-resp-center" style="font-weight:700;">—</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;">
+              <div>
+                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Acquisition Date:</strong><br />
+                <span id="coa-qr-acq-date" style="font-weight:600;">—</span>
+              </div>
+              <div>
+                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Estimated Life:</strong><br />
+                <span id="coa-qr-est-life" style="font-weight:600;">—</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;background:#f8fafc;padding:.4rem .6rem;border-radius:6px;border:1px solid #e2e8f0;margin-top:.4rem;">
+              <div>
+                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Acq. Cost</div>
+                <div style="font-weight:800;color:#0f172a;font-size:.8rem;" id="coa-qr-acq-cost">₱0.00</div>
+              </div>
+              <div>
+                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Accu. Dep.</div>
+                <div style="font-weight:800;color:#dc2626;font-size:.8rem;" id="coa-qr-acc-dep">₱0.00</div>
+              </div>
+              <div>
+                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Net Book Val</div>
+                <div style="font-weight:800;color:#16a34a;font-size:.8rem;" id="coa-qr-nbv">₱0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:.85rem;padding-top:.5rem;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:center;font-size:.68rem;color:#64748b;">
+          <div>Verified By: <strong>Barangay DRRM Secretary / Property Officer</strong></div>
+          <div>Audit Verification Hash: <span style="font-family:monospace;font-weight:700;" id="coa-qr-hash">#DRRM-COA-VALID</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer" style="padding:1rem 1.5rem;background:rgba(15,23,42,0.95);display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-ghost" onclick="closeAssetQRModal()">Close</button>
+      <div style="display:flex;gap:.6rem;">
+        <button class="btn btn-outline" onclick="simulateQRScanModal()"><i data-lucide="smartphone"></i> Mobile Scan Test</button>
+        <button class="btn btn-primary" onclick="printCOASticker()"><i data-lucide="printer"></i> Print COA Tag</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1561,9 +1681,78 @@
   </div>
 </div>
 
-<script src="assets/js/api.js"></script>
-<script src="assets/js/auth.js"></script>
-<script src="assets/js/resources.js"></script>
+<!-- ===== Asset Disposal / Retirement Modal (COA Lifecycle Archival) ===== -->
+<div class="modal-overlay" id="asset-retire-modal-overlay" onclick="closeAssetRetireModalOutside(event)">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header" style="border-bottom:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.06);">
+      <h3 style="color:#f87171;"><i data-lucide="archive"></i> Initiate Asset Disposal &amp; Retirement</h3>
+      <button class="modal-close" onclick="closeAssetRetireModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);padding:.75rem 1rem;border-radius:10px;margin-bottom:1.25rem;font-size:.82rem;color:#fca5a5;">
+        <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;margin-right:.3rem;"></i>
+        <strong>COA Audit Trail Notice:</strong> This action decommissions the asset from Active Inventory and archives its complete financial history for government audit records.
+      </div>
+
+      <div style="margin-bottom:1rem;background:rgba(15,23,42,0.6);padding:.75rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:.78rem;color:var(--text-muted);">Target Equipment:</div>
+        <div style="font-weight:700;font-size:1rem;color:var(--text-main);" id="retire-item-name">—</div>
+        <div style="font-size:.75rem;color:#60a5fa;font-family:monospace;margin-top:.2rem;" id="retire-item-code">—</div>
+      </div>
+
+      <form id="asset-retire-form" onsubmit="submitAssetRetirement(event)">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
+            Disposal / Retirement Reason <span style="color:#ef4444;">*</span>
+          </label>
+          <select id="retire-reason" class="filter-select" style="width:100%;box-sizing:border-box;" required>
+            <option value="">Select reason...</option>
+            <option value="End of Service Lifespan">End of Service Lifespan (Fully Depreciated)</option>
+            <option value="Beyond Economical Repair">Beyond Economical Repair (Damaged/Defective)</option>
+            <option value="Destroyed / Lost in Disaster">Destroyed / Lost in Disaster Operation</option>
+            <option value="Donated / Transferred">Donated or Transferred to Other Agency</option>
+            <option value="COA Decommissioning">Government COA Decommissioning Order</option>
+          </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
+              Disposal Date
+            </label>
+            <input type="date" id="retire-date" class="date-select" style="width:100%;box-sizing:border-box;" required />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
+              COA Voucher No.
+            </label>
+            <input type="text" id="retire-voucher" placeholder="e.g. COA-DISP-2026-0042" style="width:100%;box-sizing:border-box;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.12);color:var(--text-main);padding:.5rem .75rem;border-radius:8px;font-size:.85rem;" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
+            Disposal Remarks / Inspection Notes
+          </label>
+          <textarea id="retire-notes" rows="3" placeholder="Enter inspection notes or municipal approval details..." style="width:100%;box-sizing:border-box;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.12);color:var(--text-main);padding:.5rem .75rem;border-radius:8px;font-size:.85rem;"></textarea>
+        </div>
+
+        <p class="error-msg" id="retire-error" style="display:none;"></p>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
+          <button type="button" class="btn btn-ghost" onclick="closeAssetRetireModal()">Cancel</button>
+          <button type="submit" class="btn btn-danger" style="background:#dc2626;border-color:#ef4444;"><i data-lucide="archive"></i> Decommission &amp; Archive</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/api.js?v=4.1"></script>
+<script src="assets/js/auth.js?v=4.1"></script>
+<script src="assets/js/resources.js?v=4.1"></script>
+<script src="assets/js/i18n.js?v=4.1"></script>
+<script src="assets/js/weather.js?v=4.1"></script>
 <script>
   requireAuth();
   const user = getUser();

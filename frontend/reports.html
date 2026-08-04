@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="assets/js/sw-register.js"></script>
   <style>
     /* Side-by-side Grid for Resolved and Today's Incidents */
     .reports-side-by-side-grid {
@@ -271,13 +272,13 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">
+    <a href="landing.html" class="brand" style="text-decoration:none;color:inherit;">
       <i data-lucide="shield-alert" class="brand-icon"></i>
       <div>
         <h2>Barangay DRRM</h2>
         <span>Linao, Ormoc City</span>
       </div>
-    </div>
+    </a>
     <nav>
       <div class="nav-section-label"><i data-lucide="compass"></i> Command Center</div>
       <a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
@@ -294,10 +295,15 @@
 
       <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
       <a href="reports.html" class="active"><i data-lucide="file-bar-chart"></i> Reports</a>
-      <a href="directory.html"><i data-lucide="phone-call"></i> Directory</a>
-      <a href="accounts.html"><i data-lucide="users"></i> Accounts</a>
+
+      <a href="landing.html"><i data-lucide="globe"></i> Public Portal</a>
     </nav>
-    <div class="sidebar-footer">Barangay DRRM v1.0</div>
+    <div class="sidebar-footer">
+      <div>Barangay DRRM v1.0</div>
+      <div style="font-size:.65rem;color:var(--text-muted);margin-top:.2rem;">
+        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showPrivacyPolicyModal()">Terms &amp; RA 10173 Privacy</span>
+      </div>
+    </div>
   </aside>
 
   <div class="main-content">
@@ -307,15 +313,76 @@
         <span class="dash-timestamp">Generated: <span id="report-timestamp">—</span></span>
       </div>
       <div class="user-info">
-        <button class="btn btn-outline-sm no-print" onclick="exportIncidentsCSV()" style="gap:.4rem;" title="Export incidents to CSV">
-          <i data-lucide="download"></i> CSV
-        </button>
-        <button class="btn btn-outline-sm no-print" onclick="openImportModal()" style="gap:.4rem;" title="Import incidents from CSV">
-          <i data-lucide="upload"></i> Import
-        </button>
-        <button class="btn btn-outline-sm no-print" onclick="triggerPrint()" style="gap:.4rem;">
-          <i data-lucide="printer"></i> Print
-        </button>
+
+
+        <!-- Weather pill -->
+        <div class="weather-pill-wrapper no-print">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+            <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
+            <span id="weather-pill-temp">--°C</span>
+            <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
+          </button>
+
+          <div class="weather-dropdown-card" id="weather-dropdown-card">
+            <div class="weather-dropdown-header">
+              <div>
+                <div class="weather-dropdown-title"><i data-lucide="map-pin" style="width:14px;height:14px;color:#60a5fa;display:inline;vertical-align:middle;margin-right:2px;"></i> Barangay Linao</div>
+                <div class="weather-dropdown-sub">PAGASA Telemetry · Ormoc Station</div>
+              </div>
+              <button class="weather-refresh-btn" onclick="fetchWeatherData(true)" title="Refresh weather data">
+                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
+              </button>
+            </div>
+            <div class="weather-dropdown-body">
+              <div class="weather-main-row">
+                <div class="weather-temp-lg" id="weather-card-temp">--°C</div>
+                <div class="weather-meta">
+                  <div class="weather-condition-text" id="weather-card-desc">Loading weather...</div>
+                  <div class="weather-meta-sub" id="weather-card-feels">Feels like --°C</div>
+                </div>
+              </div>
+              <div class="weather-grid">
+                <div class="weather-grid-item">
+                  <i data-lucide="wind"></i>
+                  <div>
+                    <span class="w-label">Wind</span>
+                    <strong id="weather-card-wind">-- km/h</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="droplets"></i>
+                  <div>
+                    <span class="w-label">Humidity</span>
+                    <strong id="weather-card-humidity">--%</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="cloud-rain"></i>
+                  <div>
+                    <span class="w-label">Rain Prob.</span>
+                    <strong id="weather-card-pop">--%</strong>
+                  </div>
+                </div>
+                <div class="weather-grid-item">
+                  <i data-lucide="eye"></i>
+                  <div>
+                    <span class="w-label">Visibility</span>
+                    <strong id="weather-card-vis">-- km</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="weather-alert-banner" id="weather-card-alert" style="display:none;">
+                <i data-lucide="alert-triangle"></i>
+                <span id="weather-card-alert-text">No active weather warnings</span>
+              </div>
+            </div>
+            <div class="weather-dropdown-footer">
+              <span id="weather-card-updated">Updated: Just now</span>
+              <a href="https://bagong.pagasa.dost.gov.ph/" target="_blank" rel="noopener">PAGASA Radar &rarr;</a>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-icon-sm no-print" id="refresh-btn" onclick="loadReports(this)" title="Refresh Reports">
           <i data-lucide="refresh-cw"></i>
         </button>
@@ -355,13 +422,99 @@
         <p style="margin-top:.35rem;font-weight:700;">Date Generated: <span id="print-timestamp">—</span></p>
       </div>
 
+      <!-- Combined simple all-data view -->
+      <div id="combined-report" class="report-section">
+        <div class="report-section-header">
+          <h3><i data-lucide="file"></i> Combined All Data: Incidents, Evacuation, Resources</h3>
+          <span id="combined-total-badge" class="badge badge-blue" style="font-size:.72rem;">—</span>
+        </div>
+
+        <!-- Search / Filter / Date bar -->
+        <div style="padding:.85rem 1.35rem;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;">
+
+          <!-- Search -->
+          <div style="position:relative;flex:1;min-width:180px;">
+            <i data-lucide="search" style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#64748b;pointer-events:none;"></i>
+            <input id="combined-search" type="text" placeholder="Search title, ID, location…"
+              oninput="filterCombinedTable()"
+              style="width:100%;padding:.42rem .75rem .42rem 2rem;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:.8rem;outline:none;" />
+          </div>
+
+          <!-- Source filter -->
+          <select id="combined-filter-source" onchange="filterCombinedTable()"
+            style="padding:.42rem .75rem;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:.8rem;outline:none;">
+            <option value="">All Sources</option>
+            <option value="incident">Incident</option>
+            <option value="evacuation">Evacuation</option>
+            <option value="resource">Resource</option>
+          </select>
+
+          <!-- Date from -->
+          <input id="combined-date-from" type="date" onchange="filterCombinedTable()"
+            style="padding:.42rem .65rem;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:.8rem;outline:none;" />
+
+          <!-- Date to -->
+          <input id="combined-date-to" type="date" onchange="filterCombinedTable()"
+            style="padding:.42rem .65rem;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:.8rem;outline:none;" />
+
+          <!-- Reset -->
+          <button onclick="resetCombinedFilters()"
+            style="padding:.42rem .85rem;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:.8rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+            <i data-lucide="x-circle" style="width:13px;height:13px;"></i> Reset
+          </button>
+
+          <!-- Page size -->
+          <select id="combined-page-size" onchange="combinedPageSize=parseInt(this.value);combinedPage=1;renderCombinedPage()"
+            style="padding:.42rem .6rem;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:.8rem;outline:none;">
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+        </div>
+
+        <div class="report-section-body" style="padding:0;">
+          <table id="combined-report-table" class="report-table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>ID</th>
+                <th>Title / Name</th>
+                <th>Type / Status</th>
+                <th>Location</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="combined-report-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">Loading combined data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination bar -->
+        <div id="combined-pagination-bar" style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 1.35rem;border-top:1px solid rgba(255,255,255,0.07);">
+          <span id="combined-page-info" style="font-size:.78rem;color:var(--text-muted);">—</span>
+          <div style="display:flex;gap:.3rem;align-items:center;">
+            <button class="page-btn" id="combined-btn-prev" onclick="combinedPage--;renderCombinedPage()" disabled>
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <div id="combined-page-numbers" style="display:flex;gap:.25rem;"></div>
+            <button class="page-btn" id="combined-btn-next" onclick="combinedPage++;renderCombinedPage()" disabled>
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab bar -->
-      <div class="tab-bar no-print" style="margin-bottom:1.5rem;">
+      <div class="tab-bar no-print" style="margin-bottom:1.5rem;display:none;">
         <button class="tab-btn active" id="tab-incident" onclick="switchReportTab('incident')">
           <i data-lucide="triangle-alert"></i> Incident Report
         </button>
         <button class="tab-btn" id="tab-resource" onclick="switchReportTab('resource')">
           <i data-lucide="truck"></i> Resource Report
+        </button>
+        <button class="tab-btn" id="tab-executive" onclick="switchReportTab('executive')">
+          <i data-lucide="crown"></i> Executive Dashboard
         </button>
         <button class="tab-btn" id="tab-history" onclick="switchReportTab('history')">
           <i data-lucide="history"></i> Incident History
@@ -371,14 +524,13 @@
       <!-- ============================= -->
       <!-- INCIDENT SUMMARY REPORT       -->
       <!-- ============================= -->
-      <div id="pane-incident">
+      <div id="pane-incident" style="display:none;">
 
         <!-- Summary stats -->
         <div class="report-stats" id="inc-summary-stats">
           <div class="report-stat"><div class="report-stat-num blue" id="r-total">—</div><div class="report-stat-label">Total Incidents</div></div>
           <div class="report-stat"><div class="report-stat-num" id="r-today">—</div><div class="report-stat-label">Today</div></div>
-          <div class="report-stat"><div class="report-stat-num red" id="r-active">—</div><div class="report-stat-label">Active</div></div>
-          <div class="report-stat"><div class="report-stat-num orange" id="r-responding">—</div><div class="report-stat-label">Responding</div></div>
+          <div class="report-stat"><div class="report-stat-num orange" id="r-ongoing">—</div><div class="report-stat-label">Ongoing</div></div>
           <div class="report-stat"><div class="report-stat-num green" id="r-resolved">—</div><div class="report-stat-label">Resolved</div></div>
           <div class="report-stat"><div class="report-stat-num blue" id="r-people">—</div><div class="report-stat-label">People Involved</div></div>
         </div>
@@ -653,6 +805,223 @@
       </div>
 
       <!-- ============================= -->
+      <!-- EXECUTIVE DASHBOARD MODULE    -->
+      <!-- ============================= -->
+      <div id="pane-executive" style="display:none;">
+
+        <!-- 8.1 Real-Time Executive Analytical Command Bar -->
+        <div class="report-section" style="border-top:2px solid #3b82f6;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.85));margin-bottom:1.5rem;">
+          <div class="report-section-header" style="background:rgba(59,130,246,0.12);border-bottom:1px solid rgba(59,130,246,0.3);">
+            <div style="display:flex;align-items:center;gap:.75rem;">
+              <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.25);border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
+                <i data-lucide="crown" style="width:20px;height:20px;"></i>
+              </div>
+              <div>
+                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">Executive Analytical Command Hub</h3>
+                <div style="font-size:.75rem;color:#94a3b8;margin-top:.1rem;" id="exec-meta-subtitle">Barangay Linao DRRM Leadership Suite · Active Event: <strong style="color:#f87171;">Typhoon Kristine (Cat 4)</strong></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:.5rem;">
+              <button class="btn btn-outline-sm no-print" onclick="shareExecutiveSummary()" style="gap:.4rem;border-color:rgba(59,130,246,0.4);color:#60a5fa;" title="Format &amp; Share snapshot with City Officials">
+                <i data-lucide="share-2"></i> Export &amp; Share Briefing
+              </button>
+              <button class="btn btn-primary btn-sm no-print" onclick="printDILGDSWDComplianceReport()" style="gap:.4rem;background:#2563eb;">
+                <i data-lucide="file-check"></i> DILG / DSWD Compliance Report
+              </button>
+            </div>
+          </div>
+
+          <div class="report-section-body">
+            <!-- Aggregated Executive KPIs -->
+            <div class="report-stats" style="grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));gap:1rem;margin-bottom:1.5rem;">
+              <div class="report-stat" style="border-top:3px solid #ef4444;">
+                <div class="report-stat-num red" id="exec-kpi-active-incidents">3</div>
+                <div class="report-stat-label">Active Incidents</div>
+              </div>
+              <div class="report-stat" style="border-top:3px solid #60a5fa;">
+                <div class="report-stat-num blue" id="exec-kpi-residents-impacted">68</div>
+                <div class="report-stat-label">Residents Impacted</div>
+              </div>
+              <div class="report-stat" style="border-top:3px solid #f59e0b;">
+                <div class="report-stat-num orange" id="exec-kpi-shelters-open">3</div>
+                <div class="report-stat-label">Shelters Operational</div>
+              </div>
+              <div class="report-stat" style="border-top:3px solid #34d399;">
+                <div class="report-stat-num green" id="exec-kpi-evacuees-active">142</div>
+                <div class="report-stat-label">Active IDP Population</div>
+              </div>
+              <div class="report-stat" style="border-top:3px solid #a855f7;">
+                <div class="report-stat-num" style="color:#c084fc;" id="exec-kpi-occupancy-rate">56.8%</div>
+                <div class="report-stat-label">Registered Capacity</div>
+              </div>
+              <div class="report-stat" style="border-top:3px solid #38bdf8;">
+                <div class="report-stat-num" style="color:#38bdf8;" id="exec-kpi-assets-deployed">67</div>
+                <div class="report-stat-label">Assets Deployed</div>
+              </div>
+            </div>
+
+            <!-- Readiness Badge -->
+            <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-md);padding:.85rem 1.1rem;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:.6rem;">
+                <i data-lucide="shield-check" style="width:20px;height:20px;color:#34d399;"></i>
+                <span style="font-size:.85rem;color:var(--text-main);font-weight:700;">Operational Command Readiness Rating: <strong style="color:#34d399;" id="exec-readiness-rating">OPTIMAL (LEVEL 1 READY)</strong></span>
+              </div>
+              <span style="font-size:.78rem;color:var(--text-muted);">Aggregated from Incidents, Logistics, &amp; Evacuation Modules</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8.2 Strategic Planning & Predictive Analytics Grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+
+          <!-- Trend Analysis: Sitio Vulnerability & Consumption Spikes -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <h3><i data-lucide="trending-up"></i> Strategic Trend Analysis &amp; Hotspots</h3>
+              <span class="badge badge-orange">Predictive Model</span>
+            </div>
+            <div class="report-section-body">
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.85rem;">
+                Consolidation of historical disaster data identifying recurring Sitio hazards and seasonal resource spikes:
+              </div>
+              
+              <table class="report-table" style="margin-bottom:1rem;">
+                <thead>
+                  <tr>
+                    <th>Purok / Sitio</th>
+                    <th>Primary Hazard</th>
+                    <th>Annual Freq.</th>
+                    <th>Risk Rank</th>
+                  </tr>
+                </thead>
+                <tbody id="exec-trend-sitios-tbody">
+                  <tr>
+                    <td><strong>Sitio 2 Coastal</strong></td>
+                    <td>Flash Flood &amp; Storm Surge</td>
+                    <td>14 Events</td>
+                    <td><span class="badge badge-red">HIGH</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Purok 1 Riverside</strong></td>
+                    <td>Riverine Inundation</td>
+                    <td>9 Events</td>
+                    <td><span class="badge badge-red">HIGH</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Purok 4 Hillside</strong></td>
+                    <td>Soil Erosion &amp; Landslide</td>
+                    <td>6 Events</td>
+                    <td><span class="badge badge-orange">MEDIUM</span></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-sm);padding:.75rem;font-size:.78rem;color:#fbbf24;">
+                <i data-lucide="lightbulb" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                <strong>Analytical Insight:</strong> Sitio 2 Coastal accounts for 42% of evacuees. Pre-positioning relief stock at Sitio 2 Chapel reduces response latency by 35 minutes.
+              </div>
+            </div>
+          </div>
+
+          <!-- Procurement Recommendations (Audit-Ready COA Compliance) -->
+          <div class="report-section">
+            <div class="report-section-header">
+              <h3><i data-lucide="shopping-cart"></i> Automated Procurement Recommendations</h3>
+              <span class="badge badge-blue">COA Audit Compliant</span>
+            </div>
+            <div class="report-section-body">
+              <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.85rem;">
+                Automated equipment deficit analysis comparing current inventory against historical population requirements:
+              </div>
+
+              <table class="report-table" style="margin-bottom:1rem;">
+                <thead>
+                  <tr>
+                    <th>Equipment Description</th>
+                    <th>Stock / Rec.</th>
+                    <th>Deficit</th>
+                    <th>Est. Budget</th>
+                  </tr>
+                </thead>
+                <tbody id="exec-procurement-tbody">
+                  <tr>
+                    <td><strong>Inflatable Rescue Rubber Boat (10-Pax)</strong></td>
+                    <td>2 / 4 Units</td>
+                    <td><span class="badge badge-red">+2 Deficit</span></td>
+                    <td>₱240,000.00</td>
+                  </tr>
+                  <tr>
+                    <td><strong>6.5 KVA Standby Generator</strong></td>
+                    <td>1 / 3 Units</td>
+                    <td><span class="badge badge-orange">+2 Deficit</span></td>
+                    <td>₱150,000.00</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Trauma Medical Field Kits</strong></td>
+                    <td>15 / 50 Kits</td>
+                    <td><span class="badge badge-orange">+35 Deficit</span></td>
+                    <td>₱122,500.00</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:var(--radius-sm);padding:.75rem;font-size:.8rem;">
+                <div><strong>Total Executive Budget Request:</strong></div>
+                <div style="font-size:1.05rem;font-weight:800;color:#60a5fa;">₱512,500.00</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 8.3 Regulatory Compliance Submission (DILG / DSWD DROMIC) -->
+        <div class="report-section" style="border-top:2px solid #10b981;">
+          <div class="report-section-header">
+            <h3><i data-lucide="shield-check"></i> Regulatory Compliance &amp; DILG / DSWD Lifecycle Audit</h3>
+            <span class="badge badge-green">Submission Ready</span>
+          </div>
+          <div class="report-section-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:1rem;margin-bottom:1.25rem;">
+              
+              <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md);padding:.9rem;">
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">DILG JMC 2021 Checklist</div>
+                <div style="font-size:.95rem;font-weight:800;color:#34d399;margin-top:.3rem;">100% COMPLIANT</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">All 20 facility parameters verified</div>
+              </div>
+
+              <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md);padding:.9rem;">
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">DSWD DROMIC Registry</div>
+                <div style="font-size:.95rem;font-weight:800;color:#60a5fa;margin-top:.3rem;">VERIFIED IDP LOGS</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">QR Token duplicate claims active</div>
+              </div>
+
+              <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md);padding:.9rem;">
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">COA Asset Inventory</div>
+                <div style="font-size:.95rem;font-weight:800;color:#fbbf24;margin-top:.3rem;">AUDIT READY</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">Net book value &amp; depreciation set</div>
+              </div>
+
+              <div style="background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md);padding:.9rem;">
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">BDRRM Mandatory Fund</div>
+                <div style="font-size:.95rem;font-weight:800;color:#c084fc;margin-top:.3rem;">88.4% UTILIZATION</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">5% Annual Allocation Allocated</div>
+              </div>
+
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;">
+              <button class="btn btn-outline" onclick="printDILGDSWDComplianceReport()" style="gap:.5rem;">
+                <i data-lucide="printer"></i> Generate Formal DILG / DSWD Compliance Audit Briefing
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+
+      <!-- ============================= -->
       <!-- INCIDENT HISTORY              -->
       <!-- ============================= -->
       <div id="pane-history" style="display:none;">
@@ -695,8 +1064,7 @@
             <input type="hidden" id="hist-date-to" />
             <select id="hist-status" onchange="filterHistory()" class="filter-select">
               <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="responding">Responding</option>
+              <option value="ongoing">Ongoing</option>
               <option value="resolved">Resolved</option>
             </select>
             <button class="btn btn-outline no-print" onclick="clearHistoryFilters()" style="gap:.35rem;">
@@ -936,25 +1304,141 @@
   </div>
 </div>
 
-<!-- ===== CSV Import Modal ===== -->
+<!-- ===== Incident Intake Form Modal (Focal Person End-of-Day Reconciliation) ===== -->
 <div class="modal-overlay" id="import-modal-overlay" onclick="closeImportModalOutside(event)">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <h3><i data-lucide="upload"></i> Import Incidents from CSV</h3>
+  <div class="modal" style="max-width:780px;width:94vw;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
+
+    <!-- Modal Header -->
+    <div class="modal-header" style="padding:1.1rem 1.5rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,rgba(59,130,246,0.28),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.45);display:flex;align-items:center;justify-content:center;color:#60a5fa;flex-shrink:0;">
+          <i data-lucide="clipboard-list" style="width:18px;height:18px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0;font-size:1.05rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.5rem;">
+            Incident Intake Form
+          </h3>
+          <p style="margin:.15rem 0 0;font-size:.75rem;color:var(--text-muted);">Focal Person · End-of-Day Reconciliation Entry</p>
+        </div>
+      </div>
       <button class="modal-close" onclick="closeImportModal()"><i data-lucide="x"></i></button>
     </div>
-    <div class="modal-body">
+
+    <!-- Tabs: Manual Entry | Batch CSV Upload -->
+    <div style="display:flex;border-bottom:1px solid var(--border-color);background:rgba(15,23,42,0.5);">
+      <button id="intake-tab-manual" onclick="switchIntakeTab('manual')"
+        style="flex:1;padding:.65rem 1rem;font-size:.8rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#60a5fa;border-bottom:2px solid #3b82f6;transition:all .2s;">
+        <i data-lucide="pen-line" style="width:13px;height:13px;vertical-align:middle;margin-right:.3rem;"></i> Manual Entry
+      </button>
+      <button id="intake-tab-csv" onclick="switchIntakeTab('csv')"
+        style="flex:1;padding:.65rem 1rem;font-size:.8rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);border-bottom:2px solid transparent;transition:all .2s;">
+        <i data-lucide="file-spreadsheet" style="width:13px;height:13px;vertical-align:middle;margin-right:.3rem;"></i> Batch CSV Upload
+      </button>
+    </div>
+
+    <!-- PANE: Manual Entry -->
+    <div id="intake-pane-manual" class="modal-body" style="padding:1.25rem 1.5rem;max-height:72vh;overflow-y:auto;">
+      <form id="intake-form" novalidate onsubmit="return false;">
+
+        <!-- Auto-ID notice -->
+        <div style="display:flex;align-items:center;gap:.55rem;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:7px;padding:.55rem .85rem;margin-bottom:1.1rem;font-size:.77rem;color:#93c5fd;">
+          <i data-lucide="hash" style="width:13px;height:13px;flex-shrink:0;color:#60a5fa;"></i>
+          <span><strong>Incident ID</strong> is automatically assigned by the system upon submission to ensure accuracy and compliance with batch upload standards.</span>
+        </div>
+
+        <!-- ① Barangay / Date / Time -->
+        <div style="display:grid;grid-template-columns:1.1fr 1fr 1.2fr;gap:.75rem;margin-bottom:.9rem;">
+
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+              Barangay <span style="color:var(--danger);">*</span>
+            </label>
+            <input type="text" id="intake-barangay" value="Linao, Ormoc City" style="font-size:.84rem;" required />
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+              Date <span style="color:var(--danger);">*</span>
+            </label>
+            <input type="date" id="intake-date" style="font-size:.84rem;" required />
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+              Time <span style="color:var(--danger);">*</span>
+            </label>
+            <div style="display:flex;gap:.35rem;align-items:stretch;">
+              <input type="time" id="intake-time" step="60" inputmode="numeric"
+                style="font-size:.84rem;flex:1;text-align:center;font-family:monospace;letter-spacing:.06em;" required />
+              <div style="display:flex;">
+                <button type="button" id="intake-ampm-am" onclick="setIntakeAmPm('AM')"
+                  style="padding:.35rem .6rem;font-size:.72rem;font-weight:800;border-radius:6px 0 0 6px;border:1px solid rgba(59,130,246,0.55);background:rgba(59,130,246,0.25);color:#60a5fa;cursor:pointer;transition:all .15s;white-space:nowrap;">AM</button>
+                <button type="button" id="intake-ampm-pm" onclick="setIntakeAmPm('PM')"
+                  style="padding:.35rem .6rem;font-size:.72rem;font-weight:800;border-radius:0 6px 6px 0;border:1px solid var(--border-color);border-left:none;background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s;white-space:nowrap;">PM</button>
+              </div>
+              <input type="hidden" id="intake-ampm" value="AM" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ② Place of Occurrence / Title of Complaint -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.9rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+              Place of Occurrence <span style="color:var(--danger);">*</span>
+            </label>
+            <input type="text" id="intake-place" placeholder="e.g. Sitio 2 Shoreline, Purok 3" style="font-size:.84rem;" required />
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+              Title of Complaint <span style="color:var(--danger);">*</span>
+            </label>
+            <input type="text" id="intake-title" placeholder="e.g. Flash Flooding — Coastal Inundation" style="font-size:.84rem;" required />
+          </div>
+        </div>
+
+        <!-- ③ Victims / Complainants — multi-row -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:.05rem 0 .6rem;">
+          <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#60a5fa;display:flex;align-items:center;gap:.4rem;">
+            <i data-lucide="user" style="width:12px;height:12px;"></i>
+            Name of Victim / Complainant <span style="color:var(--danger);">*</span>
+          </div>
+          <button type="button" onclick="addIntakePerson('victim')"
+            style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:700;padding:.25rem .65rem;border-radius:6px;border:1px dashed rgba(59,130,246,0.45);background:rgba(59,130,246,0.07);color:#60a5fa;cursor:pointer;transition:all .15s;">
+            <i data-lucide="plus" style="width:11px;height:11px;"></i> Add Victim
+          </button>
+        </div>
+        <div id="victim-list" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;"></div>
+
+        <!-- ④ Remarks -->
+        <div class="form-group" style="margin:0 0 .25rem;">
+          <label style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.35rem;">
+            Remarks
+          </label>
+          <textarea id="intake-remarks" rows="3"
+            placeholder="Additional notes, context, or follow-up actions for this intake record..."
+            style="font-size:.84rem;resize:vertical;"></textarea>
+        </div>
+
+        <p id="intake-error-msg" style="margin-top:.75rem;display:none;padding:.55rem .85rem;border-radius:6px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;font-size:.81rem;line-height:1.45;"></p>
+      </form>
+    </div>
+
+    <!-- PANE: Batch CSV Upload -->
+    <div id="intake-pane-csv" class="modal-body" style="padding:1.25rem 1.5rem;max-height:72vh;overflow-y:auto;display:none;">
 
       <!-- Instructions -->
-      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--text-main);line-height:1.6;">
-        <div style="font-weight:700;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;">
-          <i data-lucide="info" style="width:14px;height:14px;color:#60a5fa;"></i> CSV Format Guide
+      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--text-main);line-height:1.7;">
+        <div style="font-weight:700;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem;color:#60a5fa;">
+          <i data-lucide="info" style="width:14px;height:14px;"></i> CSV Column Guide
         </div>
-        Required columns: <code>title, description, type, severity, latitude, longitude</code><br>
-        Optional: <code>location_address, people_involved, action_taken, reporter_name, reporter_contact, status, casualty_count, casualty_status</code><br><br>
-        Valid <strong>type</strong> values: <code>flood, landslide, fire, road_accident, fallen_tree, earthquake, typhoon, medical, assistance, other</code><br>
-        Valid <strong>severity</strong>: <code>low, medium, high, critical</code><br>
-        Valid <strong>status</strong>: <code>active, responding, resolved</code>
+        <strong>Required:</strong> <code>barangay, date, time, place_of_occurrence, title_of_complaint</code><br>
+        <strong>Name fields:</strong> <code>victim_first_name, victim_middle_name, victim_last_name, victim_suffix</code><br>
+        <strong>Optional:</strong> <code>remarks</code><br>
+        <div style="margin-top:.5rem;font-size:.75rem;color:var(--text-muted);">
+          <i data-lucide="shield-check" style="width:12px;height:12px;vertical-align:middle;margin-right:.25rem;color:#34d399;"></i>
+          <strong>Incident ID</strong> is auto-assigned by the system — do not include it in the CSV.
+        </div>
       </div>
 
       <!-- Download template -->
@@ -992,24 +1476,34 @@
 
       <p class="error-msg" id="import-error-msg" style="margin-top:.5rem;"></p>
     </div>
-    <div class="modal-footer" style="justify-content:space-between;">
+
+    <!-- Modal Footer -->
+    <div class="modal-footer" style="padding:1rem 1.5rem;background:var(--bg-card);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
       <div style="font-size:.78rem;color:var(--text-muted);" id="import-status-label"></div>
       <div style="display:flex;gap:.5rem;">
         <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
-        <button class="btn btn-primary" id="import-submit-btn" onclick="submitImport()" disabled style="gap:.4rem;">
+        <!-- Manual entry submit -->
+        <button class="btn btn-primary" id="intake-submit-btn" onclick="submitIntakeEntry()" style="gap:.4rem;">
+          <i data-lucide="send"></i> Submit Entry
+        </button>
+        <!-- CSV batch submit (hidden by default) -->
+        <button class="btn btn-primary" id="import-submit-btn" onclick="submitImport()" disabled style="gap:.4rem;display:none;">
           <i data-lucide="upload"></i> Import Records
         </button>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- ===== CSV Import Modal ===== -->
+<!-- ===== /Incident Intake Form Modal ===== -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/reports.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/weather.js"></script>
 <script>
   requireAuth();
   const user = getUser();

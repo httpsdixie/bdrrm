@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional
-from database import supabase
-from auth.dependencies import get_current_user
+from ..database import supabase
+from ..auth.dependencies import get_current_user
 from datetime import datetime, timezone
 import random, string
 

@@ -58,7 +58,7 @@ async function loadWeather(evt) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
     const res  = await fetch(WEATHER_URL, { signal: controller.signal });
     clearTimeout(timeoutId);
@@ -124,40 +124,44 @@ async function loadWeather(evt) {
 
     if (body) {
       body.innerHTML = `
-        <div class="weather-main">
-          <div class="weather-icon-emoji" style="display:flex;align-items:center;justify-content:center;">
-            <i data-lucide="${w.icon}" style="width:28px;height:28px;color:var(--primary);"></i>
+        <div class="weather-hero-card">
+          <div class="weather-hero-icon-wrap">
+            <i data-lucide="${w.icon}" class="weather-hero-icon"></i>
           </div>
-          <div>
-            <div class="weather-temp">${Math.round(c.temperature_2m)}<span>°C</span></div>
-            <div class="weather-desc">${w.label}</div>
-            <div class="weather-desc">Feels like ${Math.round(c.apparent_temperature)}°C</div>
-          </div>
-        </div>
-        <div class="weather-stats">
-          <div class="weather-stat">
-            <div class="weather-stat-label">Humidity</div>
-            <div class="weather-stat-value">${c.relative_humidity_2m}%</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Rain (1h)</div>
-            <div class="weather-stat-value">${(c.rain || 0).toFixed(1)} mm</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Wind</div>
-            <div class="weather-stat-value">${c.wind_speed_10m.toFixed(1)} m/s</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Direction</div>
-            <div class="weather-stat-value">${windDir(c.wind_direction_10m)}</div>
+          <div class="weather-hero-info">
+            <div class="weather-temp">${Math.round(c.temperature_2m)}<span class="weather-unit">°C</span></div>
+            <div class="weather-condition">${w.label}</div>
+            <div class="weather-feels">Feels like ${Math.round(c.apparent_temperature)}°C</div>
           </div>
         </div>
+
+        <div class="weather-stats-grid">
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="droplets"></i> Humidity</div>
+            <div class="weather-stat-val">${c.relative_humidity_2m}%</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="cloud-rain"></i> Rain (1h)</div>
+            <div class="weather-stat-val">${(c.rain || 0).toFixed(1)} mm</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="wind"></i> Wind</div>
+            <div class="weather-stat-val">${c.wind_speed_10m.toFixed(1)} m/s</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="compass"></i> Direction</div>
+            <div class="weather-stat-val">${windDir(c.wind_direction_10m)}</div>
+          </div>
+        </div>
+
         ${alert ? `
-        <div class="weather-alert" style="border-color:${alert.color}33;background:${alert.color}18;color:${alert.color};">
-          <i data-lucide="triangle-alert"></i> ${alert.msg}
+        <div class="weather-alert-box" style="border-color:${alert.color}44;background:${alert.color}20;color:${alert.color};">
+          <i data-lucide="triangle-alert"></i> <span>${alert.msg}</span>
         </div>` : ''}
-        <div style="font-size:.65rem;color:var(--text-muted);margin-top:.5rem;text-align:right;">
-          Updated ${timeStr} · Open-Meteo
+
+        <div class="weather-footer-meta">
+          <span><i data-lucide="clock" style="width:11px;height:11px;vertical-align:middle;margin-right:2px;"></i> Updated ${timeStr}</span>
+          <span>Open-Meteo</span>
         </div>`;
     }
 
@@ -174,36 +178,39 @@ async function loadWeather(evt) {
 
     if (body) {
       body.innerHTML = `
-        <div class="weather-main">
-          <div class="weather-icon-emoji" style="display:flex;align-items:center;justify-content:center;">
-            <i data-lucide="cloud" style="width:28px;height:28px;color:var(--primary);"></i>
+        <div class="weather-hero-card">
+          <div class="weather-hero-icon-wrap">
+            <i data-lucide="cloud" class="weather-hero-icon"></i>
           </div>
-          <div>
-            <div class="weather-temp">24<span>°C</span></div>
-            <div class="weather-desc">Overcast</div>
-            <div class="weather-desc">Feels like 28°C</div>
-          </div>
-        </div>
-        <div class="weather-stats">
-          <div class="weather-stat">
-            <div class="weather-stat-label">Humidity</div>
-            <div class="weather-stat-value">99%</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Rain (1h)</div>
-            <div class="weather-stat-value">0.0 mm</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Wind</div>
-            <div class="weather-stat-value">1.6 m/s</div>
-          </div>
-          <div class="weather-stat">
-            <div class="weather-stat-label">Direction</div>
-            <div class="weather-stat-value">NE</div>
+          <div class="weather-hero-info">
+            <div class="weather-temp">24<span class="weather-unit">°C</span></div>
+            <div class="weather-condition">Overcast</div>
+            <div class="weather-feels">Feels like 28°C</div>
           </div>
         </div>
-        <div style="font-size:.65rem;color:var(--text-muted);margin-top:.5rem;text-align:right;">
-          Updated ${timeStr} · Open-Meteo
+
+        <div class="weather-stats-grid">
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="droplets"></i> Humidity</div>
+            <div class="weather-stat-val">99%</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="cloud-rain"></i> Rain (1h)</div>
+            <div class="weather-stat-val">0.0 mm</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="wind"></i> Wind</div>
+            <div class="weather-stat-val">1.6 m/s</div>
+          </div>
+          <div class="weather-stat-card">
+            <div class="weather-stat-head"><i data-lucide="compass"></i> Direction</div>
+            <div class="weather-stat-val">NE</div>
+          </div>
+        </div>
+
+        <div class="weather-footer-meta">
+          <span><i data-lucide="clock" style="width:11px;height:11px;vertical-align:middle;margin-right:2px;"></i> Updated ${timeStr}</span>
+          <span>Open-Meteo</span>
         </div>`;
     }
   } finally {
