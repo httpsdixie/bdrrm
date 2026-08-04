@@ -33,13 +33,13 @@ function capacityPct(occ, cap) {
 }
 
 function showDashboardSkeletons() {
-  const ids = ['stat-active-incidents', 'stat-evac-centers', 'stat-evacuees', 'stat-resources'];
+  const ids = ['stat-active-incidents', 'stat-evac-centers', 'stat-resources'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<span class="skeleton skeleton-stat-num"></span>';
   });
 
-  const subs = ['stat-critical-sub', 'stat-evac-sub', 'stat-evacuees-sub', 'stat-resources-sub'];
+  const subs = ['stat-incidents-total-sub', 'stat-evac-sub', 'stat-resources-sub'];
   subs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<span class="skeleton skeleton-text" style="width:70px;"></span>';
@@ -91,15 +91,6 @@ function showDashboardSkeletons() {
       </div>`;
   }
 
-  const riskBody = document.getElementById('risk-widget-body');
-  if (riskBody) {
-    riskBody.innerHTML = `
-      <div class="skeleton-card" style="padding:0.5rem 0;">
-        <div class="skeleton skeleton-title" style="width:65%;margin-bottom:8px;"></div>
-        <div class="skeleton skeleton-text" style="width:85%;margin-bottom:6px;"></div>
-        <div class="skeleton skeleton-text" style="width:45%;"></div>
-      </div>`;
-  }
 
   const hotlinesBody = document.getElementById('hotlines-widget-body');
   if (hotlinesBody) {
@@ -152,18 +143,16 @@ async function loadDashboard(btnEl) {
 
   try {
     // All requests in parallel
-    const [stats, recentIncidents, evacStatus, riskData, analyticsData] = await Promise.all([
+    const [stats, recentIncidents, evacStatus, analyticsData] = await Promise.all([
       API.get('/dashboard/stats'),
       API.get('/dashboard/recent-incidents'),
       API.get('/dashboard/evac-status'),
-      API.get('/risk/analysis').catch(() => null),
       API.get('/dashboard/analytics').catch(() => null),
     ]);
 
     renderStats(stats);
     renderRecentIncidents(recentIncidents);
     renderEvacStatus(evacStatus);
-    if (riskData) renderRiskWidget(riskData);
     renderAnalyticsCharts(analyticsData);
     loadHotlinesWidget();
 
@@ -175,7 +164,6 @@ async function loadDashboard(btnEl) {
     renderStats(null);
     renderRecentIncidents([]);
     renderEvacStatus([]);
-    renderRiskWidget(null);
     renderAnalyticsCharts(null);
     loadHotlinesWidget();
   } finally {
@@ -197,7 +185,7 @@ function renderAnalyticsCharts(data) {
   }
   currentAnalyticsData = data || null;
   initTrendsChart(activeTrendsPeriod);
-  initDistributionChart();
+  initResourceStatusChart();
 }
 
 function initTrendsChart(periodKey = '6m') {
@@ -212,7 +200,7 @@ function initTrendsChart(periodKey = '6m') {
   const data = currentAnalyticsData;
   const periodData = (data && data.periods && data.periods[periodKey])
     ? data.periods[periodKey]
-    : { labels: [], incidents: [], resolved: [], evacuees: [] };
+    : { labels: [], incidents: [], resolved: [] };
 
   // Create smooth gradients
   const gradBlue = ctx.createLinearGradient(0, 0, 0, 260);
@@ -261,25 +249,6 @@ function initTrendsChart(periodKey = '6m') {
           pointHoverBackgroundColor: '#ffffff',
           pointHoverBorderColor: '#10b981',
           pointHoverBorderWidth: 3,
-        },
-        {
-          label: 'Evacuees Sheltered',
-          data: periodData.evacuees,
-          borderColor: '#f59e0b',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          borderDash: [5, 5],
-          fill: false,
-          tension: 0.4,
-          pointBackgroundColor: '#fbbf24',
-          pointBorderColor: '#0f172a',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 7,
-          pointHoverBackgroundColor: '#ffffff',
-          pointHoverBorderColor: '#f59e0b',
-          pointHoverBorderWidth: 3,
-          yAxisID: 'y1'
         }
       ]
     },
@@ -346,32 +315,14 @@ function initTrendsChart(periodKey = '6m') {
             color: '#64748b',
             font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' }
           }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          grid: {
-            drawOnChartArea: false
-          },
-          ticks: {
-            color: '#f59e0b',
-            font: { family: 'Plus Jakarta Sans', size: 11 }
-          },
-          title: {
-            display: true,
-            text: 'Evacuees',
-            color: '#f59e0b',
-            font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' }
-          }
         }
       }
     }
   });
 }
 
-function initDistributionChart() {
-  const canvas = document.getElementById('hazardDistributionChart');
+function initResourceStatusChart() {
+  const canvas = document.getElementById('resourceStatusChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
@@ -379,71 +330,80 @@ function initDistributionChart() {
     distributionChartInstance.destroy();
   }
 
-  const data = currentAnalyticsData;
-  const dist = (data && data.hazard_distribution) ? data.hazard_distribution : {};
+  // Fetch live resource status counts
+  API.get('/resources/').then(resources => {
+    const counts = { available: 0, maintenance: 0, damaged: 0, borrowed: 0, other: 0 };
+    (resources || []).forEach(r => {
+      const s = (r.status || '').toLowerCase();
+      if (s === 'available')   counts.available++;
+      else if (s === 'maintenance') counts.maintenance++;
+      else if (s === 'damaged')     counts.damaged++;
+      else if (s === 'borrowed')    counts.borrowed++;
+      else                          counts.other++;
+    });
 
-  const labels = ['Floods', 'Fires', 'Landslides', 'Typhoons', 'Medical', 'Other'];
-  const values = [
-    dist.flood || 0,
-    dist.fire || 0,
-    dist.landslide || 0,
-    dist.typhoon || 0,
-    dist.medical || 0,
-    dist.other || 0
-  ];
+    const total = (resources || []).length;
+    const labels = ['Available', 'Maintenance', 'Damaged', 'Borrowed', 'Other'];
+    const values = [counts.available, counts.maintenance, counts.damaged, counts.borrowed, counts.other];
+    const bgColors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
 
-  const bgColors = ['#3b82f6', '#ef4444', '#f59e0b', '#06b6d4', '#10b981', '#8b5cf6'];
-  const borderColors = ['#1e293b', '#1e293b', '#1e293b', '#1e293b', '#1e293b', '#1e293b'];
-
-  distributionChartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: values,
-        backgroundColor: bgColors,
-        borderColor: borderColors,
-        borderWidth: 2,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '65%',
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            color: '#94a3b8',
-            font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
-            boxWidth: 10,
-            boxHeight: 10,
-            usePointStyle: true,
-            padding: 10
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.95)',
-          titleColor: '#ffffff',
-          titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: '700' },
-          bodyColor: '#cbd5e1',
-          bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-          borderWidth: 1,
-          padding: 10,
-          callbacks: {
-            label: function(context) {
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const val = context.parsed;
-              const pct = total ? Math.round((val / total) * 100) : 0;
-              return ` ${context.label}: ${val} (${pct}%)`;
+    distributionChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: bgColors,
+          borderColor: '#1e293b',
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: {
+              color: '#94a3b8',
+              font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+              boxWidth: 10, boxHeight: 10,
+              usePointStyle: true,
+              padding: 10
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#ffffff',
+            titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: '700' },
+            bodyColor: '#cbd5e1',
+            bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+            borderColor: 'rgba(255,255,255,0.15)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: function(context) {
+                const pct = total ? Math.round((context.parsed / total) * 100) : 0;
+                return ` ${context.label}: ${context.parsed} (${pct}%)`;
+              },
+              afterBody: function() {
+                return [`Total Assets: ${total}`];
+              }
             }
           }
         }
       }
-    }
+    });
+  }).catch(() => {
+    // fallback — empty chart
+    distributionChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#334155'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+    });
   });
 }
 
@@ -469,13 +429,11 @@ function refreshDashboard() {
 function renderStats(stats) {
   if (!stats) {
     // No connection — show dashes
-    ['stat-active-incidents', 'stat-evac-centers', 'stat-evacuees', 'stat-resources'].forEach(id => {
+    ['stat-active-incidents', 'stat-evac-centers', 'stat-resources'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = '—';
     });
-    const critEl = document.getElementById('stat-critical-sub');
-    if (critEl) critEl.innerHTML = `<span class="badge" style="font-weight:700;font-size:0.75rem;color:var(--text-muted);">Unavailable</span>`;
-    const subIds = ['stat-evac-sub', 'stat-evacuees-sub', 'stat-resources-sub'];
+    const subIds = ['stat-incidents-total-sub', 'stat-evac-sub', 'stat-resources-sub'];
     subIds.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
@@ -483,30 +441,20 @@ function renderStats(stats) {
 
   // Incidents
   document.getElementById('stat-active-incidents').textContent = stats.incidents.active_total;
-  const critEl = document.getElementById('stat-critical-sub');
-  if (stats.incidents.critical > 0) {
-    critEl.innerHTML = `<span class="badge badge-red" style="font-weight:700;font-size:0.75rem;box-shadow:0 0 12px rgba(239,68,68,0.35);"><i data-lucide="triangle-alert" style="width:12px;height:12px;margin-right:2px;"></i> ${stats.incidents.critical} Critical</span>`;
-  } else {
-    critEl.innerHTML = `<span class="badge badge-green" style="font-weight:700;font-size:0.75rem;"><i data-lucide="check-circle" style="width:12px;height:12px;margin-right:2px;"></i> All Clear</span>`;
+  const totalSubEl = document.getElementById('stat-incidents-total-sub');
+  if (totalSubEl) {
+    totalSubEl.innerHTML = `<span class="badge badge-red" style="font-weight:700;font-size:0.75rem;">${stats.incidents.total} Total Recorded</span>`;
   }
 
   // Evacuation centers
   document.getElementById('stat-evac-centers').textContent = stats.evacuation.total_centers;
   document.getElementById('stat-evac-sub').innerHTML =
-    `<span class="badge badge-blue" style="font-weight:700;font-size:0.75rem;">${stats.evacuation.available} Available</span> <span class="badge badge-orange" style="font-weight:700;font-size:0.75rem;margin-left:0.25rem;">${stats.evacuation.full} Full</span>`;
-
-  // Evacuees
-  document.getElementById('stat-evacuees').textContent = stats.evacuation.total_evacuees;
-  const capPct = stats.evacuation.total_capacity
-    ? Math.round((stats.evacuation.total_evacuees / stats.evacuation.total_capacity) * 100)
-    : 0;
-  document.getElementById('stat-evacuees-sub').innerHTML =
-    `<span class="badge badge-green" style="font-weight:700;font-size:0.75rem;"><i data-lucide="pie-chart" style="width:12px;height:12px;margin-right:2px;"></i> ${capPct}% Capacity Used</span>`;
+    `<span class="badge badge-blue" style="font-weight:700;font-size:0.75rem;">${stats.evacuation.facilities_evaluated} Evaluated</span> <span class="badge badge-orange" style="font-weight:700;font-size:0.75rem;margin-left:0.25rem;">${stats.evacuation.staffed_centers} Staffed</span>`;
 
   // Resources
-  document.getElementById('stat-resources').textContent = stats.resources.deployed;
+  document.getElementById('stat-resources').textContent = stats.resources.total_items;
   document.getElementById('stat-resources-sub').innerHTML =
-    `<span class="badge badge-orange" style="font-weight:700;font-size:0.75rem;"><i data-lucide="package-check" style="width:12px;height:12px;margin-right:2px;"></i> ${stats.resources.available} Standby / Ready</span>`;
+    `<span class="badge badge-orange" style="font-weight:700;font-size:0.75rem;">${stats.resources.available} Standby / Ready</span>`;
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -517,9 +465,6 @@ let incidentsPage = 1;
 
 let evacCentersData = [];
 let evacCentersPage = 1;
-
-let riskZonesData = [];
-let riskZonesPage = 1;
 
 const WIDGET_PAGE_SIZE = 3;
 const HOTLINES_PAGE_SIZE = 4;
@@ -641,9 +586,9 @@ function renderRecentIncidents(incidents, resetPage = true) {
   const pageItems = filtered.slice(startIdx, startIdx + WIDGET_PAGE_SIZE);
 
   el.innerHTML = pageItems.map((inc, i) => {
-    const incidentKey = inc.id !== undefined ? JSON.stringify(inc.id) : startIdx + i;
+    const dataIdx = startIdx + i;
     return `
-    <div class="feed-item" onclick="openIncidentDetailModal(${incidentKey})" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0.85rem 1.15rem;" title="Click to view full incident details">
+    <div class="feed-item" onclick="openIncidentDetailModal(${dataIdx})" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0.85rem 1.15rem;" title="Click to view full incident details">
       <div style="display:flex; align-items:center; gap:0.75rem; min-width:0;">
         <div class="feed-item-dot feed-dot-${inc.status}"></div>
         <div style="min-width:0;">
@@ -680,7 +625,7 @@ function changeIncidentsPage(delta) {
 // ---- Evacuation center status panel ----
 
 function renderEvacStatus(centers, resetPage = true) {
-  if (centers) evacCentersData = centers;
+  if (centers) evacCentersData = centers.filter(c => (c.current_occupancy || 0) > 0);
   if (resetPage) evacCentersPage = 1;
 
   const el = document.getElementById('evac-status-list');
@@ -718,21 +663,32 @@ function renderEvacStatus(centers, resetPage = true) {
   const pageItems = evacCentersData.slice(startIdx, startIdx + WIDGET_PAGE_SIZE);
 
   el.innerHTML = pageItems.map((c, i) => {
-      // Occupancy not tracked in this build; show capacity only and the stored status
-    const effStatus = c.status || 'available';
-    const fillGradient = 'linear-gradient(90deg, #3b82f6, #60a5fa)';
-    const badgeHtml = STATUS_BADGES_MAP[effStatus] || `<span class="badge badge-green">${effStatus}</span>`;
+    const occ = c.current_occupancy || 0;
+    const cap = c.capacity || 0;
+    const pct = capacityPct(occ, cap);
 
+    let effStatus = c.status || 'available';
+    if (cap > 0 && occ >= cap) effStatus = 'full';
+    else if (cap > 0 && pct >= 80 && effStatus !== 'closed') effStatus = 'near_capacity';
+
+    let barColor = 'linear-gradient(90deg, #10b981, #34d399)';
+    if (pct >= 90) barColor = 'linear-gradient(90deg, #ef4444, #f87171)';
+    else if (pct >= 75) barColor = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+
+    const badgeHtml = STATUS_BADGES_MAP[effStatus] || `<span class="badge badge-green">${effStatus}</span>`;
     const evacKey = c.id !== undefined ? JSON.stringify(c.id) : startIdx + i;
+
     return `
     <div class="evac-feed-item" onclick="openEvacDetailModal(${evacKey})" style="cursor:pointer; padding:1rem 1.15rem;" title="Click to view shelter status">
-      <div class="evac-feed-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+      <div class="evac-feed-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
         <span class="evac-feed-name" style="font-size:0.92rem; font-weight:700; color:#ffffff;">${escHtml(c.name)}</span>
-        <span class="evac-feed-count" style="font-size:0.88rem; font-weight:800; color:#60a5fa;">Capacity: ${c.capacity || 0}</span>
+        <span class="evac-feed-count" style="font-size:0.88rem; font-weight:800; color:#60a5fa;">${occ} / ${cap} <span style="font-size:0.75rem; color:#94a3b8; font-weight:500;">Evacuees</span></span>
       </div>
-      <div style="height:6px;opacity:0.06;border-radius:6px;margin-top:6px;margin-bottom:6px;"></div>
-      <div class="evac-feed-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-        <span style="font-size:0.78rem; color:#cbd5e1; font-weight:600;">Capacity: ${c.capacity || 0} persons</span>
+      <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden; margin:0.4rem 0;">
+        <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+      </div>
+      <div class="evac-feed-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
+        <span style="font-size:0.78rem; color:#cbd5e1; font-weight:600;">${pct}% Capacity Occupied</span>
         ${badgeHtml}
       </div>
     </div>`;
@@ -762,120 +718,7 @@ function escHtml(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ---- Risk Widget ----
-function renderRiskWidget(data, resetPage = true) {
-  const el = document.getElementById('risk-widget-body');
-  const pagEl = document.getElementById('risk-widget-pagination');
-  if (!el) return;
-
-  if (data) {
-    riskZonesData = data.risk_zones || [];
-    // Update risk summary badge
-    const badge = document.getElementById('risk-summary-badge');
-    if (badge) {
-      if (data.high_risk_count > 0) {
-        badge.textContent = `${data.high_risk_count} high-risk area${data.high_risk_count > 1 ? 's' : ''}`;
-        badge.className = 'badge badge-red';
-      } else {
-        badge.textContent = 'No high-risk areas';
-        badge.className = 'badge badge-green';
-      }
-    }
-  }
-
-  if (resetPage) riskZonesPage = 1;
-
-  const RISK_COLOR = { critical: '#d93025', high: '#e65100', medium: '#f9a825', low: '#2e7d32' };
-  const RISK_BG    = { critical: '#fde8e8', high: '#fff3e0', medium: '#fff8e1', low: '#e6f4ea' };
-  const TYPE_LABEL_R = { flood:'Flood', fire:'Fire', landslide:'Landslide', typhoon:'Typhoon', medical:'Medical', other:'Other' };
-
-  if (!riskZonesData.length) {
-    el.innerHTML = `
-      <div class="dash-feed-empty sm">
-        <div class="dash-feed-empty-icon success sm">
-          <i data-lucide="shield-check"></i>
-        </div>
-        <div class="dash-feed-empty-text">
-          <p class="dash-feed-empty-title" style="font-size:0.88rem;">No High-Risk Areas Detected</p>
-          <span class="dash-feed-empty-sub">Hazard telemetry indicates normal safety thresholds across all sitios.</span>
-        </div>
-      </div>`;
-    if (pagEl) pagEl.style.display = 'none';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    return;
-  }
-
-  const totalPages = Math.ceil(riskZonesData.length / WIDGET_PAGE_SIZE);
-  if (riskZonesPage > totalPages) riskZonesPage = totalPages;
-  if (riskZonesPage < 1) riskZonesPage = 1;
-
-  const startIdx = (riskZonesPage - 1) * WIDGET_PAGE_SIZE;
-  const pageItems = riskZonesData.slice(startIdx, startIdx + WIDGET_PAGE_SIZE);
-
-  const RISK_BADGE_MAP = {
-    critical: '<span class="badge badge-red">Critical Risk</span>',
-    high:     '<span class="badge badge-orange">High Risk</span>',
-    medium:   '<span class="badge badge-blue">Medium Risk</span>',
-    low:      '<span class="badge badge-green">Low Risk</span>',
-  };
-
-  el.innerHTML = pageItems.map((z, i) => {
-    const globalRank = startIdx + i + 1;
-    const col = RISK_COLOR[z.risk_level] || '#f9a825';
-    
-    let glowBg = 'rgba(249, 168, 37, 0.12)';
-    let borderCol = 'rgba(249, 168, 37, 0.3)';
-    if (z.risk_level === 'critical') { glowBg = 'rgba(239, 68, 68, 0.15)'; borderCol = 'rgba(239, 68, 68, 0.35)'; }
-    else if (z.risk_level === 'high') { glowBg = 'rgba(245, 158, 11, 0.15)'; borderCol = 'rgba(245, 158, 11, 0.35)'; }
-    else if (z.risk_level === 'medium') { glowBg = 'rgba(59, 130, 246, 0.15)'; borderCol = 'rgba(59, 130, 246, 0.35)'; }
-    else if (z.risk_level === 'low') { glowBg = 'rgba(16, 185, 129, 0.15)'; borderCol = 'rgba(16, 185, 129, 0.35)'; }
-
-    const badgeHtml = RISK_BADGE_MAP[z.risk_level] || `<span class="badge badge-orange">${z.risk_level} Risk</span>`;
-    const activeText = z.active_count
-      ? `<span style="color:#f87171; font-weight:700;"> · ${z.active_count} Ongoing Emergenc${z.active_count > 1 ? 'ies' : 'y'}</span>`
-      : '';
-
-    return `
-    <div class="risk-zone-row" onclick="openRiskDetailModal(${startIdx + i})" style="background:${glowBg}; border: 1px solid ${borderCol}; cursor:pointer; padding:0.9rem 1.15rem;" title="Click to view threat analysis">
-      <div class="risk-zone-rank" style="background:${col}; color:#ffffff; font-weight:800;">#${globalRank}</div>
-      <div class="risk-zone-info" style="flex:1; margin-left:0.35rem;">
-        <div class="risk-zone-label" style="font-size:0.92rem; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:0.5rem;">
-          ${badgeHtml}
-          <span style="color:#64748b;">·</span>
-          <span style="color:#e2e8f0; font-weight:600;">${TYPE_LABEL_R[z.dominant_type] || z.dominant_type} Zone</span>
-        </div>
-        <div class="risk-zone-meta" style="font-size:0.78rem; color:#94a3b8; margin-top:0.25rem;">
-          ${activeText}
-        </div>
-      </div>
-      <div class="risk-zone-score" style="text-align:right;">
-        <div style="font-size:1.15rem; font-weight:900; color:${col}; text-shadow:0 0 10px ${col}44;">${z.risk_score}</div>
-        <div style="font-size:0.68rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Score</div>
-      </div>
-    </div>`;
-  }).join('') + `
-  <a href="map.html" class="risk-view-map-btn">
-    <i data-lucide="map-pin"></i> Open GIS Heatmap Analysis
-  </a>`;
-
-  if (riskZonesData.length > WIDGET_PAGE_SIZE) {
-    el.classList.add('dash-feed-scrollable');
-    renderWidgetPagination(pagEl, riskZonesPage, totalPages, riskZonesData.length, 'changeRiskPage');
-  } else {
-    el.classList.remove('dash-feed-scrollable');
-    if (pagEl) pagEl.style.display = 'none';
-  }
-
-  lucide.createIcons();
-}
-
-function changeRiskPage(delta) {
-  riskZonesPage += delta;
-  renderRiskWidget(null, false);
-}
-
 // ---- Hotlines Widget ----
-
 let hotlinesData = [];
 let hotlinesPage = 1;
 
@@ -998,22 +841,9 @@ function changeHotlinesPage(delta) {
 // Interactive Item Detail Modals Handlers
 // ==========================================================================
 
-function openIncidentDetailModal(id) {
-  let inc = incidentsData.find(item => item.id == id || item.id === id);
-  if (!inc && typeof id === 'number') inc = incidentsData[id];
-  if (!inc) inc = incidentsData[0];
-  if (!inc) {
-    inc = {
-      title: 'Emergency Incident Dispatch',
-      type: 'flood',
-      severity: 'medium',
-      status: 'ongoing',
-      description: 'Ongoing emergency dispatch and response monitoring in progress.',
-      location: 'Purok 3, Barangay Linao',
-      reporter_name: 'Resident Report',
-      created_at: new Date().toISOString()
-    };
-  }
+function openIncidentDetailModal(idx) {
+  const inc = incidentsData[idx];
+  if (!inc) return;
 
   const modal = document.getElementById('incident-detail-modal');
   const content = document.getElementById('inc-modal-content');
@@ -1021,7 +851,6 @@ function openIncidentDetailModal(id) {
 
   const typeName = TYPE_LABEL[inc.type] || inc.type || 'General Incident';
   const statusHtml = STATUS_BADGE[inc.status] || inc.status || '<span class="badge badge-orange">Ongoing</span>';
-  const severityHtml = SEVERITY_BADGE[inc.severity] || inc.severity || '<span class="badge badge-blue">Medium</span>';
 
   content.innerHTML = `
     <div style="margin-bottom: 1.2rem;">
@@ -1030,8 +859,6 @@ function openIncidentDetailModal(id) {
         <span style="font-size:0.75rem; color:#94a3b8; white-space:nowrap; margin-top:0.2rem;">${timeAgo(inc.created_at)}</span>
       </div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <span class="badge badge-blue" style="font-weight:700;">${typeName}</span>
-        ${severityHtml}
         ${statusHtml}
       </div>
     </div>
@@ -1085,11 +912,21 @@ function openEvacDetailModal(id) {
   const content = document.getElementById('evac-modal-content');
   if (!modal || !content) return;
 
-  const STATUS_COLOR_MAP = { available: 'var(--success)', near_capacity: '#f9a825', full: '#e65100', closed: 'var(--danger)' };
-  // Live occupancy removed — show stored status and capacity only
-  const pct = 0;
-  const effStatus = c.status || 'available';
-  const color = STATUS_COLOR_MAP[effStatus] || 'var(--primary)';
+  const occ = c.current_occupancy || 0;
+  const cap = c.capacity || 0;
+  const pct = capacityPct(occ, cap);
+  const avail = Math.max(0, cap - occ);
+
+  let effStatus = c.status || 'available';
+  if (cap > 0 && occ >= cap) effStatus = 'full';
+  else if (cap > 0 && pct >= 80 && effStatus !== 'closed') effStatus = 'near_capacity';
+
+  const STATUS_COLOR_MAP = { available: '#34d399', near_capacity: '#fbbf24', full: '#f87171', closed: '#60a5fa' };
+  const color = STATUS_COLOR_MAP[effStatus] || '#3b82f6';
+
+  let barColor = 'linear-gradient(90deg, #10b981, #34d399)';
+  if (pct >= 90) barColor = 'linear-gradient(90deg, #ef4444, #f87171)';
+  else if (pct >= 75) barColor = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
 
   content.innerHTML = `
     <div style="margin-bottom: 1.2rem;">
@@ -1103,13 +940,21 @@ function openEvacDetailModal(id) {
       </div>
     </div>
 
-    <!-- Capacity Card (occupancy hidden) -->
+    <!-- Live Shelter Occupancy & Capacity Gauge Card -->
     <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.1rem; margin-bottom:1.2rem;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
-        <span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">Shelter Capacity</span>
-        <span style="font-size:0.95rem; font-weight:800; color:#60a5fa;">${c.capacity || 'N/A'} <span style="font-size:0.78rem; color:#94a3b8; font-weight:500;">Persons</span></span>
+        <span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">Live Shelter Occupancy</span>
+        <span style="font-size:0.95rem; font-weight:800; color:#60a5fa;">${occ} / ${cap} <span style="font-size:0.78rem; color:#94a3b8; font-weight:500;">Persons</span></span>
       </div>
-      <div style="font-size:0.78rem; color:#94a3b8;">Status: <span style="color:${color}; font-weight:700; text-transform:uppercase;">${(effStatus || '').replace('_', ' ')}</span></div>
+      
+      <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:6px; overflow:hidden; margin-bottom:0.6rem;">
+        <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:6px; transition:width 0.4s ease;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:#94a3b8;">
+        <span>${pct}% Capacity Occupied</span>
+        <span style="color:#34d399; font-weight:700;">${avail} Available Space</span>
+      </div>
     </div>
 
     <!-- Amenities Grid -->
@@ -1139,64 +984,6 @@ function closeEvacDetailModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function openRiskDetailModal(idx) {
-  let z = (typeof idx === 'number') ? riskZonesData[idx] : null;
-  if (!z && typeof idx === 'string') z = riskZonesData.find(item => item.id == idx);
-  if (!z) z = riskZonesData[0];
-  if (!z) {
-    z = {
-      risk_level: 'high',
-      dominant_type: 'flood',
-      risk_score: 85,
-      incident_count: 6,
-      active_count: 1
-    };
-  }
-
-  const modal = document.getElementById('risk-detail-modal');
-  const content = document.getElementById('risk-modal-content');
-  if (!modal || !content) return;
-
-  const col = (z.risk_level === 'critical' ? '#ef4444' : z.risk_level === 'high' ? '#f59e0b' : '#3b82f6');
-
-  content.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
-      <div>
-        <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Assessed Threat Zone</div>
-        <h4 style="font-size:1.15rem; font-weight:800; color:#ffffff; margin:0.2rem 0 0 0;">${escHtml(z.dominant_type ? z.dominant_type.toUpperCase() + ' RISK AREA' : 'Purok Risk Area')}</h4>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:1.4rem; font-weight:900; color:${col}; text-shadow:0 0 12px ${col}55;">${z.risk_score || 85}</div>
-        <div style="font-size:0.68rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">Threat Index</div>
-      </div>
-    </div>
-
-    <div style="line-height:1.5; color:#e2e8f0; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.1rem; margin-bottom:1.2rem;">
-      <div style="font-size:0.78rem; font-weight:700; color:#fbbf24; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
-        <i data-lucide="shield-alert" style="width:16px; height:16px;"></i> Protocol &amp; Mitigation Action
-      </div>
-      <div>High historical frequency of localized emergency dispatches. Continuous BDRRM surveillance and early evacuation protocol recommended during adverse weather alerts.</div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem;">
-      <div style="background:rgba(255,255,255,0.02); padding:0.85rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-        <div style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Total Incidents Logged</div>
-        <div style="font-weight:800; color:#ffffff; font-size:1.05rem; margin-top:0.2rem;">${z.incident_count || 5} Cases</div>
-      </div>
-      <div style="background:rgba(255,255,255,0.02); padding:0.85rem; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
-        <div style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Ongoing Emergencies</div>
-        <div style="font-weight:800; color:${z.active_count ? '#f87171' : '#4ade80'}; font-size:1.05rem; margin-top:0.2rem;">${z.active_count || 0} Ongoing</div>
-      </div>
-    </div>
-  `;
-  modal.classList.add('active');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeRiskDetailModal() {
-  const modal = document.getElementById('risk-detail-modal');
-  if (modal) modal.classList.remove('active');
-}
 
 // =============================================
 // ADD EMERGENCY HOTLINE MODAL & HANDLERS

@@ -248,80 +248,20 @@ def initialize_disaster_event(
     return new_event
 
 
-# --- 7.2 Family Profiling & Vulnerability Triage ---
-
-class FamilyProfileCreate(BaseModel):
-    center_id: str
-    head_name: str
-    sitio_origin: Optional[str] = "Sitio Linao Main"
-    total_members: int = 1
-    infants_count: int = 0
-    children_count: int = 0
-    seniors_count: int = 0
-    pwd_count: int = 0
-    pregnant_lactating_count: int = 0
-    contact_number: Optional[str] = None
-
+# Family profiling & vulnerability triage feature removed per product decision.
+# The previous endpoints for creating and retrieving family profiles and the vulnerability scoring
+# mechanism have been retired to eliminate Proactive Risk Analysis and sitio vulnerability assessment.
 
 @router.get("/families/{center_id}")
-def get_family_profiles(center_id: str, current_user: dict = Depends(get_current_user)):
-    """Get all registered families in an evacuation center."""
-    families = [f for f in FAMILY_PROFILES_DB if f["center_id"] == center_id]
-    return families
+def get_family_profiles_removed(center_id: str, current_user: dict = Depends(get_current_user)):
+    """Family profiling endpoint removed."""
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail="Family profiling & vulnerability triage feature has been removed.")
 
 
-@router.post("/families", status_code=201)
-def create_family_profile(
-    body: FamilyProfileCreate,
-    current_user: dict = Depends(get_current_user)
-):
-    """Register family profile with Quick-Tap vulnerability triage."""
-    code_seq = len(FAMILY_PROFILES_DB) + 101
-    family_code = f"FAM-2026-{code_seq}"
-    qr_token = f"QR-{family_code}-{code_seq*37}"
-
-    # Calculate vulnerability score (weighted triage index)
-    vuln_score = (
-        (body.infants_count * 3) +
-        (body.pwd_count * 3) +
-        (body.pregnant_lactating_count * 2.5) +
-        (body.seniors_count * 2) +
-        (body.children_count * 1)
-    )
-
-    new_family = {
-        "id": f"fam_{code_seq}",
-        "family_code": family_code,
-        "qr_token": qr_token,
-        "center_id": body.center_id,
-        "head_name": body.head_name,
-        "sitio_origin": body.sitio_origin,
-        "total_members": body.total_members,
-        "infants_count": body.infants_count,
-        "children_count": body.children_count,
-        "seniors_count": body.seniors_count,
-        "pwd_count": body.pwd_count,
-        "pregnant_lactating_count": body.pregnant_lactating_count,
-        "vulnerability_score": round(vuln_score, 1),
-        "contact_number": body.contact_number,
-        "status": "active",  # 'active', 'discharged', 'transferred'
-        "checked_in_at": datetime.now(timezone.utc).isoformat(),
-        "checked_in_by": current_user.get("full_name") or current_user.get("sub"),
-    }
-    FAMILY_PROFILES_DB.append(new_family)
-
-    # Automatically increment current_occupancy of the center
-    try:
-        center_res = supabase.table("evacuation_centers").select("current_occupancy").eq("id", body.center_id).limit(1).execute()
-        if center_res.data:
-            current_occ = center_res.data[0].get("current_occupancy", 0)
-            new_occ = current_occ + body.total_members
-            supabase.table("evacuation_centers").update({"current_occupancy": new_occ}).eq("id", body.center_id).execute()
-    except Exception:
-        pass
-
-    return new_family
-
+@router.post("/families")
+def create_family_profile_removed(body: dict, current_user: dict = Depends(get_current_user)):
+    """Family profiling endpoint removed."""
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail="Family profiling & vulnerability triage feature has been removed.")
 
 # --- 7.3 QR-Based Duplicate Claim Prevention ---
 
@@ -423,14 +363,6 @@ def generate_cdrrm_pulse_report(current_user: dict = Depends(get_current_user)):
           "total_rated_capacity": total_capacity,
           "current_idp_population": total_occupancy,
           "occupancy_rate_pct": round((total_occupancy / total_capacity * 100), 1) if total_capacity > 0 else 0,
-        },
-        "vulnerability_breakdown": {
-          "infants_under_2": total_infants,
-          "children_2_to_12": total_children,
-          "senior_citizens_60plus": total_seniors,
-          "pwd_persons_with_disability": total_pwd,
-          "pregnant_and_lactating_mothers": total_pregnant,
-          "total_vulnerable_idps": total_infants + total_children + total_seniors + total_pwd + total_pregnant
         },
         "relief_distribution_summary": {
           "total_packages_claimed": len(RELIEF_CLAIMS_LOG),

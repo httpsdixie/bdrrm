@@ -916,11 +916,84 @@
     }
 
     @media (max-width: 768px) {
-      .landing-navbar { padding: 0.75rem 1rem; }
+      .landing-navbar {
+        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .nav-brand-text h3 { font-size: 0.95rem; }
+      .nav-brand-text p { font-size: 0.68rem; }
+      .nav-cta-btn {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        padding: 0.7rem 1rem;
+      }
       .hero-section { padding: 2rem 1rem 2.5rem; }
+      .evsu-header-badge {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+        padding: 0.4rem 0.95rem;
+      }
+      .hero-main-title {
+        font-size: clamp(1.45rem, 6.2vw, 2.2rem);
+        line-height: 1.22;
+      }
+      .hero-description {
+        font-size: 0.92rem;
+        line-height: 1.7;
+        margin-bottom: 1.4rem;
+      }
+      .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.8rem;
+      }
+      .hero-buttons a {
+        width: 100%;
+        justify-content: center;
+      }
+      .landing-container { padding: 3.25rem 1rem 4rem; }
+      .section-title { font-size: clamp(1.45rem, 5vw, 1.85rem); }
+      .section-description { font-size: 0.92rem; }
+      .mv-card, .service-card, .command-master-banner {
+        padding: 1.35rem;
+      }
+      .mv-header {
+        align-items: flex-start;
+        gap: 0.7rem;
+      }
+      .service-btn, .banner-cta-btn {
+        width: 100%;
+        justify-content: center;
+      }
       .banner-left-content { flex-direction: column; text-align: center; }
       .command-master-banner { justify-content: center; text-align: center; }
       .landing-footer-inner { grid-template-columns: 1fr; gap: 1.75rem; }
+      .footer-bottom-bar { flex-direction: column; align-items: flex-start; }
+      .footer-compliance-tags { width: 100%; }
+      .footer-compliance-tags span { width: 100%; }
+      .back-to-top { right: 1rem; bottom: 1rem; }
+    }
+
+    @media (max-width: 480px) {
+      .landing-navbar { padding: 0.7rem 0.85rem; }
+      .nav-brand { gap: 0.6rem; }
+      .nav-brand-logo { width: 36px; height: 36px; }
+      .nav-brand-text { display: none; }
+      .nav-hamburger { padding: 0.45rem; }
+      .hero-section { padding: 1.75rem 0.85rem 2.25rem; }
+      .barangay-subtitle-pill { font-size: 0.74rem; padding: 0.35rem 1rem; }
+      .hero-tagline { font-size: 0.73rem; gap: 0.4rem; }
+      .hero-description { font-size: 0.9rem; }
+      .hero-buttons a { padding: 0.72rem 1.1rem; font-size: 0.9rem; }
+      .mv-card, .service-card, .command-master-banner { border-radius: 16px; }
+      .service-title { font-size: 1.1rem; }
+      .service-desc, .mv-body p, .banner-text p { font-size: 0.9rem; }
+      .landing-footer { padding: 2.5rem 0.85rem 1.5rem; }
+      .landing-footer-inner { gap: 1.5rem; }
+      .footer-links-list a { font-size: 0.82rem; }
     }
 
     .skip-link { position: absolute; left: -999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
@@ -969,10 +1042,10 @@
 
   <!-- Mobile Menu Drawer -->
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-    <a href="public.html"><i data-lucide="map-pin" style="width:16px;height:16px;"></i> Public Safety GIS Map</a>
-    <a href="incidents.html"><i data-lucide="activity" style="width:16px;height:16px;"></i> Incident Monitor &amp; Logging</a>
-    <a href="resources.html"><i data-lucide="package" style="width:16px;height:16px;"></i> Resource &amp; Supply Tracking</a>
-    <a href="evacuation.html"><i data-lucide="home" style="width:16px;height:16px;"></i> Evacuation Shelter Monitoring</a>
+    <a href="public.html"><i data-lucide="map-pin" style="width:16px;height:16px;"></i> Public GIS Map</a>
+    <a href="incidents.html"><i data-lucide="activity" style="width:16px;height:16px;"></i> Incident Tracking</a>
+    <a href="resources.html"><i data-lucide="package" style="width:16px;height:16px;"></i> Resource Tracking</a>
+    <a href="evacuation.html"><i data-lucide="home" style="width:16px;height:16px;"></i> Evacuation Monitoring</a>
     <a href="index.html" style="color:#38bdf8;border:1px solid rgba(56,189,248,0.35);background:rgba(56,189,248,0.12);"><i data-lucide="log-in" style="width:16px;height:16px;"></i> Command Login</a>
   </div>
 
@@ -1007,13 +1080,13 @@
 
       <!-- Hero Description -->
       <p class="hero-description">
-        A web-based Smart DRRM GIS developed for the seventeen (17) puroks of Barangay Linao, Ormoc City — transitioning paper-based disaster records into a fast, data-driven operational platform for incident tracking, resource allocation, evacuation center monitoring, and population management.
+        A web-based Smart DRRM GIS developed for the seventeen (17) puroks of Barangay Linao, Ormoc City — transitioning paper-based disaster records into a fast, data-driven operational platform for incident tracking, resource allocation, and evacuation center facility inspection.
       </p>
 
       <!-- Primary Action Buttons -->
       <div class="hero-buttons">
         <a href="public.html" class="btn-hero-primary">
-          <i data-lucide="map" style="width:18px;height:18px;"></i> Launch Public Safety GIS Map
+          <i data-lucide="map" style="width:18px;height:18px;"></i> Launch Public GIS Map
         </a>
         <a href="index.html" class="btn-hero-secondary">
           <i data-lucide="shield-check" style="width:18px;height:18px;"></i> Command Center Login
@@ -1039,16 +1112,19 @@
       </div>
 
       <div class="mv-grid">
-        <!-- Vision & Mission Card -->
+        <!-- Vision Statement Card -->
         <div class="mv-card">
           <div class="mv-header">
             <div class="mv-icon"><i data-lucide="eye" style="width:24px;height:24px;"></i></div>
             <h3>Vision Statement</h3>
           </div>
-          <div class="mv-body" style="margin-bottom:1.8rem;">
+          <div class="mv-body">
             <p>"By 2030, Barangay Linao shall possess a digital, data-driven, and disaster-resilient management system capable of supporting efficient preparedness, response, recovery, and rehabilitation operations across its seventeen (17) puroks."</p>
           </div>
+        </div>
 
+        <!-- Mission Statement Card -->
+        <div class="mv-card">
           <div class="mv-header">
             <div class="mv-icon" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.35);color:#34d399;">
               <i data-lucide="target" style="width:24px;height:24px;"></i>
@@ -1056,39 +1132,10 @@
             <h3>Mission Statement</h3>
           </div>
           <div class="mv-body">
-            <p>"To strengthen disaster preparedness and emergency response in Barangay Linao through a GIS-integrated digital platform — improving incident tracking, resource allocation, and evacuation monitoring in compliance with RA 10121 and RA 10173."</p>
+            <p>"To strengthen disaster preparedness and emergency response in Barangay Linao through a GIS-integrated digital platform — improving incident tracking, resource allocation, and evacuation center facility inspection in compliance with RA 10121 and RA 10173."</p>
           </div>
         </div>
 
-        <!-- Strategic Objectives Card -->
-        <div class="mv-card c-purple-bar">
-          <div class="mv-header">
-            <div class="mv-icon" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.35);color:#c084fc;">
-              <i data-lucide="compass" style="width:24px;height:24px;"></i>
-            </div>
-            <h3>Strategic Objectives</h3>
-          </div>
-          <div class="mv-body">
-            <ul class="goals-list">
-              <li>
-                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                <span><strong>Resilience Building:</strong> Strengthen Barangay Linao's disaster preparedness and community safety across all 17 puroks.</span>
-              </li>
-              <li>
-                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                <span><strong>GIS Integration:</strong> Deploy dynamic spatial hazard mapping for flood, storm surge, and emergency evacuation management.</span>
-              </li>
-              <li>
-                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                <span><strong>Operational Standardization:</strong> Establish UUID-standardized databases for incident logging, evacuation profiling, and resource distribution.</span>
-              </li>
-              <li>
-                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                <span><strong>Legal Compliance:</strong> Enforce strict adherence to RA 10173 (Data Privacy Act), RA 10121 (DRRM Act), and COA audit standards.</span>
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -1106,12 +1153,12 @@
 
       <div class="services-grid">
         
-        <!-- Portal 01: Public Safety GIS Map -->
+        <!-- Portal 01: Public GIS Map -->
         <div class="service-card srv-blue">
           <div class="service-icon-box">
             <i data-lucide="map-pin" style="width:26px;height:26px;"></i>
           </div>
-          <h3 class="service-title">Public Safety GIS Map</h3>
+          <h3 class="service-title">Public GIS Map</h3>
           <p class="service-desc">
             Interactive GIS map displaying spatial hazard overlays, flood risk zones, emergency evacuation points, and purok boundaries of Barangay Linao.
           </p>
@@ -1121,12 +1168,12 @@
           </a>
         </div>
 
-        <!-- Portal 02: Incident Monitor & Logging -->
+        <!-- Portal 02: Incident Tracking -->
         <div class="service-card srv-purple">
           <div class="service-icon-box">
             <i data-lucide="activity" style="width:26px;height:26px;"></i>
           </div>
-          <h3 class="service-title">Incident Monitor &amp; Logging</h3>
+          <h3 class="service-title">Incident Tracking</h3>
           <p class="service-desc">
             Emergency incident logging, severity triage, responder dispatch, and active threat reporting for Barangay Linao emergency responders.
           </p>
@@ -1136,32 +1183,32 @@
           </a>
         </div>
 
-        <!-- Portal 03: Resource & Supply Tracking -->
-        <div class="service-card srv-amber">
-          <div class="service-icon-box">
-            <i data-lucide="package" style="width:26px;height:26px;"></i>
-          </div>
-          <h3 class="service-title">Resource &amp; Supply Tracking</h3>
-          <p class="service-desc">
-            COA-accountable inventory tracking for relief goods, medical kits, rescue equipment, and emergency supply dispatches.
-          </p>
-          <a href="resources.html" class="service-btn">
-            <span>Track Resources</span>
-            <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
-          </a>
-        </div>
-
-        <!-- Portal 04: Evacuation Shelter Monitoring -->
+        <!-- Portal 03: Evacuation Monitoring -->
         <div class="service-card srv-green">
           <div class="service-icon-box">
             <i data-lucide="home" style="width:26px;height:26px;"></i>
           </div>
-          <h3 class="service-title">Evacuation Shelter Monitoring</h3>
+          <h3 class="service-title">Evacuation Monitoring</h3>
           <p class="service-desc">
-            Occupancy tracking, shelter capacity status, vulnerable sector counts, and family registration for emergency evacuation centers.
+            Facility inspection status, shelter capacity, structural readiness, and operational readiness for emergency evacuation centers.
           </p>
           <a href="evacuation.html" class="service-btn">
             <span>Check Shelters</span>
+            <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+          </a>
+        </div>
+
+        <!-- Portal 04: Resource & Supply Tracking -->
+        <div class="service-card srv-amber">
+          <div class="service-icon-box">
+            <i data-lucide="package" style="width:26px;height:26px;"></i>
+          </div>
+          <h3 class="service-title">Resource Tracking</h3>
+          <p class="service-desc">
+            COA-accountable inventory tracking non-tangible equipments.
+          </p>
+          <a href="resources.html" class="service-btn">
+            <span>Track Resources</span>
             <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
           </a>
         </div>
@@ -1176,7 +1223,7 @@
           </div>
           <div class="banner-text">
             <h3>BDRRMC Command Center Portal</h3>
-            <p>Authorized administrator access for BDRRMC officials, situation analytics, threat matrix monitoring, and data exports.</p>
+            <p>Authorized administrator access for BDRRMC officials, situation analytics, hazard monitoring, and data exports.</p>
           </div>
         </div>
         <a href="dashboard.html" class="banner-cta-btn">
@@ -1204,7 +1251,7 @@
           </div>
         </div>
         <p class="footer-brand-desc">
-          A web-based Smart DRRM GIS for the 17 puroks of Barangay Linao, Ormoc City — enabling digital incident tracking, evacuation monitoring, and resource management for there residents.
+          A web-based Smart DRRM GIS for the 17 puroks of Barangay Linao, Ormoc City — enabling digital incident tracking, evacuation center facility inspection, and resource management for local operations.
         </p>
       </div>
 
@@ -1212,21 +1259,14 @@
       <div>
         <div class="footer-col-title">System Portals</div>
         <ul class="footer-links-list">
-          <li><a href="public.html"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> Public Safety GIS Map</a></li>
-          <li><a href="incidents.html"><i data-lucide="activity" style="width:14px;height:14px;"></i> Incident Monitor &amp; Logging</a></li>
-          <li><a href="resources.html"><i data-lucide="package" style="width:14px;height:14px;"></i> Resource &amp; Supply Tracking</a></li>
-          <li><a href="evacuation.html"><i data-lucide="home" style="width:14px;height:14px;"></i> Evacuation Shelter Monitoring</a></li>
+          <li><a href="public.html"><i data-lucide="map-pin" style="width:14px;height:14px;"></i> Public GIS Map</a></li>
+          <li><a href="incidents.html"><i data-lucide="activity" style="width:14px;height:14px;"></i> Incident Tracking</a></li>
+          <li><a href="resources.html"><i data-lucide="package" style="width:14px;height:14px;"></i> Resource Tracking</a></li>
+          <li><a href="evacuation.html"><i data-lucide="home" style="width:14px;height:14px;"></i> Evacuation Monitoring</a></li>
           <li><a href="dashboard.html"><i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Command Dashboard</a></li>
         </ul>
       </div>
 
-      <!-- Access Links -->
-      <div>
-        <div class="footer-col-title">Access &amp; Security</div>
-        <ul class="footer-links-list">
-          <li><a href="index.html"><i data-lucide="log-in" style="width:14px;height:14px;"></i> About Project</a></li>
-        </ul>
-      </div>
     </div>
 
     <!-- Bottom Bar -->

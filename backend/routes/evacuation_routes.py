@@ -50,6 +50,12 @@ class EvacuationCenterCreate(BaseModel):
     contact_person: Optional[str] = None
     contact_number: Optional[str] = None
     personnel_directory: Optional[List[Dict[str, Any]]] = []
+    facilities_checklist: Optional[Dict[str, Any]] = None
+    camp_layout_filename: Optional[str] = None
+    contingency_plan: Optional[str] = None
+    prepared_by: Optional[Dict[str, Any]] = None
+    approved_by: Optional[Dict[str, Any]] = None
+    structural_integrity_report: Optional[str] = None
 
     @field_validator("floor_area_sqm", mode="before")
     @classmethod
@@ -93,6 +99,11 @@ class EvacuationCenterUpdate(BaseModel):
     facilities: Optional[str] = None
     facilities_checklist: Optional[Any] = None
     personnel_directory: Optional[List[Dict[str, Any]]] = None
+    camp_layout_filename: Optional[str] = None
+    contingency_plan: Optional[str] = None
+    prepared_by: Optional[Dict[str, Any]] = None
+    approved_by: Optional[Dict[str, Any]] = None
+    structural_integrity_report: Optional[str] = None
     has_water: Optional[bool] = None
     has_electricity: Optional[bool] = None
     has_first_aid: Optional[bool] = None
@@ -254,7 +265,7 @@ def create_center(body: EvacuationCenterCreate, current_user: dict = Depends(get
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    result = supabase.table("evacuation_centers").insert({
+    payload = {
         "name": body.name,
         "address": body.address,
         "latitude": body.latitude,
@@ -269,10 +280,23 @@ def create_center(body: EvacuationCenterCreate, current_user: dict = Depends(get
         "contact_person": body.contact_person,
         "contact_number": body.contact_number,
         "personnel_directory": body.personnel_directory or [],
+        "facilities_checklist": body.facilities_checklist or {},
+        "camp_layout_filename": body.camp_layout_filename,
+        "contingency_plan": body.contingency_plan,
+        "prepared_by": body.prepared_by,
+        "approved_by": body.approved_by,
+        "structural_integrity_report": body.structural_integrity_report,
         "updated_at": now_iso,
-        "updated_by": current_user.get("sub"),
-        "last_updated_by_name": current_user.get("full_name"),
-    }).execute()
+    }
+    # Include audit columns only if they exist in the table (added via patch)
+    try:
+        result = supabase.table("evacuation_centers").insert({
+            **payload,
+            "updated_by": current_user.get("sub"),
+            "last_updated_by_name": current_user.get("full_name"),
+        }).execute()
+    except Exception:
+        result = supabase.table("evacuation_centers").insert(payload).execute()
     return result.data[0]
 
 
@@ -291,15 +315,27 @@ def update_center(
 
     now_iso = datetime.now(timezone.utc).isoformat()
     updates["updated_at"] = now_iso
-    updates["updated_by"] = current_user.get("sub")
-    updates["last_updated_by_name"] = current_user.get("full_name")
 
-    result = (
-        supabase.table("evacuation_centers")
-        .update(updates)
-        .eq("id", center_id)
-        .execute()
-    )
+    # Try with audit columns first; fall back silently if they don't exist yet
+    try:
+        full_updates = {
+            **updates,
+            "updated_by": current_user.get("sub"),
+            "last_updated_by_name": current_user.get("full_name"),
+        }
+        result = (
+            supabase.table("evacuation_centers")
+            .update(full_updates)
+            .eq("id", center_id)
+            .execute()
+        )
+    except Exception:
+        result = (
+            supabase.table("evacuation_centers")
+            .update(updates)
+            .eq("id", center_id)
+            .execute()
+        )
     if not result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evacuation center not found")
     return result.data[0]

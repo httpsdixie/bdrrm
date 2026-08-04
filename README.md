@@ -24,7 +24,7 @@ A web-based Geographic Information System and emergency management dashboard for
 - **Emergency Directory** — centralized hotlines for public and officers
 - **User Accounts** — admin-only page to add, edit, reset passwords, and delete DRRM personnel accounts
 - **Public Map** — citizen-facing GIS view with weather widget and emergency hotlines
-- **Dashboard** — live stat cards, recent incident feed, risk analysis, quick actions
+- **Dashboard** — live stat cards, recent incident feed, quick actions
 
 ---
 
@@ -94,7 +94,6 @@ barangay-drrm/
 │       ├── dashboard_routes.py
 │       ├── map_routes.py
 │       ├── reports_routes.py
-│       ├── risk_routes.py
 │       └── directory_routes.py
 ├── frontend/
 │   ├── index.html          (login)
@@ -114,7 +113,7 @@ barangay-drrm/
 │           ├── auth.js
 │           ├── dashboard.js
 │           ├── incidents.js
-│           ├── evacuation.js
+│           ├── evacuation-monitoring.js
 │           ├── resources.js
 │           ├── map.js
 │           ├── map-manage.js

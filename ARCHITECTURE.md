@@ -47,7 +47,6 @@ Each route file strictly handles a single functional area:
 | `resource_routes.py` | Logistics & Inventory | Relief goods, equipment tracking, distribution |
 | `map_routes.py` | Spatial GIS Data | Layer endpoints, marker locations, hazard polygons |
 | `reports_routes.py` | Analytics & Reports | PDF/CSV generation, summary reports |
-| `risk_routes.py` | Risk Assessment | Risk matrix, vulnerability scores |
 | `directory_routes.py` | Emergency Contacts | Hotline directory, responder contacts |
 | `asset_routes.py` | Municipal Assets | Vehicles, heavy machinery, static assets |
 | `manual_fallback_routes.py` | Offline Sync Handling | Sync queue processing for offline operations |
@@ -70,7 +69,7 @@ The frontend follows a **Decoupled Controller Pattern**:
 - **Page Modules**:
   - `map.js`, `map-layers.js`, `map-manage.js`: Leaflet.js map rendering, dynamic overlays, and marker controls.
   - `dashboard.js`: Real-time telemetry, charts, and metrics update.
-  - `evacuation.js`: Evacuation center monitoring and occupant counters.
+  - `evacuation-monitoring.js`: Evacuation center monitoring and occupant counters.
   - `incidents.js`: Incident reporting form logic and dynamic table rendering.
   - `resources.js`: Inventory management and relief distribution tracking.
   - `reports.js`: Exporting analytics and filtered audit logs.

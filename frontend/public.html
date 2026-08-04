@@ -257,8 +257,8 @@
         </div>
       </div>
 
-      <button class="pub-badge pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" style="cursor:pointer;" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest danger.">
-        <i data-lucide="flame"></i> High-Risk Areas
+      <button class="pub-badge pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" style="cursor:pointer;" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest incident density.">
+        <i data-lucide="flame"></i> Incident Heatmap
       </button>
       <div class="pub-badge pub-badge-tooltip" data-tooltip="Connected to the official Barangay Linao DRRM database for safety updates.">
         <div class="dot"></div> System Online
@@ -281,7 +281,7 @@
           <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;">
-          <span id="active-layer-count" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">8/8</span>
+          <span id="active-layer-count" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">7/7</span>
           <i data-lucide="chevron-up" id="pub-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
         </div>
       </div>
@@ -304,7 +304,7 @@
 
         <!-- Section: Disaster Danger Areas -->
         <div class="layer-group-label">
-          <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Danger & Risk Areas
+          <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard Areas
         </div>
         <div class="pub-layer-row" title="Shows flood-prone areas across Barangay Linao">
           <div class="pub-layer-left"><span class="legend-poly" style="background:#0284c7;border:1px solid #38bdf8;"></span> Flood-Prone Areas</div>
@@ -313,10 +313,6 @@
         <div class="pub-layer-row" title="Shows landslide-susceptible slopes and hillsides">
           <div class="pub-layer-left"><span class="legend-poly" style="background:#f97316;border:1px solid #fb923c;"></span> Landslide Areas</div>
           <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('landslide',this)"><span class="toggle-slider"></span></label>
-        </div>
-        <div class="pub-layer-row" title="Shows combined high-risk disaster zones">
-          <div class="pub-layer-left"><span class="legend-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span> High-Risk Zones</div>
-          <label class="toggle-switch"><input type="checkbox" checked onchange="pubToggle('risk',this)"><span class="toggle-slider"></span></label>
         </div>
 
         <div class="layer-group-sep"></div>
@@ -683,7 +679,7 @@
     function toggleAllPubLayers() {
       pubAllVisible = !pubAllVisible;
       const btn = document.getElementById('toggle-all-pub-btn');
-      const keys = ['incidents', 'evac', 'flood', 'landslide', 'hospitals', 'stations', 'roads', 'risk'];
+      const keys = ['incidents', 'evac', 'flood', 'landslide', 'hospitals', 'stations', 'roads'];
       
       document.querySelectorAll('#pub-toggles-body input[type=checkbox]').forEach(cb => {
         cb.checked = pubAllVisible;

@@ -3,200 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resources — Barangay DRRM</title>
+  <title>Resource Tracking — Barangay DRRM</title>
   <link rel="stylesheet" href="assets/css/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="assets/js/sw-register.js"></script>
-  <!-- Export / Import Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    /* Category Pill Filter Bar Styling */
-    .category-pill-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      padding: 0.2rem 0.5rem 0.2rem 0.2rem;
-      margin-bottom: 1.25rem;
-      scrollbar-width: none;
+    /* ── Native date/number inputs — dark theme fix ── */
+    input[type="date"] {
+      appearance: none;
+      -webkit-appearance: none;
+      color-scheme: dark;
     }
-    .category-pill-bar::-webkit-scrollbar { display: none; }
-
-    .cat-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      height: 34px;
-      padding: 0 0.75rem;
-      border-radius: 99px;
-      border: 1px solid var(--border-color);
-      background: rgba(15, 23, 42, 0.6);
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      font-weight: 600;
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.5);
       cursor: pointer;
+    }
+
+    /* ── Modal body inputs — match incidents.html styling ── */
+    .modal-body input[type="text"],
+    .modal-body input[type="number"],
+    .modal-body input[type="date"],
+    .modal-body select,
+    .modal-body textarea {
+      background: rgba(15, 23, 42, 0.75) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 8px !important;
+      color: #f8fafc !important;
+      font-size: .84rem !important;
+      outline: none !important;
+      transition: all .18s ease !important;
+    }
+    .modal-body input[type="text"]::placeholder,
+    .modal-body input[type="number"]::placeholder,
+    .modal-body textarea::placeholder {
+      color: #64748b !important;
+      opacity: 1 !important;
+    }
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      border-color: #3b82f6 !important;
+      background: rgba(15, 23, 42, 0.95) !important;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35) !important;
+      color: #ffffff !important;
+    }
+
+    /* ── COA Table ── */
+    .coa-table th, .coa-table td {
+      font-size: .8rem;
+      padding: .55rem .75rem;
       white-space: nowrap;
-      flex-shrink: 0;
-      user-select: none;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
+    }
+    .coa-table th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .coa-table td.mono { font-family: monospace; font-size: .82rem; color: var(--primary); font-weight: 700; }
+    .coa-table td.money { text-align: right; font-variant-numeric: tabular-nums; }
+    .coa-table td.nbv   { text-align: right; font-variant-numeric: tabular-nums; color: #34d399; font-weight: 700; }
+    .coa-table tr:hover td { background: rgba(255,255,255,0.03); cursor: pointer; }
+
+    /* ── Status badges ── */
+    .badge-available  { background: rgba(34,197,94,.18);  color: #4ade80; border: 1px solid rgba(34,197,94,.35); }
+    .badge-maintenance{ background: rgba(56,189,248,.15); color: #38bdf8; border: 1px solid rgba(56,189,248,.35); }
+    .badge-damaged    { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.35); }
+    .badge-borrowed   { background: rgba(251,146,60,.15); color: #fb923c; border: 1px solid rgba(251,146,60,.35); }
+
+    /* ── Responsibility center pill ── */
+    .rc-pill {
+      display: inline-flex; align-items: center; gap: .35rem;
+      background: rgba(99,102,241,.12); color: #818cf8;
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 99px; padding: .18rem .7rem;
+      font-size: .72rem; font-weight: 700; white-space: nowrap;
     }
 
-    .cat-pill svg {
-      width: 14px;
-      height: 14px;
-      color: var(--text-muted);
-      transition: transform 0.2s ease, color 0.2s ease;
+    /* ── Status action buttons in detail ── */
+    .status-action-btn {
+      display: flex; align-items: center; gap: .6rem;
+      width: 100%; padding: .7rem 1rem;
+      border-radius: 10px; border: 1px solid var(--border-color);
+      background: rgba(15,23,42,.6); color: var(--text-main);
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      transition: all .2s ease; text-align: left;
     }
+    .status-action-btn:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); }
+    .status-action-btn.active-status { border-color: #3b82f6; background: rgba(59,130,246,.12); color: #60a5fa; }
+    .status-action-btn i { width: 18px; height: 18px; flex-shrink: 0; }
 
-    .cat-pill:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-main);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-    .cat-pill:hover svg { color: var(--text-main); }
+    /* ── Simple modal form ── */
+    .simple-modal { max-width: 560px; width: 100%; }
 
-    .cat-pill.active {
-      background: var(--primary);
-      color: #ffffff;
-      border-color: var(--primary);
-      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-    }
+    /* Modal overlay and base styling to match Incident Report look */
+    .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6,8,15,0.6); backdrop-filter: blur(6px); z-index: 3000; }
+    .modal-overlay.active { display: flex; }
 
-    .cat-pill.active svg { color: #ffffff; }
+    .modal { background: linear-gradient(180deg, rgba(6,8,15,0.85), rgba(7,10,20,0.85)); border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 40px rgba(2,6,23,0.6); border-radius: 14px; color: var(--text-main); display: flex; flex-direction: column; max-height: 90vh; }
 
-    /* Multi-Tag Badge List in Table / Cards */
-    .hazard-badge-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem;
-      align-items: center;
-      max-width: 260px;
-    }
+    .modal-header { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.03); display:flex; align-items:flex-start; flex-shrink: 0; }
+    .modal-header h3 { margin: 0; font-size: 1.05rem; color: var(--text-main); }
+    #asset-modal-sub { color: var(--text-muted); font-size: .9rem; }
 
-    .cat-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.22rem 0.6rem;
-      border-radius: 99px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      white-space: nowrap;
-      line-height: 1.2;
-      transition: all 0.2s ease;
-    }
-    .cat-badge svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .modal-body { padding: 18px; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,0.03); display:flex; justify-content:flex-end; gap:.6rem; flex-shrink: 0; }
 
-    /* Specific Tag Visual Palettes */
-    .cat-badge.cat-flooding     { background: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
-    .cat-badge.cat-typhoon      { background: rgba(6, 182, 212, 0.18); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); }
-    .cat-badge.cat-fire         { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
-    .cat-badge.cat-earthquake   { background: rgba(234, 179, 8, 0.18); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); }
-    .cat-badge.cat-landslide    { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.4); }
-    .cat-badge.cat-medical      { background: rgba(34, 197, 94, 0.18); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
-    .cat-badge.cat-power        { background: rgba(249, 115, 22, 0.18); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.35); }
-    .cat-badge.cat-rescue       { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
-    .cat-badge.cat-general      { background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
-    .cat-badge.cat-other        { background: rgba(148, 163, 184, 0.18); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35); }
+    .modal-close { background: transparent; border: 0; color: var(--text-muted); padding: .35rem; border-radius: 8px; cursor: pointer; }
 
-    /* Interactive Multi-Tag Picker in Modal */
-    .hazard-tag-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.4rem;
-    }
+    /* Buttons inside modal */
+    .modal .btn { min-width: 92px; padding: .5rem .9rem; border-radius: 10px; font-weight:700; }
+    .btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.04); color: var(--text-muted); }
+    .btn-success { background: linear-gradient(180deg, #10b981, #059669); border: 0; color: white; box-shadow: 0 8px 20px rgba(16,185,129,0.12); }
 
-    .tag-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: 99px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      border: 1px solid var(--border-color);
-      background: rgba(15, 23, 42, 0.7);
-      color: var(--text-muted);
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.2s ease;
-    }
-    .tag-chip svg { width: 13px; height: 13px; flex-shrink: 0; }
-    .tag-chip:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
-      border-color: rgba(255, 255, 255, 0.25);
-    }
-    .tag-chip.active {
-      background: rgba(59, 130, 246, 0.25);
-      color: #60a5fa;
-      border-color: #3b82f6;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-    }
-    .tag-chip.active svg { color: #60a5fa; }
 
-    .tag-remove-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      color: #fff;
-      font-size: 11px;
-      line-height: 1;
-      margin-left: 0.25rem;
-      cursor: pointer;
-    }
-    .tag-remove-btn:hover { background: rgba(239, 68, 68, 0.8); }
-
-    /* Spacious Modal & Step-by-Step Wizard Styles */
-    #resource-modal-overlay .modal,
-    #dispatch-modal-overlay .modal,
-    #maintenance-modal-overlay .modal {
+    /* Spacious Asset Modal & 2-Step Wizard Styles */
+    #asset-modal-overlay .modal {
       max-width: 820px !important;
       width: 92vw !important;
       background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 35px rgba(59, 130, 246, 0.2);
-    }
-
-    #resource-modal-overlay input[type="text"],
-    #resource-modal-overlay input[type="number"],
-    #resource-modal-overlay input[type="date"],
-    #resource-modal-overlay select,
-    #resource-modal-overlay textarea,
-    #dispatch-modal-overlay input[type="text"],
-    #dispatch-modal-overlay input[type="number"],
-    #dispatch-modal-overlay input[type="date"],
-    #dispatch-modal-overlay select,
-    #dispatch-modal-overlay textarea,
-    #maintenance-modal-overlay input[type="text"],
-    #maintenance-modal-overlay input[type="number"],
-    #maintenance-modal-overlay input[type="date"],
-    #maintenance-modal-overlay select,
-    #maintenance-modal-overlay textarea {
-      font-size: 0.92rem;
-      padding: 0.7rem 1rem;
-      border-radius: 8px;
-      min-height: 44px;
-    }
-    #resource-modal-overlay label,
-    #dispatch-modal-overlay label,
-    #maintenance-modal-overlay label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 0.35rem;
     }
 
     .wizard-progress-bar {
@@ -231,46 +156,47 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.85rem;
       font-weight: 700;
+      font-size: 0.85rem;
       transition: all 0.25s ease;
     }
 
     .wizard-step-item.active {
-      color: #60a5fa;
+      color: var(--primary, #3b82f6);
     }
     .wizard-step-item.active .wizard-step-circle {
-      background: #3b82f6;
-      border-color: #60a5fa;
+      background: var(--primary, #3b82f6);
+      border-color: var(--primary, #3b82f6);
       color: #ffffff;
       box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
     }
     .wizard-step-item.completed {
-      color: #4ade80;
+      color: #34d399;
     }
     .wizard-step-item.completed .wizard-step-circle {
-      background: rgba(34, 197, 94, 0.2);
-      border-color: #22c55e;
-      color: #4ade80;
+      background: rgba(52, 211, 153, 0.2);
+      border-color: #34d399;
+      color: #34d399;
     }
 
     .wizard-step-line {
       flex: 1;
       height: 2px;
       background: rgba(255, 255, 255, 0.1);
-      margin: 0 0.75rem;
+      margin: 0 1rem;
       transition: all 0.25s ease;
     }
     .wizard-step-line.active {
-      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      background: var(--primary, #3b82f6);
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
     }
 
     .wizard-step-pane {
       display: none;
-      animation: fadeInStep 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     .wizard-step-pane.active {
       display: block;
+      animation: fadeInStep 0.25s ease-in-out;
     }
 
     @keyframes fadeInStep {
@@ -279,8 +205,8 @@
     }
 
     .step-section-header {
-      margin-bottom: 1.1rem;
-      padding-bottom: 0.6rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .step-section-title {
@@ -297,59 +223,8 @@
       margin-top: 0.2rem;
     }
 
-    .asset-summary-card {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      margin-top: 1rem;
-      box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.05);
-    }
-
-    /* Export Dropdown */
-    .export-dropdown-wrap {
-      position: relative;
-    }
-    .export-dropdown-menu {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      min-width: 220px;
-      background: rgba(15, 23, 42, 0.98);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-      z-index: 200;
-      overflow: hidden;
-      animation: fadeInStep .15s ease forwards;
-    }
-    .export-dropdown-menu button {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-      width: 100%;
-      padding: .65rem 1rem;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      font-size: .84rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background .15s;
-      text-align: left;
-    }
-    .export-dropdown-menu button:hover { background: rgba(255,255,255,0.07); }
-    .export-dropdown-menu button i[data-lucide] { width: 15px; height: 15px; color: var(--primary); flex-shrink: 0; }
-    .export-dropdown-divider { height: 1px; background: rgba(255,255,255,0.08); margin: .25rem 0; }
-
-    /* Import Modal Preview Table */
-    .import-preview-table { width: 100%; border-collapse: collapse; font-size: .78rem; margin-top: .75rem; }
-    .import-preview-table th { background: rgba(59,130,246,0.15); color: #60a5fa; padding: .4rem .6rem; text-align: left; font-weight: 700; border-bottom: 1px solid rgba(59,130,246,0.25); white-space: nowrap; }
-    .import-preview-table td { padding: .38rem .6rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--text-main); }
-    .import-preview-table tr:hover td { background: rgba(255,255,255,0.03); }
-    .import-row-valid   td:first-child { border-left: 3px solid #22c55e; }
-    .import-row-invalid td:first-child { border-left: 3px solid #ef4444; }
-    .import-row-invalid td { color: #f87171; }
+    .modal-status-header { display: flex; align-items: center; gap: .65rem; }
+    .modal-status-header i { width: 22px; height: 22px; }
   </style>
 </head>
 <body>
@@ -375,127 +250,88 @@
       <div class="nav-section-label"><i data-lucide="shield-alert"></i> Field Operations</div>
       <a href="incidents.html"><i data-lucide="triangle-alert"></i> Incidents</a>
       <a href="evacuation.html"><i data-lucide="house"></i> Evacuation Centers</a>
-      <a href="resources.html" class="active"><i data-lucide="truck"></i> Resources</a>
+      <a href="resources.html" class="active"><i data-lucide="package"></i> Resources</a>
 
       <div class="nav-section-divider"></div>
 
       <div class="nav-section-label"><i data-lucide="settings-2"></i> Management</div>
       <a href="reports.html"><i data-lucide="file-bar-chart"></i> Reports</a>
-
       <a href="landing.html"><i data-lucide="globe"></i> Public Portal</a>
     </nav>
     <div class="sidebar-footer">
       <div>Barangay DRRM v1.0</div>
       <div style="font-size:.65rem;color:var(--text-muted);margin-top:.2rem;">
-        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showPrivacyPolicyModal()">Terms &amp; RA 10173 Privacy</span>
+        <span style="color:var(--primary);cursor:pointer;text-decoration:underline;" onclick="showPrivacyPolicyModal && showPrivacyPolicyModal()">Terms &amp; RA 10173 Privacy</span>
       </div>
     </div>
   </aside>
 
-  <!-- Main Content -->
+  <!-- Main -->
   <div class="main-content">
     <div class="topbar">
       <div class="topbar-left">
-        <h2>Resource Logistics</h2>
+        <h2>Resource Tracking</h2>
         <div class="dash-timestamp">
-          <span class="sync-item"><i data-lucide="truck"></i> Equipment Inventory &amp; COA Property Audit</span>
+          <span class="sync-item"><i data-lucide="package"></i> COA Property Inventory — Linao BDRRMC</span>
         </div>
       </div>
       <div class="user-info">
-
-
         <!-- Weather pill -->
         <div class="weather-pill-wrapper">
-          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather conditions &amp; forecast for Barangay Linao, Ormoc City">
+          <button class="weather-pill" onclick="toggleWeatherDropdown(event)" title="Real-time weather">
             <span id="weather-pill-emoji"><i data-lucide="cloud-sun"></i></span>
             <span id="weather-pill-temp">--°C</span>
             <span id="weather-pill-desc" class="skeleton skeleton-text" style="display:inline-block;min-width:65px;height:12px;vertical-align:middle;"></span>
           </button>
-
           <div class="weather-dropdown-card" id="weather-dropdown-card">
             <div class="weather-dropdown-header">
               <div>
                 <div class="weather-dropdown-title"><i data-lucide="map-pin" style="width:14px;height:14px;color:#60a5fa;display:inline;vertical-align:middle;margin-right:2px;"></i> Barangay Linao</div>
                 <div class="weather-dropdown-sub">PAGASA Telemetry · Ormoc Station</div>
               </div>
-              <button class="weather-refresh-btn" onclick="fetchWeatherData(true)" title="Refresh weather data">
-                <i data-lucide="refresh-cw" id="weather-refresh-icon"></i>
-              </button>
+              <button class="weather-refresh-btn" onclick="fetchWeatherData(true)"><i data-lucide="refresh-cw" id="weather-refresh-icon"></i></button>
             </div>
             <div class="weather-dropdown-body">
               <div class="weather-main-row">
                 <div class="weather-temp-lg" id="weather-card-temp">--°C</div>
                 <div class="weather-meta">
-                  <div class="weather-condition-text" id="weather-card-desc">Loading weather...</div>
+                  <div class="weather-condition-text" id="weather-card-desc">Loading...</div>
                   <div class="weather-meta-sub" id="weather-card-feels">Feels like --°C</div>
                 </div>
               </div>
               <div class="weather-grid">
-                <div class="weather-grid-item">
-                  <i data-lucide="wind"></i>
-                  <div>
-                    <span class="w-label">Wind</span>
-                    <strong id="weather-card-wind">-- km/h</strong>
-                  </div>
-                </div>
-                <div class="weather-grid-item">
-                  <i data-lucide="droplets"></i>
-                  <div>
-                    <span class="w-label">Humidity</span>
-                    <strong id="weather-card-humidity">--%</strong>
-                  </div>
-                </div>
-                <div class="weather-grid-item">
-                  <i data-lucide="cloud-rain"></i>
-                  <div>
-                    <span class="w-label">Rain Prob.</span>
-                    <strong id="weather-card-pop">--%</strong>
-                  </div>
-                </div>
-                <div class="weather-grid-item">
-                  <i data-lucide="eye"></i>
-                  <div>
-                    <span class="w-label">Visibility</span>
-                    <strong id="weather-card-vis">-- km</strong>
-                  </div>
-                </div>
-              </div>
-              <div class="weather-alert-banner" id="weather-card-alert" style="display:none;">
-                <i data-lucide="alert-triangle"></i>
-                <span id="weather-card-alert-text">No active weather warnings</span>
+                <div class="weather-grid-item"><i data-lucide="wind"></i><div><span class="w-label">Wind</span><strong id="weather-card-wind">-- km/h</strong></div></div>
+                <div class="weather-grid-item"><i data-lucide="droplets"></i><div><span class="w-label">Humidity</span><strong id="weather-card-humidity">--%</strong></div></div>
+                <div class="weather-grid-item"><i data-lucide="cloud-rain"></i><div><span class="w-label">Rain Prob.</span><strong id="weather-card-pop">--%</strong></div></div>
+                <div class="weather-grid-item"><i data-lucide="eye"></i><div><span class="w-label">Visibility</span><strong id="weather-card-vis">-- km</strong></div></div>
               </div>
             </div>
             <div class="weather-dropdown-footer">
               <span id="weather-card-updated">Updated: Just now</span>
-              <a href="https://bagong.pagasa.dost.gov.ph/" target="_blank" rel="noopener">PAGASA Radar &rarr;</a>
+              <a href="https://bagong.pagasa.dost.gov.ph/" target="_blank" rel="noopener">PAGASA →</a>
             </div>
           </div>
         </div>
 
-        <button class="btn-icon-sm" id="refresh-btn" onclick="loadResources(); loadDispatchLog(); if(document.getElementById('tab-logs').classList.contains('active')) loadResourceLogs();" title="Refresh">
+        <button class="btn-icon-sm" id="refresh-btn" onclick="loadResources()" title="Refresh">
           <i data-lucide="refresh-cw"></i>
         </button>
 
-        <!-- User Profile Dropdown Avatar -->
+        <!-- Profile -->
         <div class="user-profile-wrapper">
           <button class="user-avatar-btn" onclick="toggleProfileDropdown(event)" title="Account Profile">
             <i data-lucide="user"></i>
           </button>
-
           <div class="profile-dropdown-card" id="profile-dropdown-card">
             <div class="profile-dropdown-header">
-              <div class="profile-avatar-lg">
-                <i data-lucide="user"></i>
-              </div>
+              <div class="profile-avatar-lg"><i data-lucide="user"></i></div>
               <div class="profile-info-text">
                 <strong id="user-display-name">—</strong>
                 <div style="margin-top:.2rem;"><span id="user-role-badge" class="badge badge-blue">Admin</span></div>
               </div>
             </div>
             <div class="profile-dropdown-divider"></div>
-            <button class="profile-dropdown-item danger" onclick="logout()">
-              <i data-lucide="log-out"></i> Log Out
-            </button>
+            <button class="profile-dropdown-item danger" onclick="logout()"><i data-lucide="log-out"></i> Log Out</button>
           </div>
         </div>
       </div>
@@ -503,130 +339,89 @@
 
     <div class="page-body">
 
-      <!-- Summary -->
-      <div class="evac-summary" id="res-summary" style="margin-bottom:1.25rem;">
-          <div class="evac-summary-item" onclick="quickFilterStatus('')" style="cursor:pointer;" title="View All">
-            <i data-lucide="package" style="width:18px;height:18px;color:#60a5fa;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(96,165,250,0.5));"></i>
-            <div class="evac-summary-num blue" id="sum-total-items">—</div>
-            <div class="evac-summary-label">Total Items</div>
-          </div>
-          <div class="evac-summary-divider"></div>
-          <div class="evac-summary-item" onclick="quickFilterStatus('available')" style="cursor:pointer;" title="Filter Available">
-            <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(74,222,128,0.5));"></i>
-            <div class="evac-summary-num green" id="sum-available-items">—</div>
-            <div class="evac-summary-label">Available</div>
-          </div>
-          <div class="evac-summary-divider"></div>
-          <div class="evac-summary-item" onclick="quickFilterStatus('deployed')" style="cursor:pointer;" title="Filter Deployed">
-            <i data-lucide="send" style="width:18px;height:18px;color:#fb923c;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(251,146,60,0.5));"></i>
-            <div class="evac-summary-num orange" id="sum-deployed-items">—</div>
-            <div class="evac-summary-label">Deployed</div>
-          </div>
-          <div class="evac-summary-divider"></div>
-          <div class="evac-summary-item" onclick="quickFilterStatus('maintenance')" style="cursor:pointer;" title="Filter Maintenance">
-            <i data-lucide="wrench" style="width:18px;height:18px;color:#38bdf8;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(56,189,248,0.5));"></i>
-            <div class="evac-summary-num" style="color:#38bdf8;text-shadow:0 0 16px rgba(56,189,248,0.35);" id="sum-maintenance-items">—</div>
-            <div class="evac-summary-label">Maintenance</div>
-          </div>
-          <div class="evac-summary-divider"></div>
-          <div class="evac-summary-item" style="cursor:pointer;" onclick="quickFilterStatus('damaged')" title="Filter Damaged">
-            <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#ef4444;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(239,68,68,0.5));"></i>
-            <div class="evac-summary-num red" id="sum-damaged-items">—</div>
-            <div class="evac-summary-label">Damaged</div>
-          </div>
-          <div class="evac-summary-divider"></div>
-          <div class="evac-summary-item" style="cursor:pointer;" onclick="quickFilterStatus('unavailable')" title="Filter Unavailable">
-            <i data-lucide="slash" style="width:18px;height:18px;color:#f43f5e;margin-bottom:0.25rem;filter:drop-shadow(0 0 6px rgba(244,63,94,0.5));"></i>
-            <div class="evac-summary-num red" id="sum-unavailable-items">—</div>
-            <div class="evac-summary-label">Unavailable</div>
-          </div>
+      <!-- Summary cards -->
+      <div class="evac-summary" style="margin-bottom:1.25rem;">
+        <div class="evac-summary-item" onclick="quickFilter('')" style="cursor:pointer;" title="All">
+          <i data-lucide="package" style="width:18px;height:18px;color:#60a5fa;margin-bottom:.25rem;filter:drop-shadow(0 0 6px rgba(96,165,250,.5));"></i>
+          <div class="evac-summary-num blue" id="sum-total">—</div>
+          <div class="evac-summary-label">Total Assets</div>
         </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilter('available')" style="cursor:pointer;" title="Available">
+          <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#4ade80;margin-bottom:.25rem;filter:drop-shadow(0 0 6px rgba(74,222,128,.5));"></i>
+          <div class="evac-summary-num green" id="sum-available">—</div>
+          <div class="evac-summary-label">Available</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilter('maintenance')" style="cursor:pointer;" title="Maintenance">
+          <i data-lucide="wrench" style="width:18px;height:18px;color:#38bdf8;margin-bottom:.25rem;filter:drop-shadow(0 0 6px rgba(56,189,248,.5));"></i>
+          <div class="evac-summary-num" style="color:#38bdf8;" id="sum-maintenance">—</div>
+          <div class="evac-summary-label">Maintenance</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilter('damaged')" style="cursor:pointer;" title="Damaged / For Repair">
+          <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f87171;margin-bottom:.25rem;filter:drop-shadow(0 0 6px rgba(239,68,68,.5));"></i>
+          <div class="evac-summary-num red" id="sum-damaged">—</div>
+          <div class="evac-summary-label">Damaged</div>
+        </div>
+        <div class="evac-summary-divider"></div>
+        <div class="evac-summary-item" onclick="quickFilter('borrowed')" style="cursor:pointer;" title="Borrowed / Lent Out">
+          <i data-lucide="arrow-right-left" style="width:18px;height:18px;color:#fb923c;margin-bottom:.25rem;filter:drop-shadow(0 0 6px rgba(251,146,60,.5));"></i>
+          <div class="evac-summary-num orange" id="sum-borrowed">—</div>
+          <div class="evac-summary-label">Borrowed</div>
+        </div>
+      </div>
 
-      <!-- Header Bar: Tabs + Add Resource (matches incidents layout) -->
+      <!-- Header Bar with Tabs & Add Asset -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
         <div class="tab-bar" style="margin-bottom:0;">
-          <button class="tab-btn active" id="tab-inventory" onclick="switchTab('inventory')">
-            <i data-lucide="package"></i> Inventory
+          <button class="tab-btn active" id="tab-assets" onclick="switchResourceTab('assets')">
+            <i data-lucide="package"></i> All Assets
           </button>
-          <button class="tab-btn" id="tab-dispatch" onclick="switchTab('dispatch')" style="display:none;">
-            <i data-lucide="send"></i> Dispatch Log
-          </button>
-          <button class="tab-btn" id="tab-maintenance" onclick="switchTab('maintenance')" style="display:none;">
-            <i data-lucide="wrench"></i> Maintenance
-          </button>
-          <button class="tab-btn" id="tab-logs" onclick="switchTab('logs')" style="display:none;">
+          <button class="tab-btn" id="tab-logs" onclick="switchResourceTab('logs')">
             <i data-lucide="clock"></i> Activity Log
           </button>
         </div>
-        <button class="btn btn-primary" id="btn-add-resource" onclick="openAddResourceModal()">
+        <button class="btn btn-primary" onclick="openAddModal()">
           <i data-lucide="plus"></i> Add Resource
         </button>
       </div>
 
-      <!-- ===== INVENTORY TAB ===== -->
-      <div id="pane-inventory">
-
-        <!-- Filter Bar (matches incidents filter-bar-card style) -->
-        <div class="filter-bar-card">
-          <div class="search-wrap">
-            <i data-lucide="search"></i>
-            <input type="text" id="res-search" placeholder="Search resources or emergency tags..." oninput="filterResources()" />
-          </div>
-          <div class="filter-group">
-            <select id="res-filter-hazard" onchange="filterResources()" class="filter-select">
-              <option value="">Hazard: All</option>
-              <option value="flooding">Flooding</option>
-              <option value="typhoon">Typhoon</option>
-              <option value="fire">Fire Suppression</option>
-              <option value="earthquake">Earthquake</option>
-              <option value="landslide">Landslide</option>
-              <option value="medical">Medical Emergency</option>
-              <option value="power_outage">Power Outage</option>
-              <option value="search_rescue">Search &amp; Rescue</option>
-              <option value="general_emergency">General Response</option>
-            </select>
-            <select id="res-filter-ownership" onchange="filterResources()" class="filter-select">
-              <option value="">Tier: All</option>
-              <option value="barangay">Barangay Inventory</option>
-              <option value="private">Private Sector</option>
-            </select>
-            <select id="res-filter-type" onchange="filterResources()" class="filter-select">
-              <option value="">Type: All</option>
-              <option value="rescue_boat">Rescue Boat</option>
-              <option value="ambulance">Ambulance</option>
-              <option value="fire_truck">Fire Truck</option>
-              <option value="vehicle">Vehicle / Patrol</option>
-              <option value="medical_kit">Medical Kit</option>
-              <option value="food_pack">Food Pack</option>
-              <option value="tent">Tent</option>
-              <option value="fuel">Fuel</option>
-              <option value="other">Other</option>
-            </select>
-            <select id="res-filter-status" onchange="filterResources()" class="filter-select">
-              <option value="">Status: All</option>
-              <option value="available">Available</option>
-              <option value="deployed">Deployed</option>
-              <option value="maintenance">Under Maintenance</option>
-              <option value="damaged">Damaged</option>
-              <option value="unavailable">Unavailable</option>
-            </select>
-            <button class="btn btn-outline" id="btn-clear-filters" onclick="clearResourceFilters()" style="display:none;">
-              <i data-lucide="rotate-ccw"></i> Reset
-            </button>
+      <div id="pane-assets">
+        <!-- Toolbar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
+            <div class="search-wrap">
+              <i data-lucide="search"></i>
+              <input type="text" id="res-search" placeholder="Search by property no. or description…" oninput="filterResources()" />
+            </div>
+            <div class="filter-group">
+              <select id="res-filter-status" onchange="filterResources()" class="filter-select">
+                <option value="">Status: All</option>
+                <option value="available">Available</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="damaged">Damaged</option>
+                <option value="borrowed">Borrowed</option>
+              </select>
+              <button class="btn btn-outline" id="btn-clear-filters" onclick="clearFilters()" style="display:none;">
+                <i data-lucide="rotate-ccw"></i> Reset
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Table -->
+        <!-- COA Table -->
         <div class="table-card">
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table coa-table">
               <thead>
                 <tr>
-                  <th style="min-width:240px;">Resource Equipment</th>
-                  <th style="width:140px;">Ownership</th>
-                  <th style="width:170px;">Available / Total</th>
+                  <th style="min-width:140px;">Property No.</th>
+                  <th style="min-width:260px;">Description</th>
+                  <th style="width:80px;text-align:center;">Est. Life</th>
+                  <th style="width:150px;">Resp. Center</th>
                   <th style="width:140px;">Status</th>
-                  <th style="width:120px;text-align:right;">Actions</th>
+                  <th style="width:80px;text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="resources-tbody"></tbody>
@@ -637,1132 +432,320 @@
             <div class="pagination-controls">
               <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-                <select id="res-page-size" onchange="changeResPageSize(this.value)" class="pagination-select">
+                <select id="res-page-size" onchange="changePageSize(this.value)" class="pagination-select">
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
                   <option value="50">50</option>
                 </select>
               </div>
-              <button class="page-btn" id="res-btn-prev" onclick="prevResPage()"><i data-lucide="chevron-left"></i></button>
+              <button class="page-btn" id="res-btn-prev" onclick="prevPage()"><i data-lucide="chevron-left"></i></button>
               <div id="res-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="res-btn-next" onclick="nextResPage()"><i data-lucide="chevron-right"></i></button>
+              <button class="page-btn" id="res-btn-next" onclick="nextPage()"><i data-lucide="chevron-right"></i></button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ===== DISPATCH LOG TAB ===== -->
-      <div id="pane-dispatch" style="display:none;">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
-          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
-            <div class="search-wrap">
-              <i data-lucide="search"></i>
-              <input type="text" id="dispatch-search" placeholder="Search ticket ID, borrower, equipment..." oninput="filterDispatch()" />
-            </div>
-            <div class="filter-group">
-              <select id="dispatch-filter-status" onchange="filterDispatch()" class="filter-select">
-                <option value="">Status: All</option>
-                <option value="out">Out</option>
-                <option value="returned">Returned</option>
-              </select>
-              <select id="dispatch-filter-date" onchange="handleDispatchDatePresetChange()" class="filter-select">
-                <option value="">Date: All Time</option>
-                <option value="today">Today</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="custom">Custom Range...</option>
-              </select>
-              <input type="hidden" id="dispatch-date-from" />
-              <input type="hidden" id="dispatch-date-to" />
-              <button class="btn btn-outline" id="dispatch-btn-clear" onclick="clearDispatchFilters()" style="display:none;">
-                <i data-lucide="rotate-ccw"></i> Reset
-              </button>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="openDispatchModal()" style="flex-shrink:0;height:42px;">
-            <i data-lucide="clipboard-list"></i> Issue Dispatch Ticket
-          </button>
-        </div>
-
-        <div class="table-card">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:140px;">Ticket ID</th>
-                  <th style="min-width:220px;">Equipment</th>
-                  <th style="min-width:180px;">Borrower / Recipient</th>
-                  <th style="width:180px;">Status &amp; Return</th>
-                  <th style="width:120px;text-align:right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="dispatch-tbody"></tbody>
-            </table>
-          </div>
-          <div class="table-pagination" id="dispatch-pagination" style="display:none;">
-            <div class="pagination-info" id="dispatch-pagination-info">Showing 0 of 0 entries</div>
-            <div class="pagination-controls">
-              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
-                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-                <select id="dispatch-page-size" onchange="changeDispatchPageSize(this.value)" class="pagination-select">
-                  <option value="10" selected>10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                </select>
-              </div>
-              <button class="page-btn" id="dispatch-btn-prev" onclick="prevDispatchPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="dispatch-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="dispatch-btn-next" onclick="nextDispatchPage()"><i data-lucide="chevron-right"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== MAINTENANCE TAB ===== -->
-      <div id="pane-maintenance" style="display:none;">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
-          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
-            <div class="search-wrap">
-              <i data-lucide="search"></i>
-              <input type="text" id="maint-search" placeholder="Search item, location, technician..." oninput="filterMaintenance()" />
-            </div>
-            <div class="filter-group">
-              <select id="maint-filter-status" onchange="filterMaintenance()" class="filter-select">
-                <option value="">Status: All</option>
-                <option value="maintenance">Under Maintenance</option>
-                <option value="damaged">Damaged</option>
-                <option value="unavailable">Unavailable</option>
-                <option value="available">Resolved / Available</option>
-              </select>
-              <select id="maint-filter-type" onchange="filterMaintenance()" class="filter-select">
-                <option value="">Type: All</option>
-                <option value="maintenance">Maintenance / Repair</option>
-                <option value="damage">Damage Report</option>
-                <option value="inspection">Inspection</option>
-                <option value="unavailable">Out of Service</option>
-              </select>
-              <button class="btn btn-outline" id="maint-btn-clear" onclick="clearMaintenanceFilters()" style="display:none;">
-                <i data-lucide="rotate-ccw"></i> Reset
-              </button>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="openMaintenanceTicketModal()" style="flex-shrink:0;height:42px;">
-            <i data-lucide="plus-circle"></i> Log Maintenance
-          </button>
-        </div>
-
-        <div class="table-card">
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:140px;">Ticket ID</th>
-                  <th style="min-width:240px;">Equipment</th>
-                  <th style="width:140px;">Issue Type</th>
-                  <th style="width:180px;">Status</th>
-                  <th style="width:120px;text-align:right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="maintenance-tbody"></tbody>
-            </table>
-          </div>
-          <div class="table-pagination" id="maint-pagination" style="display:none;">
-            <div class="pagination-info" id="maint-pagination-info">Showing 0 of 0 entries</div>
-            <div class="pagination-controls">
-              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
-                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-                <select id="maint-page-size" onchange="changeMaintPageSize(this.value)" class="pagination-select">
-                  <option value="10" selected>10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                </select>
-              </div>
-              <button class="page-btn" id="maint-btn-prev" onclick="prevMaintPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="maint-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="maint-btn-next" onclick="nextMaintPage()"><i data-lucide="chevron-right"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== ACTIVITY LOG TAB ===== -->
       <div id="pane-logs" style="display:none;">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
-          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
-            <div class="search-wrap">
-              <i data-lucide="search"></i>
-              <input type="text" id="log-search" placeholder="Search activity logs or resource..." oninput="filterLogs()" />
-            </div>
-            <div class="filter-group">
-              <select id="log-filter-event" onchange="filterLogs()" class="filter-select">
-                <option value="">Event: All</option>
-                <option value="added">Added</option>
-                <option value="restocked">Restocked</option>
-                <option value="dispatched">Dispatched</option>
-                <option value="returned">Returned</option>
-                <option value="status_changed">Status Changed</option>
-                <option value="archived">Archived</option>
-              </select>
-              <select id="log-filter-type" onchange="filterLogs()" class="filter-select">
-                <option value="">Type: All</option>
-                <option value="rescue_boat">Rescue Boat</option>
-                <option value="ambulance">Ambulance</option>
-                <option value="fire_truck">Fire Truck</option>
-                <option value="vehicle">Vehicle / Patrol</option>
-                <option value="medical_kit">Medical Kit</option>
-                <option value="food_pack">Food Pack</option>
-                <option value="tent">Tent</option>
-                <option value="fuel">Fuel</option>
-                <option value="other">Other</option>
-              </select>
-              <select id="log-date-preset" onchange="handleLogDatePresetChange()" class="filter-select">
-                <option value="all" selected>Date: All Time</option>
-                <option value="today">Today</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="custom">Custom Range...</option>
-              </select>
-              <input type="hidden" id="log-date-from" />
-              <input type="hidden" id="log-date-to" />
-              <button class="btn btn-outline" id="btn-clear-log-filters" onclick="clearLogFilters()" style="display:none;">
-                <i data-lucide="rotate-ccw"></i> Reset
-              </button>
-            </div>
+        <div class="filter-bar-card" style="margin-bottom:1rem;">
+          <div class="search-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="res-log-search" placeholder="Search activity logs…" oninput="filterResourceLogs()" />
           </div>
-          <button class="btn btn-ghost" onclick="printResourceLogs()" style="flex-shrink:0;height:42px;">
-            <i data-lucide="printer"></i> Print
-          </button>
         </div>
-
         <div class="table-card">
           <div class="table-responsive">
-            <table class="data-table" id="log-table">
+            <table class="data-table" style="width:100%;font-size:.85rem;border-collapse:collapse;">
               <thead>
                 <tr>
-                  <th style="width:170px;">Date &amp; Time</th>
-                  <th style="min-width:220px;">Resource Item</th>
-                  <th style="width:160px;">Event</th>
-                  <th style="min-width:160px;">Performed By</th>
+                  <th style="min-width:160px;">Time</th>
+                  <th style="min-width:180px;">Resource</th>
+                  <th style="min-width:140px;">Event</th>
+                  <th>Description</th>
+                  <th style="min-width:140px;">Performed By</th>
                 </tr>
               </thead>
-              <tbody id="logs-tbody"></tbody>
-                  </td>
-                </tr>
-            </tbody>
-          </table>
+              <tbody id="resource-logs-tbody"></tbody>
+            </table>
+          </div>
         </div>
-        <div class="table-pagination" id="log-pagination" style="display:none;">
-            <div class="pagination-info" id="log-pagination-info">Showing 0 of 0 entries</div>
-            <div class="pagination-controls">
-              <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
-                <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-                <select id="log-page-size" onchange="changeLogPageSize(this.value)" class="pagination-select">
-                  <option value="25" selected>25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
+      </div>
+
+      <!-- Modal: Resource Activity Log Detail -->
+      <div class="modal-overlay" id="res-log-detail-modal-overlay" onclick="closeResourceLogDetailModalOutside(event)" style="z-index:3000;">
+        <div class="modal" style="max-width:560px; border-radius:var(--radius-lg); overflow:hidden;">
+          <div class="modal-header" style="padding:1.25rem 1.5rem; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:.75rem;">
+              <div class="brand-icon" style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15)); border:1px solid rgba(59,130,246,0.4); display:flex; align-items:center; justify-content:center; color:#60a5fa;">
+                <i data-lucide="history" style="width:20px;height:20px;"></i>
               </div>
-              <button class="page-btn" id="log-btn-prev" onclick="prevLogPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="log-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="log-btn-next" onclick="nextLogPage()"><i data-lucide="chevron-right"></i></button>
+              <div>
+                <h3 style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin:0;">Activity Log Record</h3>
+                <div style="font-size:.75rem; color:var(--text-muted); margin-top:.1rem;">Resource lifecycle audit movement detail</div>
+              </div>
             </div>
+            <button class="modal-close" onclick="closeResourceLogDetailModal()"><i data-lucide="x"></i></button>
+          </div>
+          <div class="modal-body" id="res-log-modal-body" style="font-size:.88rem; padding:1.5rem; max-height:75vh; overflow-y:auto;">
           </div>
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+</div><!-- /layout -->
 
-<!-- ===== Add/Edit Resource Wizard Modal ===== -->
-<div class="modal-overlay" id="resource-modal-overlay" onclick="closeResourceModalOutside(event)">
-  <div class="modal" style="max-width:920px;width:92vw;padding:0;overflow:hidden;border-radius:var(--radius-lg);">
 
-    <!-- Modal Header -->
-    <div class="modal-header" style="padding:1.25rem 1.5rem 1rem;background:var(--bg-card);border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <h3 id="resource-modal-title" style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.15rem;color:var(--text-main);">
-          <i data-lucide="package" style="color:var(--primary);width:22px;height:22px;"></i> Add Resource
-        </h3>
-        <p style="margin:.25rem 0 0;font-size:.78rem;color:var(--text-muted);">COA Asset Entry — simplified form</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:.6rem;">
-        <button type="button" class="btn btn-outline-sm" onclick="autoFillResourceDemoData()" title="Quick auto-populate demo resource data" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
-          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
-        </button>
-        <button class="modal-close" onclick="closeResourceModal()" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:.4rem;">
-          <i data-lucide="x" style="width:20px;height:20px;"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Stepper removed: simplified single-step COA form -->
-
-    <div class="modal-body" style="padding:1.5rem 1.75rem;max-height:65vh;overflow-y:auto;">
-      <form id="resource-form" novalidate onsubmit="return false;">
-        <input type="hidden" id="r-id" />
-
-        <!-- Simplified COA-focused Resource Form -->
-        <div class="step-section-header" style="margin-bottom:1rem;padding-bottom:0.35rem;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div class="step-section-title">
-            <i data-lucide="building-2" style="color:var(--primary);"></i> COA Asset Entry
-          </div>
-          <div class="step-section-desc">Enter COA-compliant asset details below.</div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label>Barangay Property Number <span class="required">*</span></label>
-          <div style="display:flex;gap:.4rem;align-items:center;">
-            <input type="text" id="r-property-code" placeholder="BRG-2024-0001"
-              style="background:rgba(15,23,42,0.8);color:var(--primary);font-family:monospace;font-weight:700;letter-spacing:.04em;flex:1;" oninput="updateAssetSummaryPreview()" />
-            <button type="button" class="btn btn-ghost" onclick="autoGenResourceCode()" title="Generate New Property Code" style="padding:.5rem .75rem;font-size:.78rem;display:flex;align-items:center;gap:.35rem;white-space:nowrap;">
-              <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> Auto-Gen
-            </button>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label>Description <span class="required">*</span></label>
-          <textarea id="r-name" rows="2" placeholder="Brief description of the asset (this will be used as the resource title)" required oninput="updateAssetSummaryPreview()"></textarea>
-        </div>
-
-        <div class="form-row" style="gap:1rem;margin-bottom:1rem;">
-          <div class="form-group">
-            <label>Acquisition Date</label>
-            <input type="date" id="r-acq-date" onchange="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
-          </div>
-          <div class="form-group">
-            <label>Estimated Life (Years)</label>
-            <input type="number" id="r-est-life" min="1" max="50" value="5" placeholder="5" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
-          </div>
-        </div>
-
-        <div class="form-row" style="gap:1rem;margin-bottom:1rem;align-items:end;">
-          <div class="form-group" style="flex:1;">
-            <label>Responsibility Center</label>
-            <!-- Show fixed responsibility center in a plain text box (not a dropdown) -->
-            <input type="text" id="r-resp-center" value="Linao" readonly oninput="updateAssetSummaryPreview()" style="cursor:text;" />
-          </div>
-
-          <div class="form-group" style="flex:1;">
-            <label>Acquisition Cost (₱)</label>
-            <input type="number" id="r-acq-cost" min="0" step="0.01" placeholder="e.g. 150000" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview();" />
-          </div>
-        </div>
-
-        <div class="form-row" style="gap:1rem;margin-bottom:1rem;align-items:end;">
-          <div class="form-group" style="flex:1;">
-            <label>Accu. Depreciation (₱)</label>
-            <input type="number" id="r-acc-dep" min="0" step="0.01" placeholder="Enter accumulated depreciation" oninput="calculateDepreciationPreview(); updateAssetSummaryPreview()" />
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>Net Book Value (₱)</label>
-            <input type="number" id="r-net-book" readonly style="background:rgba(30,41,59,0.7);color:#4ade80;font-weight:700;" placeholder="₱0.00" />
-          </div>
-        </div>
-
-        <div class="asset-summary-card" id="asset-summary-card" style="margin-top:1rem;background:rgba(15,23,42,0.8);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:1rem;">
-          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
-            <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> COA Asset Summary Review
-          </div>
-          <div id="summary-card-content" style="font-size:.85rem;color:var(--text-main);">
-            <!-- Rendered live by JS -->
-          </div>
-        </div>
-
-        <p class="error-msg" id="resource-error" style="margin-top:1rem;display:none;"></p>
-      </form>
-    </div>
-
-    <!-- Simplified Footer: only Save and Cancel for the single-step form -->
-    <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:flex-start; align-items:center; gap:.75rem; background:rgba(15, 23, 42, 0.9);">
-      <div style="display:flex;gap:.75rem;">
-        <button type="button" class="btn btn-ghost" onclick="closeResourceModal()">Cancel</button>
-        <button type="button" class="btn btn-success" id="resource-submit-btn" onclick="submitResource()">
-          <i data-lucide="check-circle"></i> <span id="resource-submit-label">Save Resource</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Equipment Borrowing Ticket (Dispatch Wizard Modal) ===== -->
-<div class="modal-overlay" id="dispatch-modal-overlay" onclick="closeDispatchModalOutside(event)">
+<!-- ═══════════════════════════════════════════════════════════
+     ADD / EDIT ASSET MODAL (Spacious 2-Step Wizard)
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="asset-modal-overlay" onclick="closeAssetModalOutside(event)">
   <div class="modal">
-    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="modal-header" style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <h3 style="margin:0;display:flex;align-items:center;gap:.6rem;">
-          <i data-lucide="clipboard-list" style="color:var(--primary);width:22px;height:22px;"></i> Equipment Borrowing Ticket
+        <h3 id="asset-modal-title" style="margin:0;display:flex;align-items:center;gap:.6rem;font-size:1.1rem;">
+          <i data-lucide="package-plus" style="color:var(--primary);width:22px;height:22px;"></i> Add Resource
         </h3>
-        <div style="margin-top:.35rem;display:flex;align-items:center;gap:.5rem;">
-          <span style="font-size:.78rem;color:var(--text-muted);">Ticket ID:</span>
-          <span style="font-family:monospace;font-weight:800;font-size:.85rem;color:var(--primary);
-            background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);
-            padding:.15rem .6rem;border-radius:6px;letter-spacing:.04em;">
-            Auto-assigned on submit
-          </span>
-        </div>
+        <div id="asset-modal-sub" class="small text-muted" style="margin-top:.25rem;">Record a new resource for barangay COA inventory. Fields marked <span class="required" style="color:#ef4444;">*</span> are required.</div>
       </div>
-      <div style="display:flex;align-items:center;gap:.6rem;">
-        <button type="button" class="btn btn-outline-sm" onclick="autoFillDispatchDemoData()" title="Quick auto-populate sample dispatch ticket" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
-          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <button type="button" id="btn-autofill-sample" onclick="autofillSampleData()" title="Fill form with sample data" style="display:none;padding:.4rem .75rem;font-size:.78rem;border-radius:7px;border:1px dashed rgba(99,102,241,.5);background:rgba(99,102,241,.1);color:#818cf8;cursor:pointer;display:flex;align-items:center;gap:.35rem;white-space:nowrap;">
+          <i data-lucide="wand-2" style="width:13px;height:13px;"></i> Sample Data
         </button>
-        <button class="modal-close" onclick="closeDispatchModal()"><i data-lucide="x"></i></button>
+        <button class="modal-close" onclick="closeAssetModal()"><i data-lucide="x"></i></button>
       </div>
     </div>
 
     <div class="modal-body" style="padding: 1.5rem 1.75rem;">
       <!-- Step Progress Bar -->
-      <div class="wizard-progress-bar" style="margin-bottom: 1.25rem;">
-        <div class="wizard-step-item active" id="dispatch-wizard-indicator-1" onclick="goToDispatchWizardStep(1)">
+      <div class="wizard-progress-bar">
+        <div class="wizard-step-item active" id="asset-wizard-indicator-1" onclick="goToAssetWizardStep(1)">
           <div class="wizard-step-circle">1</div>
-          <span>Borrower & Resource</span>
+          <span>Property Specs &amp; Details</span>
         </div>
-        <div class="wizard-step-line" id="dispatch-wizard-line-1"></div>
-        <div class="wizard-step-item" id="dispatch-wizard-indicator-2" onclick="goToDispatchWizardStep(2)">
+        <div class="wizard-step-line" id="asset-wizard-line-1"></div>
+        <div class="wizard-step-item" id="asset-wizard-indicator-2" onclick="goToAssetWizardStep(2)">
           <div class="wizard-step-circle">2</div>
-          <span>Operation & Confirmation</span>
+          <span>COA Valuation &amp; Inventory</span>
         </div>
       </div>
 
-      <form id="dispatch-form" novalidate onsubmit="return false;">
+      <form id="asset-form" novalidate onsubmit="return false;">
+        <input type="hidden" id="a-id" />
 
-        <!-- STEP 1: Borrower & Resource Selection -->
-        <div class="wizard-step-pane active" id="dispatch-pane-1">
+        <!-- STEP 1: Property Identification & Specs -->
+        <div class="wizard-step-pane active" id="asset-pane-1">
           <div class="step-section-header">
             <div class="step-section-title">
-              <i data-lucide="user-check" style="color:var(--primary);"></i> Step 1 of 2: Borrower & Equipment Details
+              <i data-lucide="tag" style="color:var(--primary);"></i> Step 1 of 2: Property Identification &amp; Specifications
             </div>
-            <div class="step-section-desc">Specify who is borrowing the equipment, select inventory items, and count.</div>
+            <div class="step-section-desc">Assign official property code, item description, acquisition date, and expected service life.</div>
           </div>
 
-          <!-- Structured Borrower Name Inputs (First, Middle, Last, Suffix) + Contact -->
-          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:1rem 1.15rem; margin-bottom:1.25rem;">
-            <div style="font-size:.78rem; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem;">
-              <i data-lucide="user-check" style="width:15px; height:15px;"></i> Borrower Name &amp; Identification
-            </div>
-            <div class="form-row" style="flex-wrap:wrap; gap:.5rem; margin-bottom:.75rem;">
-              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
-                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">First Name <span class="required" style="color:var(--danger);">*</span></label>
-                <input type="text" id="d-borrower-first-name" placeholder="First name" required oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
-              </div>
-              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
-                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Middle Name</label>
-                <input type="text" id="d-borrower-middle-name" placeholder="Middle name" oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
-              </div>
-              <div class="form-group" style="flex:1; min-width:130px; margin:0;">
-                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Last Name <span class="required" style="color:var(--danger);">*</span></label>
-                <input type="text" id="d-borrower-last-name" placeholder="Last name" required oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
-              </div>
-              <div class="form-group" style="flex:0 0 85px; min-width:75px; margin:0;">
-                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Suffix</label>
-                <input type="text" id="d-borrower-suffix" placeholder="Jr./III" oninput="syncBorrowerFullName(); updateDispatchTicketPreview();" />
-              </div>
-            </div>
-            <div class="form-row" style="gap:1rem; margin:0;">
-              <div class="form-group" style="flex:1; margin:0;">
-                <label style="font-size:.75rem; font-weight:600; color:#e2e8f0;">Contact Number</label>
-                <input type="text" id="d-borrower-contact" placeholder="e.g. 0917-555-0199" oninput="updateDispatchTicketPreview()" />
-              </div>
-            </div>
-            <input type="hidden" id="d-borrower-name" />
-          </div>
-
+          <!-- Property Number -->
           <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Deployment Destination <span class="required">*</span></label>
-            <input type="text" id="d-destination" placeholder="e.g. Sitio 2 Riverbank, Purok 4 Evacuation Center" required oninput="updateDispatchTicketPreview()" />
+            <label for="a-property-code" style="font-size:.88rem;font-weight:700;">Property Number <span class="required" style="color:#ef4444;">*</span></label>
+            <div style="display:flex;gap:.5rem;align-items:center;">
+              <input type="text" id="a-property-code" name="property_code" placeholder="BRG-2026-0001"
+                aria-describedby="propHelp" style="font-family:monospace;font-weight:700;color:var(--primary);flex:1;" required oninput="updateAssetCardPreview()" />
+              <button type="button" id="btn-auto-gen-code" class="btn btn-outline" onclick="autoGenCode()" aria-label="Generate next property number" style="padding:.65rem .85rem;font-size:.82rem;display:flex;align-items:center;gap:.4rem;white-space:nowrap;border-radius:8px;">
+                <i data-lucide="sparkles" style="width:14px;height:14px;color:var(--primary);"></i> Auto Generate
+              </button>
+            </div>
+            <div id="propHelp" class="form-text" style="color:var(--text-muted);font-size:.8rem;margin-top:.35rem;">Leave blank to auto-generate, or click Auto Generate for next sequential property code.</div>
           </div>
 
+          <!-- Description -->
           <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Resource Equipment <span class="required">*</span></label>
-            <select id="d-resource" onchange="updateDispatchAvailable(); updateDispatchTicketPreview();" required>
-              <option value="">Select resource equipment...</option>
-            </select>
-            <div style="font-size:.78rem;color:#34d399;margin-top:.3rem;display:flex;align-items:center;gap:.35rem;font-weight:600;" id="d-avail-info"></div>
+            <label for="a-name" style="font-size:.88rem;font-weight:700;">Resource Description &amp; Specifications <span class="required" style="color:#ef4444;">*</span></label>
+            <textarea id="a-name" name="description" rows="3" placeholder="e.g. Inflatable Rescue Rubber Boat — Honda, 20HP engine (serial: ABC123XYZ)" aria-describedby="descHelp" required style="resize:vertical;" oninput="updateAssetCardPreview()"></textarea>
+            <div id="descHelp" class="form-text" style="color:var(--text-muted);font-size:.8rem;margin-top:.35rem;">Detail item type, brand, model, engine capacity, serial number or distinguishing marks.</div>
           </div>
 
-          <div class="form-row" style="gap:1rem;">
+          <!-- Acquisition Date + Estimated Life -->
+          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;display:grid;grid-template-columns:1fr 1fr;">
             <div class="form-group">
-              <label>Quantity to Borrow <span class="required">*</span></label>
-              <input type="number" id="d-qty" min="1" placeholder="e.g. 2" required oninput="updateDispatchTicketPreview()" />
+              <label style="font-size:.88rem;font-weight:700;">Acquisition Date</label>
+              <input type="date" id="a-acq-date" onchange="updateAssetCardPreview()" />
             </div>
             <div class="form-group">
-              <label>Expected Return Date</label>
-              <input type="date" id="d-due-date" onchange="updateDispatchTicketPreview()" />
+              <label style="font-size:.88rem;font-weight:700;">Estimated Useful Life <span style="font-size:.78rem;color:var(--text-muted);font-weight:normal;">(years)</span></label>
+              <input type="number" id="a-est-life" min="1" max="50" value="5" placeholder="5" oninput="updateAssetCardPreview()" />
+            </div>
+          </div>
+
+          <!-- Responsibility Center — display only -->
+          <div class="form-group">
+            <label style="font-size:.88rem;font-weight:700;">Responsibility Center</label>
+            <div style="display:flex;align-items:center;gap:.6rem;padding:.75rem 1rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:10px;">
+              <i data-lucide="building-2" style="width:18px;height:18px;color:#818cf8;flex-shrink:0;"></i>
+              <div>
+                <strong style="color:#818cf8;font-size:.9rem;">Barangay Linao BDRRMC</strong>
+                <div style="font-size:.72rem;color:var(--text-muted);">COA Property Custodian Unit · Linao, Ormoc City</div>
+              </div>
+              <span class="badge badge-blue" style="margin-left:auto;font-size:.7rem;">Primary Custody</span>
             </div>
           </div>
         </div>
 
-        <!-- STEP 2: Operation Purpose & Confirmation Summary -->
-        <div class="wizard-step-pane" id="dispatch-pane-2">
+        <!-- STEP 2: Financial Valuation & COA Metrics -->
+        <div class="wizard-step-pane" id="asset-pane-2">
           <div class="step-section-header">
             <div class="step-section-title">
-              <i data-lucide="file-text" style="color:var(--primary);"></i> Step 2 of 2: Purpose & Confirmation Summary
+              <i data-lucide="calculator" style="color:var(--primary);"></i> Step 2 of 2: COA Valuation &amp; Inventory Metrics
             </div>
-            <div class="step-section-desc">Detail the deployment reason, link to active disasters, and review ticket summary.</div>
+            <div class="step-section-desc">Record acquisition cost, depreciation, and calculate net book value according to COA rules.</div>
           </div>
 
+          <!-- Acquisition Cost + Accumulated Depreciation -->
+          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;display:grid;grid-template-columns:1fr 1fr;">
+            <div class="form-group">
+              <label style="font-size:.88rem;font-weight:700;">Acquisition Cost (₱)</label>
+              <input type="number" id="a-acq-cost" min="0" step="0.01" placeholder="e.g. 150000" oninput="calcNBV(); updateAssetCardPreview();" />
+            </div>
+            <div class="form-group">
+              <label style="font-size:.88rem;font-weight:700;">Accumulated Depreciation (₱)</label>
+              <input type="number" id="a-acc-dep" min="0" step="0.01" placeholder="e.g. 30000" oninput="calcNBV(); updateAssetCardPreview();" />
+            </div>
+          </div>
+
+          <!-- Net Book Value Card -->
           <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Purpose / Reason for Borrowing <span class="required">*</span></label>
-            <textarea id="d-purpose" rows="2" placeholder="e.g. Emergency flood rescue operations along Sitio 2 riverbank." required oninput="updateDispatchTicketPreview()"></textarea>
-          </div>
-
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Linked Active Incident <span style="font-size:.78rem;color:var(--text-muted);font-weight:normal;">(Optional)</span></label>
-              <select id="d-incident" onchange="updateDispatchTicketPreview()">
-                <option value="">— None / General Operational Use —</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Additional Officer Notes</label>
-              <input type="text" id="d-notes" placeholder="e.g. Inspected before release, good condition." oninput="updateDispatchTicketPreview()" />
+            <label style="font-size:.88rem;font-weight:700;">Net Book Value (₱) <span style="font-size:.75rem;color:#4ade80;font-weight:normal;">— Auto-calculated (Cost − Depreciation)</span></label>
+            <div style="position:relative;">
+              <input type="number" id="a-nbv" readonly
+                style="background:rgba(30,41,59,.8) !important;color:#4ade80 !important;font-weight:800 !important;font-size:1.15rem !important;letter-spacing:.02em;"
+                placeholder="0.00" />
             </div>
           </div>
 
-          <!-- Live Ticket Confirmation Card -->
-          <div class="asset-summary-card" id="dispatch-summary-card">
+          <!-- Live Asset Card Summary Preview -->
+          <div class="contact-summary-card" id="asset-summary-card" style="background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:1.1rem;margin-top:1rem;">
             <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
-              <i data-lucide="ticket" style="width:14px;height:14px;"></i> Equipment Borrowing Ticket Preview
+              <i data-lucide="eye" style="width:14px;height:14px;"></i> Live COA Inventory Card Preview
             </div>
-            <div id="dispatch-summary-content" style="font-size:.85rem;color:var(--text-main);">
+            <div id="asset-summary-content">
               <!-- Rendered live by JS -->
             </div>
           </div>
-
-          <!-- Legal & Property Custodianship Acknowledgement Checkbox -->
-          <div class="form-group" style="margin-top:.85rem;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);padding:.65rem .85rem;border-radius:8px;">
-            <label style="font-size:.78rem;color:var(--text-main);display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;margin:0;">
-              <input type="checkbox" id="d-coa-terms-consent" checked style="margin-top:.15rem;accent-color:#f59e0b;" />
-              <span>I hereby acknowledge official responsibility for the care, maintenance, and prompt return of this government equipment in compliance with COA property rules and BDRRMC terms of use.</span>
-            </label>
-          </div>
         </div>
 
-        <p class="error-msg" id="dispatch-error" style="margin-top:1rem;display:none;"></p>
+        <p class="error-msg" id="asset-error" style="display:none;margin-top:1rem;"></p>
       </form>
     </div>
 
     <!-- Wizard Navigation Footer -->
-    <div class="modal-footer" style="padding: 1rem 1.75rem; display:flex; justify-content:space-between; align-items:center; background:rgba(15, 23, 42, 0.9);">
-      <button type="button" class="btn btn-ghost" id="dispatch-wizard-btn-prev" onclick="prevDispatchWizardStep()" style="visibility:hidden;">
-        <i data-lucide="arrow-left"></i> Back
+    <div class="modal-footer" style="padding: 1.1rem 1.75rem; display:flex; justify-content:space-between; align-items:center; background:rgba(15, 23, 42, 0.9); border-top:1px solid rgba(255,255,255,0.06);">
+      <button type="button" class="btn btn-ghost" id="asset-btn-prev" onclick="prevAssetWizardStep()" style="visibility:hidden;">
+        <i data-lucide="arrow-left"></i> Previous Step
       </button>
 
       <div style="display:flex;gap:.75rem;">
-        <button type="button" class="btn btn-primary" id="dispatch-wizard-btn-next" onclick="nextDispatchWizardStep()">
+        <button type="button" class="btn btn-ghost" onclick="closeAssetModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="asset-btn-next" onclick="nextAssetWizardStep()">
           Next Step <i data-lucide="arrow-right"></i>
         </button>
-        <button type="button" class="btn btn-primary" id="dispatch-submit-btn" onclick="submitDispatch()" style="display:none;">
-          <i data-lucide="clipboard-list"></i> Issue Dispatch Ticket
+        <button type="button" class="btn btn-success" id="asset-submit-btn" onclick="submitAsset()" style="display:none;">
+          <i data-lucide="check-circle"></i> <span id="asset-submit-label">Register Resource</span>
         </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===== Restock Modal ===== -->
-<div class="modal-overlay" id="restock-modal-overlay" onclick="closeRestockModalOutside(event)">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-      <h3 style="margin:0; display:flex; align-items:center; gap:.5rem;">
-        <i data-lucide="plus-circle" style="color:var(--primary);"></i> Restock Resource Inventory
+
+<!-- ═══════════════════════════════════════════════════════════
+     ASSET DETAIL / STATUS MODAL
+     Opens on row click — shows COA fields + status actions
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="detail-modal-overlay" onclick="closeDetailModalOutside(event)">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h3 id="detail-title" style="margin:0;font-size:1.05rem;color:var(--text-main);">Asset Detail</h3>
+        <div id="detail-code" style="font-family:monospace;font-size:.8rem;color:var(--primary);margin-top:.2rem;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <button class="btn btn-outline" onclick="openEditModal_fromDetail()" style="display:flex;align-items:center;gap:.4rem;padding:.4rem .8rem;font-size:.82rem;">
+          <i data-lucide="pencil" style="width:14px;height:14px;"></i> Edit
+        </button>
+        <button class="modal-close" onclick="closeDetailModal()"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- COA data grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;" id="detail-coa-grid">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- Status section -->
+      <div>
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.05em;margin-bottom:.6rem;">Update Status</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+          <button class="status-action-btn" id="btn-status-available"   onclick="openStatusModal('available')">
+            <i data-lucide="check-circle-2" style="color:#4ade80;"></i> Available
+          </button>
+          <button class="status-action-btn" id="btn-status-maintenance" onclick="openStatusModal('maintenance')">
+            <i data-lucide="wrench" style="color:#38bdf8;"></i> Maintenance
+          </button>
+          <button class="status-action-btn" id="btn-status-damaged"     onclick="openStatusModal('damaged')">
+            <i data-lucide="alert-triangle" style="color:#f87171;"></i> Damaged / For Repair
+          </button>
+          <button class="status-action-btn" id="btn-status-borrowed"    onclick="openStatusModal('borrowed')">
+            <i data-lucide="arrow-right-left" style="color:#fb923c;"></i> Borrowed / Lent Out
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     STATUS UPDATE MODAL  (simple — just notes)
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="status-modal-overlay" onclick="closeStatusModalOutside(event)">
+  <div class="modal simple-modal" style="max-width:520px;">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 id="status-modal-title" class="modal-status-header" style="margin:0;font-size:1rem;">
+        <i data-lucide="wrench" style="color:#38bdf8;"></i> Under Maintenance
       </h3>
-      <div style="display:flex; align-items:center; gap:.6rem;">
-        <button type="button" class="btn btn-outline-sm" onclick="autoFillRestockDemoData()" title="Quick auto-populate sample restock quantity &amp; notes" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(59,130,246,0.5); color:#60a5fa; background:rgba(59,130,246,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
-          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
-        </button>
-        <button class="modal-close" onclick="closeRestockModal()"><i data-lucide="x"></i></button>
-      </div>
+      <button class="modal-close" onclick="closeStatusModal()"><i data-lucide="x"></i></button>
     </div>
+
     <div class="modal-body">
-      <form id="restock-form" novalidate>
-        <div class="form-group">
-          <label style="color:var(--text-muted);font-size:0.82rem;">Target Resource Item:</label>
-          <div style="font-weight:700;font-size:1.05rem;color:var(--text-main);margin-top:0.2rem;" id="restock-item-name">—</div>
-        </div>
+      <div id="status-asset-name" style="font-weight:700;font-size:.95rem;color:var(--text-main);margin-bottom:1rem;padding:.55rem .75rem;background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.08);border-radius:8px;"></div>
 
-        <div class="form-group">
-          <label>Additional Quantity to Add <span class="required">*</span></label>
-          <input type="number" id="restock-qty" min="1" placeholder="e.g. 50" required />
-        </div>
+      <!-- Structured dynamic fields container for damage / borrowing / maintenance -->
+      <div id="status-extra-fields" style="margin-bottom:.85rem;"></div>
 
-        <div class="form-group">
-          <label>Restock Source / Batch Notes</label>
-          <input type="text" id="restock-notes" placeholder="e.g. CDRRMO Relief Goods Procurement Batch #2026-08" />
-        </div>
+      <div class="form-group">
+        <label id="status-notes-label">Notes</label>
+        <textarea id="status-notes" rows="3" placeholder="Optional notes…" style="resize:vertical;"></textarea>
+      </div>
 
-        <p class="error-msg" id="restock-error"></p>
-      </form>
+      <p class="error-msg" id="status-error" style="display:none;margin-top:.5rem;"></p>
     </div>
+
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeRestockModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitRestock()">
-        <i data-lucide="plus-circle"></i> Restock Item
+      <button class="btn btn-ghost" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-primary" id="status-submit-btn" onclick="submitStatus()">
+        <i data-lucide="check"></i> <span id="status-submit-label">Confirm</span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- ===== Maintenance Ticket Wizard Modal ===== -->
-<div class="modal-overlay" id="maintenance-modal-overlay" onclick="closeMaintenanceModalOutside(event)">
-  <div class="modal">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;align-items:flex-start;gap:1rem;display:flex;justify-content:space-between;">
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;">
-          <span style="font-family:monospace;font-size:.78rem;background:rgba(245,158,11,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.3);padding:.18rem .6rem;border-radius:6px;font-weight:700;white-space:nowrap;">
-            Auto-assigned on submit
-          </span>
-        </div>
-        <h3 style="margin:0;font-size:1.18rem;font-weight:700;color:var(--text-main);line-height:1.35;display:flex;align-items:center;gap:.5rem;">
-          <i data-lucide="wrench" style="color:#f59e0b;width:22px;height:22px;flex-shrink:0;"></i> Maintenance Ticket
-        </h3>
-        <div style="font-size:.8rem;color:var(--text-muted);margin-top:.2rem;">Equipment maintenance, repair &amp; out-of-service tracking</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:.6rem;">
-        <button type="button" class="btn btn-outline-sm" onclick="autoFillMaintenanceDemoData()" title="Quick auto-populate sample maintenance ticket" style="font-size:.72rem; padding:.28rem .7rem; border-color:rgba(245,158,11,0.5); color:#fbbf24; background:rgba(245,158,11,0.15); border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;">
-          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Autofill
-        </button>
-        <button class="modal-close" onclick="closeMaintenanceModal()" style="margin-top:-.25rem;"><i data-lucide="x"></i></button>
-      </div>
-    </div>
 
-    <div class="modal-body" style="padding:1.5rem 1.75rem;">
-      <div class="wizard-progress-bar" style="margin-bottom:1.25rem;">
-        <div class="wizard-step-item active" id="maint-wizard-indicator-1" onclick="goToMaintWizardStep(1)">
-          <div class="wizard-step-circle">1</div>
-          <span>Item &amp; Issue</span>
-        </div>
-        <div class="wizard-step-line" id="maint-wizard-line-1"></div>
-        <div class="wizard-step-item" id="maint-wizard-indicator-2" onclick="goToMaintWizardStep(2)">
-          <div class="wizard-step-circle">2</div>
-          <span>Details &amp; Confirm</span>
-        </div>
-      </div>
-
-      <form id="maint-form" novalidate onsubmit="return false;">
-        <input type="hidden" id="maint-resource-id" />
-
-        <!-- STEP 1: Item selection & issue type -->
-        <div class="wizard-step-pane active" id="maint-pane-1">
-          <div class="step-section-header">
-            <div class="step-section-title">
-              <i data-lucide="package" style="color:var(--primary);"></i> Step 1 of 2: Equipment &amp; Issue Type
-            </div>
-            <div class="step-section-desc">Select the affected item, classify the issue, and set the new operational status.</div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Resource Equipment <span class="required">*</span></label>
-            <select id="maint-resource-select" onchange="updateMaintItemInfo()" required>
-              <option value="">Select equipment...</option>
-            </select>
-            <div id="maint-resource-info" style="font-size:.78rem;color:#94a3b8;margin-top:.35rem;"></div>
-          </div>
-
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Issue / Maintenance Type <span class="required">*</span></label>
-              <select id="maint-type" required onchange="updateMaintPreview()">
-                <option value="">Select type...</option>
-                <option value="maintenance">Scheduled Maintenance / Repair</option>
-                <option value="damage">Damage Report — Physical Damage</option>
-                <option value="inspection">Inspection / Safety Check</option>
-                <option value="calibration">Calibration / Servicing</option>
-                <option value="unavailable">Out of Service — Other Reason</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Set Operational Status <span class="required">*</span></label>
-              <select id="maint-status" onchange="updateMaintPreview()">
-                <option value="maintenance">Under Maintenance</option>
-                <option value="damaged">Damaged</option>
-                <option value="unavailable">Unavailable</option>
-                <option value="available">Available — Back in Service</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Issue Description <span class="required">*</span></label>
-            <textarea id="maint-description" rows="3" placeholder="e.g. Engine seized during flood operations. Oil leak detected in main drive shaft." required oninput="updateMaintPreview()"></textarea>
-          </div>
-        </div>
-
-        <!-- STEP 2: Location, schedule & confirmation -->
-        <div class="wizard-step-pane" id="maint-pane-2">
-          <div class="step-section-header">
-            <div class="step-section-title">
-              <i data-lucide="map-pin" style="color:var(--primary);"></i> Step 2 of 2: Location, Schedule &amp; Confirmation
-            </div>
-            <div class="step-section-desc">Enter where the item is sent, who handles it, and expected return date.</div>
-          </div>
-
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Sent To / Current Location <span class="required">*</span></label>
-              <input type="text" id="maint-location" placeholder="e.g. CDRRMO Repair Shop, Ormoc City" required oninput="updateMaintPreview()" />
-            </div>
-            <div class="form-group">
-              <label>Technician / Assigned To</label>
-              <input type="text" id="maint-technician" placeholder="e.g. Engr. Santos / BFP Mechanic" oninput="updateMaintPreview()" />
-            </div>
-          </div>
-
-          <div class="form-row" style="gap:1rem;margin-bottom:1.25rem;">
-            <div class="form-group">
-              <label>Date Sent Out <span class="required">*</span></label>
-              <input type="date" id="maint-date-out" required onchange="updateMaintPreview()" />
-            </div>
-            <div class="form-group">
-              <label>Expected Return Date</label>
-              <input type="date" id="maint-date-return" onchange="updateMaintPreview()" />
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:1.25rem;">
-            <label>Additional Notes</label>
-            <input type="text" id="maint-notes" placeholder="e.g. Under warranty. PO# 2026-045 issued." oninput="updateMaintPreview()" />
-          </div>
-
-          <!-- Live Ticket Preview -->
-          <div class="asset-summary-card" id="maint-summary-card">
-            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.06em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem;">
-              <i data-lucide="clipboard" style="width:14px;height:14px;"></i> Maintenance Ticket Preview
-            </div>
-            <div id="maint-summary-content" style="font-size:.85rem;color:var(--text-main);"></div>
-          </div>
-        </div>
-
-        <p class="error-msg" id="maint-error" style="margin-top:1rem;display:none;"></p>
-      </form>
-    </div>
-
-    <div class="modal-footer" style="padding:1rem 1.75rem;display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,0.9);">
-      <button type="button" class="btn btn-ghost" id="maint-wizard-btn-prev" onclick="prevMaintWizardStep()" style="visibility:hidden;">
-        <i data-lucide="arrow-left"></i> Back
-      </button>
-      <div style="display:flex;gap:.75rem;">
-        <button type="button" class="btn btn-primary" id="maint-wizard-btn-next" onclick="nextMaintWizardStep()">
-          Next Step <i data-lucide="arrow-right"></i>
-        </button>
-        <button type="button" class="btn btn-warning" id="maint-submit-btn" onclick="submitMaintenanceTicket()" style="display:none;">
-          <i data-lucide="wrench"></i> Submit Ticket
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Resource Detail Modal ===== -->
-<div class="modal-overlay" id="resource-detail-modal-overlay" onclick="closeResourceDetailModalOutside(event)">
-  <div class="modal" style="max-width:620px;border-radius:var(--radius-lg);overflow:hidden;">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
-          <i data-lucide="package" style="width:20px;height:20px;"></i>
-        </div>
-        <div>
-          <h3 id="res-detail-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;"></h3>
-          <div id="res-detail-subtitle" style="font-size:.73rem;color:var(--text-muted);margin-top:.15rem;"></div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeResourceDetailModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" id="res-detail-body" style="font-size:.88rem;padding:1.5rem;max-height:72vh;overflow-y:auto;"></div>
-    <div class="modal-footer" id="res-detail-footer" style="padding:.9rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;align-items:center;gap:.5rem;">
-      <div id="res-detail-actions" style="display:flex;gap:.5rem;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Dispatch Detail Modal ===== -->
-<div class="modal-overlay" id="dispatch-detail-modal-overlay" onclick="closeDispatchDetailModalOutside(event)">
-  <div class="modal" style="max-width:560px;border-radius:var(--radius-lg);overflow:hidden;">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
-          <i data-lucide="ticket" style="width:20px;height:20px;"></i>
-        </div>
-        <div>
-          <h3 id="disp-detail-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;"></h3>
-          <div id="disp-detail-subtitle" style="font-size:.73rem;color:var(--text-muted);margin-top:.15rem;"></div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeDispatchDetailModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" id="disp-detail-body" style="font-size:.88rem;padding:1.5rem;max-height:72vh;overflow-y:auto;"></div>
-    <div class="modal-footer" id="disp-detail-footer" style="padding:.9rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;align-items:center;gap:.5rem;">
-      <div id="disp-detail-actions" style="display:flex;gap:.5rem;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Linked Incident Detail Modal ===== -->
-<div class="modal-overlay" id="linked-incident-modal-overlay" onclick="closeLinkedIncidentModalOutside(event)">
-  <div class="modal" style="max-width:620px;border-radius:var(--radius-lg);overflow:hidden;">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
-          <i data-lucide="triangle-alert" style="width:20px;height:20px;"></i>
-        </div>
-        <div>
-          <h3 id="inc-detail-title" style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;">Linked Incident Report</h3>
-          <div id="inc-detail-subtitle" style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Incident details &amp; operational status</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeLinkedIncidentModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" id="inc-detail-body" style="font-size:.88rem;padding:1.5rem;max-height:72vh;overflow-y:auto;"></div>
-    <div class="modal-footer" style="padding:.9rem 1.5rem;background:rgba(15,23,42,0.6);border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeLinkedIncidentModal()"><i data-lucide="x"></i> Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Activity Log Detail Modal ===== -->
-<div class="modal-overlay" id="log-detail-modal-overlay" onclick="closeLogDetailModalOutside(event)">
-  <div class="modal" style="max-width:560px;border-radius:var(--radius-lg);overflow:hidden;">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:rgba(15,23,42,0.85);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div class="brand-icon" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.3),rgba(37,99,235,0.15));border:1px solid rgba(59,130,246,0.4);display:flex;align-items:center;justify-content:center;color:#60a5fa;">
-          <i data-lucide="history" style="width:20px;height:20px;"></i>
-        </div>
-        <div>
-          <h3 id="log-modal-title" style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0;">Activity Log Record</h3>
-          <div id="log-modal-subtitle" style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Resource inventory movement detail</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeLogDetailModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" id="log-modal-body" style="font-size:.88rem;padding:1.5rem;max-height:75vh;overflow-y:auto;">
-    </div>
-  </div>
-</div>
-
-<!-- ===== Digital Identification & COA Audit Tag Modal ===== -->
-<div class="modal-overlay" id="asset-qr-modal-overlay" onclick="closeAssetQRModalOutside(event)">
-  <div class="modal" style="max-width:680px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(59,130,246,0.25);">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.95));border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.35),rgba(37,99,235,0.2));border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;box-shadow:0 0 15px rgba(59,130,246,0.3);">
-          <i data-lucide="qr-code" style="width:22px;height:22px;"></i>
-        </div>
-        <div>
-          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;" id="qr-modal-asset-title">Digital Asset Identification</h3>
-          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Government Accounting & COA Audit Property Tag</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeAssetQRModal()"><i data-lucide="x"></i></button>
-    </div>
-
-    <div class="modal-body" style="padding:1.5rem;background:rgba(15,23,42,0.9);max-height:75vh;overflow-y:auto;">
-      
-      <!-- Official Sticker Container (Printable Card) -->
-      <div id="coa-sticker-printable-card" style="background:#ffffff;color:#0f172a;border-radius:12px;padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.5);border:3px double #0f172a;position:relative;">
-        
-        <!-- Header -->
-        <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:.75rem;margin-bottom:1rem;">
-          <div style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#475569;">Republic of the Philippines • City of Ormoc</div>
-          <div style="font-size:1.05rem;font-weight:900;text-transform:uppercase;color:#0f172a;letter-spacing:.03em;margin-top:.15rem;">Barangay Linao Disaster Risk Reduction Office</div>
-          <div style="font-size:.75rem;font-weight:700;background:#0f172a;color:#ffffff;display:inline-block;padding:.2rem .75rem;border-radius:99px;margin-top:.4rem;letter-spacing:.05em;">COA PROPERTY & ASSET IDENTIFICATION TAG</div>
-        </div>
-
-        <!-- Layout Grid: QR Code Left + Specs Right -->
-        <div style="display:grid;grid-template-columns:170px 1fr;gap:1.25rem;align-items:center;">
-          <div style="text-align:center;">
-            <div id="coa-qr-code-graphic" style="background:#ffffff;padding:8px;border:1px solid #cbd5e1;border-radius:8px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.1);"></div>
-            <div style="font-size:.7rem;font-weight:800;font-family:monospace;color:#334155;margin-top:.4rem;letter-spacing:.05em;" id="coa-qr-prop-code-display">BRG-2024-0000</div>
-          </div>
-
-          <div style="font-size:.82rem;line-height:1.5;color:#1e293b;">
-            <div style="margin-bottom:.4rem;">
-              <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Asset Title:</strong><br />
-              <span id="coa-qr-asset-name" style="font-weight:800;font-size:.95rem;color:#0f172a;">—</span>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;">
-              <div>
-                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Property Code:</strong><br />
-                <span id="coa-qr-prop-code" style="font-family:monospace;font-weight:700;color:#2563eb;">—</span>
-              </div>
-              <div>
-                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Responsibility Center:</strong><br />
-                <span id="coa-qr-resp-center" style="font-weight:700;">—</span>
-              </div>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;">
-              <div>
-                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Acquisition Date:</strong><br />
-                <span id="coa-qr-acq-date" style="font-weight:600;">—</span>
-              </div>
-              <div>
-                <strong style="color:#64748b;font-size:.72rem;text-transform:uppercase;">Estimated Life:</strong><br />
-                <span id="coa-qr-est-life" style="font-weight:600;">—</span>
-              </div>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;background:#f8fafc;padding:.4rem .6rem;border-radius:6px;border:1px solid #e2e8f0;margin-top:.4rem;">
-              <div>
-                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Acq. Cost</div>
-                <div style="font-weight:800;color:#0f172a;font-size:.8rem;" id="coa-qr-acq-cost">₱0.00</div>
-              </div>
-              <div>
-                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Accu. Dep.</div>
-                <div style="font-weight:800;color:#dc2626;font-size:.8rem;" id="coa-qr-acc-dep">₱0.00</div>
-              </div>
-              <div>
-                <div style="font-size:.68rem;color:#64748b;font-weight:700;">Net Book Val</div>
-                <div style="font-weight:800;color:#16a34a;font-size:.8rem;" id="coa-qr-nbv">₱0.00</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:.85rem;padding-top:.5rem;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:center;font-size:.68rem;color:#64748b;">
-          <div>Verified By: <strong>Barangay DRRM Secretary / Property Officer</strong></div>
-          <div>Audit Verification Hash: <span style="font-family:monospace;font-weight:700;" id="coa-qr-hash">#DRRM-COA-VALID</span></div>
-        </div>
-      </div>
-
-    </div>
-    <div class="modal-footer" style="padding:1rem 1.5rem;background:rgba(15,23,42,0.95);display:flex;justify-content:space-between;align-items:center;">
-      <button class="btn btn-ghost" onclick="closeAssetQRModal()">Close</button>
-      <div style="display:flex;gap:.6rem;">
-        <button class="btn btn-outline" onclick="simulateQRScanModal()"><i data-lucide="smartphone"></i> Mobile Scan Test</button>
-        <button class="btn btn-primary" onclick="printCOASticker()"><i data-lucide="printer"></i> Print COA Tag</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Custom Date Range Filter Modal ===== -->
-<div class="modal-overlay" id="custom-date-modal-overlay" onclick="closeCustomDateModalOutside(event)">
-  <div class="modal" style="max-width:460px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(59,130,246,0.35);box-shadow:0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(59,130,246,0.2);">
-    <div class="modal-header" style="padding:1.25rem 1.5rem;background:linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9));border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
-      <div style="display:flex;align-items:center;gap:.75rem;">
-        <div class="brand-icon" style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.35),rgba(37,99,235,0.2));border:1px solid rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;color:#60a5fa;box-shadow:0 0 15px rgba(59,130,246,0.3);">
-          <i data-lucide="calendar-range" style="width:22px;height:22px;"></i>
-        </div>
-        <div>
-          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-main);margin:0;">Custom Date Filter</h3>
-          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.1rem;">Specify exact start and end date boundaries</div>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeCustomDateModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" style="font-size:.88rem;padding:1.5rem;background:rgba(15,23,42,0.75);">
-      
-      <!-- Quick Range Selection Chips -->
-      <div style="margin-bottom:1.2rem;">
-        <div style="font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Quick Select Presets</div>
-        <div style="display:flex;gap:.45rem;flex-wrap:wrap;">
-          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('today', this)">Today</button>
-          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('7days', this)">Last 7 Days</button>
-          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('30days', this)">Last 30 Days</button>
-          <button type="button" class="modal-preset-btn" onclick="setModalQuickDate('clear', this)">Clear</button>
-        </div>
-      </div>
-
-      <form id="custom-date-form" onsubmit="applyCustomDateFilter(event)">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
-              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> Start Date
-            </label>
-            <input type="date" id="modal-date-from" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateModalRangeText()" required />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:.45rem;text-transform:uppercase;letter-spacing:.03em;">
-              <i data-lucide="calendar" style="width:13px;height:13px;color:#60a5fa;"></i> End Date
-            </label>
-            <input type="date" id="modal-date-to" class="date-select" style="width:100% !important;box-sizing:border-box !important;" onchange="updateModalRangeText()" required />
-          </div>
-        </div>
-
-        <!-- Live Selected Date Range Indicator -->
-        <div id="modal-date-range-preview" style="font-size:.78rem;color:#60a5fa;background:rgba(59,130,246,0.12);padding:.6rem .85rem;border-radius:10px;border:1px dashed rgba(59,130,246,0.35);display:flex;align-items:center;gap:.5rem;">
-          <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;"></i>
-          <span id="modal-date-range-text">Select start &amp; end dates to filter records</span>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn btn-ghost" onclick="closeCustomDateModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" style="box-shadow:0 0 18px rgba(59,130,246,0.45);"><i data-lucide="filter"></i> Apply Date Filter</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Import CSV Modal ===== -->
-<div class="modal-overlay" id="import-modal-overlay" onclick="closeImportModalOutside(event)">
-  <div class="modal" style="max-width:860px;width:95vw;">
-    <div class="modal-header">
-      <h3><i data-lucide="upload"></i> Bulk Import Resources via CSV</h3>
-      <button class="modal-close" onclick="closeImportModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" style="padding:1.5rem 1.75rem;">
-
-      <!-- Step 1: Upload -->
-      <div id="import-step-upload">
-        <div class="step-section-header">
-          <div class="step-section-title"><i data-lucide="file-up" style="color:var(--primary);"></i> Step 1: Upload CSV File</div>
-          <div class="step-section-desc">Upload a CSV file with resource data. Download the template below to ensure correct column format.</div>
-        </div>
-
-        <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-ghost" onclick="downloadImportTemplate()" style="font-size:.84rem;">
-            <i data-lucide="file-down"></i> Download CSV Template
-          </button>
-          <span style="font-size:.78rem;color:var(--text-muted);">Required columns: <code style="color:var(--primary);">name, type, quantity, location, status, ownership_tier, hazard_tags</code></span>
-        </div>
-
-        <div id="import-drop-zone" style="
-          border: 2px dashed rgba(59,130,246,0.4);
-          border-radius: 12px;
-          padding: 2.5rem 1.5rem;
-          text-align: center;
-          cursor: pointer;
-          transition: all .2s ease;
-          background: rgba(59,130,246,0.04);
-        " onclick="document.getElementById('import-file-input').click()"
-           ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,0.1)';"
-           ondragleave="this.style.borderColor='rgba(59,130,246,0.4)';this.style.background='rgba(59,130,246,0.04)';"
-           ondrop="handleImportDrop(event)">
-          <i data-lucide="upload-cloud" style="width:40px;height:40px;color:#60a5fa;margin-bottom:.75rem;"></i>
-          <div style="font-size:.95rem;font-weight:700;color:var(--text-main);margin-bottom:.3rem;">Drop CSV file here or click to browse</div>
-          <div style="font-size:.78rem;color:var(--text-muted);">Accepts .csv files only — max 5MB</div>
-          <input type="file" id="import-file-input" accept=".csv" style="display:none;" onchange="handleImportFileSelect(event)" />
-        </div>
-        <p class="error-msg" id="import-upload-error" style="display:none;margin-top:.75rem;"></p>
-      </div>
-
-      <!-- Step 2: Preview & Validate -->
-      <div id="import-step-preview" style="display:none;">
-        <div class="step-section-header">
-          <div class="step-section-title"><i data-lucide="table" style="color:var(--primary);"></i> Step 2: Preview &amp; Validate</div>
-          <div class="step-section-desc">Review parsed rows below. Rows with errors are highlighted in red and will be skipped on import.</div>
-        </div>
-
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-          <div id="import-stats" style="font-size:.83rem;color:var(--text-muted);"></div>
-          <button class="btn btn-ghost" onclick="resetImport()" style="font-size:.8rem;">
-            <i data-lucide="rotate-ccw"></i> Upload Different File
-          </button>
-        </div>
-
-        <div style="max-height:340px;overflow-y:auto;border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
-          <table class="import-preview-table">
-            <thead id="import-preview-thead"></thead>
-            <tbody id="import-preview-tbody"></tbody>
-          </table>
-        </div>
-
-        <p class="error-msg" id="import-preview-error" style="display:none;margin-top:.75rem;"></p>
-      </div>
-
-      <!-- Progress bar during import -->
-      <div id="import-progress-wrap" style="display:none;margin-top:1rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.5rem;color:var(--text-main);" id="import-progress-label">Importing… 0 / 0</div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:99px;height:8px;overflow:hidden;">
-          <div id="import-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width .3s ease;border-radius:99px;"></div>
-        </div>
-      </div>
-
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
-      <button class="btn btn-primary" id="import-submit-btn" onclick="runBulkImport()" style="display:none;">
-        <i data-lucide="upload"></i> <span id="import-submit-label">Import Valid Rows</span>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Asset Disposal / Retirement Modal (COA Lifecycle Archival) ===== -->
-<div class="modal-overlay" id="asset-retire-modal-overlay" onclick="closeAssetRetireModalOutside(event)">
-  <div class="modal" style="max-width:540px;">
-    <div class="modal-header" style="border-bottom:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.06);">
-      <h3 style="color:#f87171;"><i data-lucide="archive"></i> Initiate Asset Disposal &amp; Retirement</h3>
-      <button class="modal-close" onclick="closeAssetRetireModal()"><i data-lucide="x"></i></button>
-    </div>
-    <div class="modal-body" style="padding:1.25rem 1.5rem;">
-      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);padding:.75rem 1rem;border-radius:10px;margin-bottom:1.25rem;font-size:.82rem;color:#fca5a5;">
-        <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;margin-right:.3rem;"></i>
-        <strong>COA Audit Trail Notice:</strong> This action decommissions the asset from Active Inventory and archives its complete financial history for government audit records.
-      </div>
-
-      <div style="margin-bottom:1rem;background:rgba(15,23,42,0.6);padding:.75rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
-        <div style="font-size:.78rem;color:var(--text-muted);">Target Equipment:</div>
-        <div style="font-weight:700;font-size:1rem;color:var(--text-main);" id="retire-item-name">—</div>
-        <div style="font-size:.75rem;color:#60a5fa;font-family:monospace;margin-top:.2rem;" id="retire-item-code">—</div>
-      </div>
-
-      <form id="asset-retire-form" onsubmit="submitAssetRetirement(event)">
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
-            Disposal / Retirement Reason <span style="color:#ef4444;">*</span>
-          </label>
-          <select id="retire-reason" class="filter-select" style="width:100%;box-sizing:border-box;" required>
-            <option value="">Select reason...</option>
-            <option value="End of Service Lifespan">End of Service Lifespan (Fully Depreciated)</option>
-            <option value="Beyond Economical Repair">Beyond Economical Repair (Damaged/Defective)</option>
-            <option value="Destroyed / Lost in Disaster">Destroyed / Lost in Disaster Operation</option>
-            <option value="Donated / Transferred">Donated or Transferred to Other Agency</option>
-            <option value="COA Decommissioning">Government COA Decommissioning Order</option>
-          </select>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
-              Disposal Date
-            </label>
-            <input type="date" id="retire-date" class="date-select" style="width:100%;box-sizing:border-box;" required />
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
-              COA Voucher No.
-            </label>
-            <input type="text" id="retire-voucher" placeholder="e.g. COA-DISP-2026-0042" style="width:100%;box-sizing:border-box;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.12);color:var(--text-main);padding:.5rem .75rem;border-radius:8px;font-size:.85rem;" />
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label style="display:block;font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.4rem;">
-            Disposal Remarks / Inspection Notes
-          </label>
-          <textarea id="retire-notes" rows="3" placeholder="Enter inspection notes or municipal approval details..." style="width:100%;box-sizing:border-box;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.12);color:var(--text-main);padding:.5rem .75rem;border-radius:8px;font-size:.85rem;"></textarea>
-        </div>
-
-        <p class="error-msg" id="retire-error" style="display:none;"></p>
-
-        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn btn-ghost" onclick="closeAssetRetireModal()">Cancel</button>
-          <button type="submit" class="btn btn-danger" style="background:#dc2626;border-color:#ef4444;"><i data-lucide="archive"></i> Decommission &amp; Archive</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<script src="assets/js/api.js?v=4.1"></script>
-<script src="assets/js/auth.js?v=4.1"></script>
-<script src="assets/js/resources.js?v=4.1"></script>
-<script src="assets/js/i18n.js?v=4.1"></script>
-<script src="assets/js/weather.js?v=4.1"></script>
-<script>
-  requireAuth();
-  const user = getUser();
-  if (user) {
-    document.getElementById("user-display-name").textContent = user.full_name || user.username;
-    if (document.getElementById("user-role-badge")) document.getElementById("user-role-badge").textContent = user.role;
-  }
-  lucide.createIcons();
-  loadResources();
-  loadDispatchLog();
-</script>
+<!-- scripts -->
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/components.js"></script>
+<script src="assets/js/weather.js"></script>
+<script src="assets/js/resources.js"></script>
 </body>
 </html>

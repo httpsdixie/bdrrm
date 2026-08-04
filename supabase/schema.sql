@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS incidents (
   type VARCHAR(50) NOT NULL,          -- 'flood', 'fire', 'landslide', 'typhoon', 'medical', 'other'
   status VARCHAR(20) DEFAULT 'active', -- 'active', 'responding', 'resolved'
   severity VARCHAR(10) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+  victims JSONB,
+  suspects JSONB,
+  respondents JSONB,
   latitude DOUBLE PRECISION NOT NULL,
   longitude DOUBLE PRECISION NOT NULL,
   reported_by UUID REFERENCES users(id),
@@ -39,33 +42,90 @@ CREATE TABLE IF NOT EXISTS evacuation_centers (
   status VARCHAR(20) DEFAULT 'available', -- 'available', 'full', 'closed'
   contact_person VARCHAR(100),
   contact_number VARCHAR(20),
+  year_established INTEGER,
+  floor_area_sqm NUMERIC,
+  lot_area TEXT,
+  type VARCHAR(100),
+  personnel_directory JSONB DEFAULT '[]'::jsonb,
+  facilities_checklist JSONB DEFAULT '{}'::jsonb,
+  camp_layout_filename TEXT,
+  contingency_plan TEXT,
+  prepared_by JSONB,
+  approved_by JSONB,
+  structural_integrity_report TEXT,
+  jmc2_checklist JSONB,
+  jmc2_score NUMERIC,
+  jmc2_last_assessed_at TIMESTAMPTZ,
+  jmc2_inspector VARCHAR(100),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Resources / Equipment table
+-- Ensure evacuation center schema supports the new monitoring fields
+ALTER TABLE evacuation_centers
+  ADD COLUMN IF NOT EXISTS year_established INTEGER,
+  ADD COLUMN IF NOT EXISTS floor_area_sqm NUMERIC,
+  ADD COLUMN IF NOT EXISTS lot_area TEXT,
+  ADD COLUMN IF NOT EXISTS type VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS personnel_directory JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS facilities_checklist JSONB DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS camp_layout_filename TEXT,
+  ADD COLUMN IF NOT EXISTS contingency_plan TEXT,
+  ADD COLUMN IF NOT EXISTS prepared_by JSONB,
+  ADD COLUMN IF NOT EXISTS approved_by JSONB,
+  ADD COLUMN IF NOT EXISTS structural_integrity_report TEXT,
+  ADD COLUMN IF NOT EXISTS jmc2_checklist JSONB,
+  ADD COLUMN IF NOT EXISTS jmc2_score NUMERIC,
+  ADD COLUMN IF NOT EXISTS jmc2_last_assessed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS jmc2_inspector VARCHAR(100);
+
+-- Resources / Equipment table (COA Property Tracking)
 CREATE TABLE IF NOT EXISTS resources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(150) NOT NULL,
-  type VARCHAR(50) NOT NULL,          -- 'rescue_boat', 'medical_kit', 'food_pack', 'tent', 'vehicle', 'other'
-  quantity INTEGER NOT NULL DEFAULT 0,
-  available_quantity INTEGER NOT NULL DEFAULT 0,
-  location TEXT,
-  status VARCHAR(20) DEFAULT 'available', -- 'available', 'deployed', 'maintenance'
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  -- Identity
+  property_code       VARCHAR(50) UNIQUE NOT NULL,    -- Barangay Property Number (BRG-YYYY-NNNN)
+  name                VARCHAR(150) NOT NULL,           -- Description / item name
+  type                VARCHAR(50) NOT NULL DEFAULT 'other',
+  -- COA Accounting Fields
+  acquisition_date    DATE,
+  estimated_life      NUMERIC(5,2) DEFAULT 5,          -- in years
+  responsibility_center VARCHAR(100) NOT NULL DEFAULT 'Linao BDRRMC',  -- always Linao BDRRMC, not user-editable
+  acquisition_cost    NUMERIC(14,2) DEFAULT 0,
+  accumulated_depreciation NUMERIC(14,2) DEFAULT 0,
+  net_book_value      NUMERIC(14,2) DEFAULT 0,
+  -- Status
+  status              VARCHAR(20) DEFAULT 'available', -- 'available', 'maintenance', 'damaged', 'borrowed'
+  status_notes        TEXT,                            -- notes for the current status (who borrowed, damage description, maintenance instructions)
+  -- Optional inventory fields
+  quantity            INTEGER DEFAULT 1,
+  location            TEXT,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Resource Dispatch Log table
-CREATE TABLE IF NOT EXISTS resource_dispatch (
+-- Ensure COA property tracking columns are present in older deployments
+ALTER TABLE resources
+  ADD COLUMN IF NOT EXISTS acquisition_date DATE,
+  ADD COLUMN IF NOT EXISTS estimated_life NUMERIC(5,2) DEFAULT 5,
+  ADD COLUMN IF NOT EXISTS responsibility_center VARCHAR(100) DEFAULT 'Linao BDRRMC',
+  ADD COLUMN IF NOT EXISTS acquisition_cost NUMERIC(14,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS accumulated_depreciation NUMERIC(14,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS net_book_value NUMERIC(14,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'available',
+  ADD COLUMN IF NOT EXISTS status_notes TEXT;
+
+-- Resource Activity Log
+CREATE TABLE IF NOT EXISTS resource_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  resource_id UUID REFERENCES resources(id),
-  incident_id UUID REFERENCES incidents(id),
-  quantity_dispatched INTEGER NOT NULL,
-  dispatched_by UUID REFERENCES users(id),
-  dispatched_at TIMESTAMPTZ DEFAULT NOW(),
-  returned_at TIMESTAMPTZ,
-  notes TEXT
+  resource_id         UUID REFERENCES resources(id) ON DELETE SET NULL,
+  resource_name       VARCHAR(150),
+  event_type          VARCHAR(30) NOT NULL,  -- 'added', 'status_changed', 'updated', 'archived'
+  old_status          VARCHAR(20),
+  new_status          VARCHAR(20),
+  description         TEXT,
+  performed_by        UUID REFERENCES users(id),
+  performed_by_name   VARCHAR(100),
+  created_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =============================================
@@ -285,6 +345,9 @@ ON CONFLICT DO NOTHING;
 -- New columns for enhanced incident intake
 ALTER TABLE incidents
   ADD COLUMN IF NOT EXISTS location_address TEXT,
+  ADD COLUMN IF NOT EXISTS victims JSONB,
+  ADD COLUMN IF NOT EXISTS suspects JSONB,
+  ADD COLUMN IF NOT EXISTS respondents JSONB,
   ADD COLUMN IF NOT EXISTS parties_involved TEXT,
   ADD COLUMN IF NOT EXISTS casualty_count INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS casualty_status VARCHAR(20) DEFAULT 'none',

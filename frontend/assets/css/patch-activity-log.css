@@ -1,0 +1,105 @@
+/* Activity Log: make table body scrollable and keep header + pagination visible */
+.table-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow children to constrain height */
+}
+
+.table-card .table-responsive {
+  overflow: auto;
+  max-height: calc(100vh - 460px);
+  min-height: 180px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep the table header visible while scrolling the tbody */
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 1) 100%);
+}
+
+/* Pin pagination to bottom of the table-card so it remains visible */
+.table-card .table-pagination {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+}
+
+/* Small visual tweak to ensure page numbers wrap correctly on small screens */
+#inc-log-page-numbers {
+  display: flex;
+  gap: .25rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Improve table header readability and allow wrapping */
+.data-table th {
+  color: var(--text-main);
+  white-space: normal;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+
+/* Make table rows easier to scan */
+.data-table tbody tr:nth-child(odd) td {
+  background: rgba(255,255,255,0.012);
+}
+.data-table tbody tr:nth-child(even) td {
+  background: transparent;
+}
+
+/* Stronger hover highlight */
+.data-table tbody tr:hover td {
+  background: rgba(96,165,250,0.06);
+}
+
+/* Prevent long text from overflowing columns but allow wrapping */
+.data-table td {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Slightly increase font weight for labels in table headers */
+.data-table th {
+  font-weight: 800;
+  color: #e6eef8;
+}
+
+/* Activity Log table — natural column sizing, no squish */
+#inc-log-table {
+  min-width: 600px;
+  table-layout: auto;
+  width: 100%;
+}
+
+/* Date & Time — fixed narrow */
+#inc-log-table th:nth-child(1),
+#inc-log-table td:nth-child(1) {
+  white-space: nowrap;
+  width: 1%;
+}
+
+/* Event Action — fixed narrow */
+#inc-log-table th:nth-child(3),
+#inc-log-table td:nth-child(3) {
+  white-space: nowrap;
+  width: 1%;
+}
+
+/* Incident Operation — takes most space */
+#inc-log-table th:nth-child(2),
+#inc-log-table td:nth-child(2) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Details / Remarks — reasonable width */
+#inc-log-table th:nth-child(4),
+#inc-log-table td:nth-child(4) {
+  white-space: normal;
+  word-break: break-word;
+  width: 20%;
+}

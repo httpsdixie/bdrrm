@@ -126,11 +126,14 @@ def get_public_map_data():
         .execute()
     ).data or []
 
-    stations = (
-        supabase.table("responder_stations")
-        .select("id, name, type, address, latitude, longitude, contact_number")
-        .execute()
-    ).data or []
+    try:
+        stations = (
+            supabase.table("responder_stations")
+            .select("id, name, type, address, latitude, longitude, contact_number")
+            .execute()
+        ).data or []
+    except Exception:
+        stations = []
 
     road_closures = (
         supabase.table("road_closures")
@@ -181,11 +184,14 @@ def get_all_map_layers(current_user: dict = Depends(get_current_user)):
         .execute()
     ).data or []
 
-    stations = (
-        supabase.table("responder_stations")
-        .select("*")
-        .execute()
-    ).data or []
+    try:
+        stations = (
+            supabase.table("responder_stations")
+            .select("*")
+            .execute()
+        ).data or []
+    except Exception:
+        stations = []
 
     road_closures = (
         supabase.table("road_closures")

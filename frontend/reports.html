@@ -535,7 +535,7 @@
           <div class="report-stat"><div class="report-stat-num blue" id="r-people">—</div><div class="report-stat-label">People Involved</div></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:1fr;gap:1.25rem;margin-bottom:1.5rem;">
 
           <!-- Incidents by type -->
           <div class="report-section">
@@ -547,20 +547,6 @@
                 <div class="skeleton skeleton-title" style="width:70%;margin-bottom:8px;"></div>
                 <div class="skeleton skeleton-text" style="width:90%;margin-bottom:6px;"></div>
                 <div class="skeleton skeleton-text" style="width:50%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Rescue items dispatched -->
-          <div class="report-section">
-            <div class="report-section-header">
-              <h3><i data-lucide="package"></i> Rescue Items Dispatched</h3>
-            </div>
-            <div class="report-section-body">
-              <div class="type-bars" id="rescue-items-bars">
-                <div class="skeleton skeleton-title" style="width:65%;margin-bottom:8px;"></div>
-                <div class="skeleton skeleton-text" style="width:85%;margin-bottom:6px;"></div>
-                <div class="skeleton skeleton-text" style="width:55%;"></div>
               </div>
             </div>
           </div>
@@ -676,34 +662,9 @@
           <div class="report-stat"><div class="report-stat-num blue" id="res-total-items">—</div><div class="report-stat-label">Total Unique Items</div></div>
           <div class="report-stat"><div class="report-stat-num green" id="res-available">—</div><div class="report-stat-label">Available Units</div></div>
           <div class="report-stat"><div class="report-stat-num orange" id="res-deployed">—</div><div class="report-stat-label">Deployed Units</div></div>
-          <div class="report-stat"><div class="report-stat-num" id="res-deployed-items">—</div><div class="report-stat-label">Deployed Item Types</div></div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
-
-          <!-- Resources by type -->
-          <div class="report-section">
-            <div class="report-section-header">
-              <h3><i data-lucide="grid"></i> Inventory by Type</h3>
-              <button class="btn btn-outline-sm no-print" onclick="openResourceModal('type')">
-                <i data-lucide="maximize-2"></i> View All
-              </button>
-            </div>
-            <div class="report-section-body">
-              <div class="res-type-grid" id="res-type-grid">
-                <div class="res-type-card"><div class="skeleton skeleton-title" style="width:60%;margin-bottom:8px;"></div><div class="skeleton skeleton-text" style="width:100%;height:14px;"></div></div>
-                <div class="res-type-card"><div class="skeleton skeleton-title" style="width:70%;margin-bottom:8px;"></div><div class="skeleton skeleton-text" style="width:100%;height:14px;"></div></div>
-              </div>
-              <div id="res-type-pagination" style="display:none;justify-content:space-between;align-items:center;padding:.75rem 0 .25rem;border-top:1px solid rgba(255,255,255,0.07);margin-top:.75rem;">
-                <span id="res-type-info" style="font-size:.78rem;color:var(--text-muted);"></span>
-                <div style="display:flex;gap:.35rem;align-items:center;">
-                  <button class="page-btn" id="res-type-btn-prev" onclick="changeResTypePage(-1)"><i data-lucide="chevron-left"></i></button>
-                  <span id="res-type-page-num" style="font-size:.78rem;font-weight:600;color:var(--text-main);min-width:60px;text-align:center;"></span>
-                  <button class="page-btn" id="res-type-btn-next" onclick="changeResTypePage(1)"><i data-lucide="chevron-right"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Currently deployed -->
           <div class="report-section">
@@ -721,7 +682,6 @@
                 <thead>
                   <tr>
                     <th>Resource</th>
-                    <th>Type</th>
                     <th>Qty</th>
                     <th>Incident</th>
                   </tr>
@@ -730,7 +690,6 @@
                   <tr>
                     <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
                     <td><span class="skeleton skeleton-badge"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
                     <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
                   </tr>
                 </tbody>
@@ -771,7 +730,6 @@
               <thead>
                 <tr>
                   <th>Resource</th>
-                  <th>Type</th>
                   <th>Qty</th>
                   <th>Incident</th>
                   <th>Dispatched By</th>
@@ -783,7 +741,6 @@
                 <tr>
                   <td><span class="skeleton skeleton-title" style="width:70%;"></span></td>
                   <td><span class="skeleton skeleton-badge"></span></td>
-                  <td><span class="skeleton skeleton-text" style="width:30px;"></span></td>
                   <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
                   <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
                   <td><span class="skeleton skeleton-text" style="width:60px;"></span></td>
@@ -846,13 +803,9 @@
                 <div class="report-stat-num orange" id="exec-kpi-shelters-open">3</div>
                 <div class="report-stat-label">Shelters Operational</div>
               </div>
-              <div class="report-stat" style="border-top:3px solid #34d399;">
-                <div class="report-stat-num green" id="exec-kpi-evacuees-active">142</div>
-                <div class="report-stat-label">Active IDP Population</div>
-              </div>
               <div class="report-stat" style="border-top:3px solid #a855f7;">
                 <div class="report-stat-num" style="color:#c084fc;" id="exec-kpi-occupancy-rate">56.8%</div>
-                <div class="report-stat-label">Registered Capacity</div>
+                <div class="report-stat-label">Capacity Usage</div>
               </div>
               <div class="report-stat" style="border-top:3px solid #38bdf8;">
                 <div class="report-stat-num" style="color:#38bdf8;" id="exec-kpi-assets-deployed">67</div>
@@ -874,51 +827,15 @@
         <!-- 8.2 Strategic Planning & Predictive Analytics Grid -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
 
-          <!-- Trend Analysis: Sitio Vulnerability & Consumption Spikes -->
+          <!-- Trend Analysis removed per product decision -->
           <div class="report-section">
             <div class="report-section-header">
               <h3><i data-lucide="trending-up"></i> Strategic Trend Analysis &amp; Hotspots</h3>
-              <span class="badge badge-orange">Predictive Model</span>
+              <span class="badge badge-muted">Removed</span>
             </div>
             <div class="report-section-body">
               <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.85rem;">
-                Consolidation of historical disaster data identifying recurring Sitio hazards and seasonal resource spikes:
-              </div>
-              
-              <table class="report-table" style="margin-bottom:1rem;">
-                <thead>
-                  <tr>
-                    <th>Purok / Sitio</th>
-                    <th>Primary Hazard</th>
-                    <th>Annual Freq.</th>
-                    <th>Risk Rank</th>
-                  </tr>
-                </thead>
-                <tbody id="exec-trend-sitios-tbody">
-                  <tr>
-                    <td><strong>Sitio 2 Coastal</strong></td>
-                    <td>Flash Flood &amp; Storm Surge</td>
-                    <td>14 Events</td>
-                    <td><span class="badge badge-red">HIGH</span></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Purok 1 Riverside</strong></td>
-                    <td>Riverine Inundation</td>
-                    <td>9 Events</td>
-                    <td><span class="badge badge-red">HIGH</span></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Purok 4 Hillside</strong></td>
-                    <td>Soil Erosion &amp; Landslide</td>
-                    <td>6 Events</td>
-                    <td><span class="badge badge-orange">MEDIUM</span></td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-sm);padding:.75rem;font-size:.78rem;color:#fbbf24;">
-                <i data-lucide="lightbulb" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                <strong>Analytical Insight:</strong> Sitio 2 Coastal accounts for 42% of evacuees. Pre-positioning relief stock at Sitio 2 Chapel reduces response latency by 35 minutes.
+                This module has been removed. Predictive sitio vulnerability and consumption spike analytics are no longer available.
               </div>
             </div>
           </div>

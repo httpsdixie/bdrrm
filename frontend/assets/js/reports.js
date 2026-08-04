@@ -2,11 +2,6 @@
 
 const TYPE_LABEL = { flood:'Flood', fire:'Fire', landslide:'Landslide', typhoon:'Typhoon', medical:'Medical', other:'Other' };
 const TYPE_COLOR = { flood:'#0077b6', fire:'#d93025', landslide:'#e65100', typhoon:'#6200ea', medical:'#2e7d32', other:'#5f6368' };
-const RES_TYPE_LABEL = {
-  rescue_boat: 'Rescue Boat', ambulance: 'Ambulance', fire_truck: 'Fire Truck',
-  medical_kit: 'Medical Kit', food_pack: 'Food Pack', tent: 'Tent',
-  vehicle: 'Vehicle', fuel: 'Fuel', chainsaw: 'Chainsaw', other: 'Other'
-};
 const SEV_BADGE = {
   low:      '<span class="badge badge-green">Low</span>',
   medium:   '<span class="badge badge-blue">Medium</span>',
@@ -108,7 +103,7 @@ async function loadSIMEXResults() {
         <td style="font-weight:700;color:var(--text-main);">${d.title}</td>
         <td style="font-size:.82rem;color:var(--text-muted);">${d.scenario}</td>
         <td style="font-size:.8rem;color:#94a3b8;">${d.participating_puroks.join(', ')}</td>
-        <td style="font-weight:700;color:#60a5fa;">${d.simulated_evacuee_count} IDPs</td>
+        <td style="font-weight:700;color:#60a5fa;">${d.simulated_evacuee_count} Capacity</td>
         <td style="font-size:.82rem;color:#fbbf24;">${d.avg_triage_latency_mins} mins</td>
         <td><span class="badge badge-green">${d.readiness_rating}</span></td>
       </tr>
@@ -123,7 +118,7 @@ async function openRunSIMEXModal() {
   if (!title) return;
   const scenario = prompt('Catastrophe Scenario:', 'Rapid Coastal Flooding & Power Outage');
   if (!scenario) return;
-  const evacuees = parseInt(prompt('Simulated Evacuee Count:', '350') || '350', 10);
+  const simulatedCapacity = parseInt(prompt('Simulated Capacity:', '350') || '350', 10);
 
   try {
     const res = await apiFetch('/validation/simex/run', {
@@ -132,7 +127,7 @@ async function openRunSIMEXModal() {
         title,
         scenario,
         participating_puroks: ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4'],
-        simulated_evacuee_count: evacuees
+        simulated_evacuee_count: simulatedCapacity
       })
     });
     showToast(res.message, 'success', 'SIMEX Drill Executed');
@@ -307,10 +302,6 @@ function renderIncidentReport(data) {
 
   // Type breakdown bars
   renderTypeBars('inc-type-bars', data.by_type, TYPE_COLOR, TYPE_LABEL);
-
-  // Rescue items bars
-  const rescueColors = { rescue_boat:'#1a73e8', medical_kit:'#2e7d32', food_pack:'#f9a825', tent:'#6200ea', vehicle:'#d93025', other:'#5f6368' };
-  renderTypeBars('rescue-items-bars', data.rescue_items_dispatched, rescueColors, RES_TYPE_LABEL);
 
   // Ongoing operations
   renderOngoingOps(data.ongoing_operations);
@@ -647,15 +638,14 @@ function closeReportModalOutside(e) {
 function renderResourceReport(data) {
   const s = data.summary;
 
-  document.getElementById('res-total-items').textContent   = s.total_items;
-  document.getElementById('res-available').textContent     = s.available_quantity;
-  document.getElementById('res-deployed').textContent      = s.deployed_quantity;
-  document.getElementById('res-deployed-items').textContent= s.status_counts['deployed']||0;
-  document.getElementById('deployed-count').textContent    = data.currently_deployed.length;
+  document.getElementById('res-total-items').textContent = s.total_items;
+  document.getElementById('res-available').textContent = s.available_quantity;
+  document.getElementById('res-deployed').textContent = s.deployed_quantity;
+  const currentlyDeployed = data.currently_deployed || [];
+  document.getElementById('deployed-count').textContent = currentlyDeployed.length;
 
-  renderResTypeGrid(data.by_type);
-  renderDeployedTable(data.currently_deployed);
-  renderDispatchLogTable(data.dispatch_log);
+  renderDeployedTable(currentlyDeployed);
+  renderDispatchLogTable(data.dispatch_log || []);
   renderAffectedMap(data.affected_zones);
 
   lucide.createIcons();
@@ -670,7 +660,6 @@ let combinedPage      = 1;
 let combinedPageSize  = 10;
 
 // Re-build allCombinedRows as structured data objects so we can filter them
-let allCombinedData = [];  // [{source, id, title, typeStatus, loc, dt, dtRaw}]
 
 function renderCombinedReport(incData, resData, evacData) {
   allCombinedData = [];
@@ -716,7 +705,7 @@ function renderCombinedReport(incData, resData, evacData) {
     .forEach(item => pushRow('evacuation',
       item.id || 'EVAC',
       item.name || item.title || 'Evacuation Center',
-      `Center (Capacity: ${item.capacity||0} IDPs)`,
+      `Center (Capacity: ${item.capacity||0})`,
       item.address || item.location || 'Barangay Linao',
       item.created_at || item.opened_at || new Date().toISOString()
     ));
@@ -732,11 +721,11 @@ function renderCombinedReport(incData, resData, evacData) {
   const seenRes = new Set();
   rawRes.filter(r => { const k = r.id||r.resource_id||r.name; if (!k||seenRes.has(k)) return false; seenRes.add(k); return true; })
     .forEach(item => {
-      const rType = RES_TYPE_LABEL[item.type||(item.resources&&item.resources.type)] || item.type || 'Equipment';
+      const resourceStatus = item.status || (item.available_quantity ? 'Available' : 'Deployed');
       pushRow('resource',
         item.id || item.resource_id || item.property_code || 'RES',
         item.name || item.resource_name || (item.resources&&item.resources.name) || 'Resource Item',
-        `${rType} (${item.status||(item.available_quantity?'Available':'Deployed')})`,
+        resourceStatus,
         item.location || item.stored_at || item.deployed_to || 'Operations Depot',
         item.created_at || item.added_at || item.dispatched_at || new Date().toISOString()
       );
@@ -746,11 +735,11 @@ function renderCombinedReport(incData, resData, evacData) {
   if (allCombinedData.length < 3) {
     [
       { sourceKey:'incident',   id:'INC-2026-0801', title:'Flash Flooding & Riverbank Overflow',              typeStatus:'Flood (Ongoing)',                   loc:'Sitio 2 Riverbank Evacuation Zone',     dtIso:'2026-08-04T05:30:00.000Z' },
-      { sourceKey:'evacuation', id:'EVAC-001',       title:'Barangay Linao Multi-Purpose Gymnasium',           typeStatus:'Primary Shelter (142 / 250 IDPs)',  loc:'Zone 1 Central Compound',                dtIso:'2026-08-04T04:00:00.000Z' },
-      { sourceKey:'resource',   id:'BRG-2026-9111',  title:'Submersible De-Watering Trash Pump 3"',            typeStatus:'Watercraft / De-Watering (Deployed)',loc:'Sitio 2 Coastal Access Road',            dtIso:'2026-08-04T05:45:00.000Z' },
+      { sourceKey:'evacuation', id:'EVAC-001',       title:'Barangay Linao Multi-Purpose Gymnasium',           typeStatus:'Primary Shelter (142 / 250 Capacity)', loc:'Zone 1 Central Compound',                dtIso:'2026-08-04T04:00:00.000Z' },
+      { sourceKey:'resource',   id:'BRG-2026-9111',  title:'Submersible De-Watering Trash Pump 3"',            typeStatus:'Deployed',loc:'Sitio 2 Coastal Access Road',            dtIso:'2026-08-04T05:45:00.000Z' },
       { sourceKey:'incident',   id:'INC-2026-0798',  title:'Electrical Transformer Spark & Power Outage',      typeStatus:'Fire / Infrastructure (Resolved)',   loc:'Purok 3 Main Highway Intersect',          dtIso:'2026-08-03T23:15:00.000Z' },
-      { sourceKey:'resource',   id:'BRG-2024-0002',  title:'Inflatable Heavy-Duty Rubber Rescue Boat',         typeStatus:'Rescue Watercraft (Available)',      loc:'Barangay Linao Hall Bodega - Zone 2',     dtIso:'2026-08-04T01:00:00.000Z' },
-      { sourceKey:'evacuation', id:'EVAC-002',        title:'Linao Elementary School Evacuation Building',      typeStatus:'Secondary Shelter (0 / 180 IDPs)',  loc:'Purok 2 School Road',                     dtIso:'2026-08-04T04:00:00.000Z' },
+      { sourceKey:'resource',   id:'BRG-2024-0002',  title:'Inflatable Heavy-Duty Rubber Rescue Boat',         typeStatus:'Available',      loc:'Barangay Linao Hall Bodega - Zone 2',     dtIso:'2026-08-04T01:00:00.000Z' },
+      { sourceKey:'evacuation', id:'EVAC-002',        title:'Linao Elementary School Evacuation Building',      typeStatus:'Secondary Shelter (0 / 180 Capacity)', loc:'Purok 2 School Road',                     dtIso:'2026-08-04T04:00:00.000Z' },
     ].forEach(d => allCombinedData.push({ ...d, sourceBadge: sourceBadges[d.sourceKey] }));
   }
 
@@ -841,10 +830,6 @@ function renderCombinedPage() {
 
   if (window.lucide) lucide.createIcons();
 }
-let resTypeData    = {};
-let resTypePage    = 1;
-const RES_TYPE_PAGE_SIZE = 4;
-
 let deployedData   = [];
 let deployedPage   = 1;
 
@@ -857,58 +842,6 @@ const RES_TABLE_PAGE_SIZE = 5;
 let currentResModalType = '';
 let currentResModalPage = 1;
 const RES_MODAL_PAGE_SIZE = 10;
-
-function renderResTypeGrid(byType, resetPage = true) {
-  if (byType) resTypeData = byType;
-  if (resetPage) resTypePage = 1;
-
-  const el     = document.getElementById('res-type-grid');
-  const pagEl  = document.getElementById('res-type-pagination');
-  const infoEl = document.getElementById('res-type-info');
-  const numEl  = document.getElementById('res-type-page-num');
-  const prevBtn = document.getElementById('res-type-btn-prev');
-  const nextBtn = document.getElementById('res-type-btn-next');
-
-  const entries = Object.entries(resTypeData);
-  if (!entries.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;">No resources recorded.</p>';
-    if (pagEl) pagEl.style.display = 'none';
-    return;
-  }
-
-  const totalPages = Math.ceil(entries.length / RES_TYPE_PAGE_SIZE);
-  if (resTypePage > totalPages) resTypePage = totalPages;
-  if (resTypePage < 1) resTypePage = 1;
-
-  const start = (resTypePage - 1) * RES_TYPE_PAGE_SIZE;
-  const pageItems = entries.slice(start, start + RES_TYPE_PAGE_SIZE);
-
-  el.innerHTML = pageItems.map(([type, info]) => `
-    <div class="res-type-card">
-      <div class="res-type-name">${RES_TYPE_LABEL[type]||type}</div>
-      <div class="res-type-row"><span>Total</span><span>${info.total}</span></div>
-      <div class="res-type-row"><span>Available</span><span style="color:var(--success);">${info.available}</span></div>
-      <div class="res-type-row"><span>Deployed</span><span style="color:#e65100;">${info.deployed}</span></div>
-      <div class="cap-bar-track" style="margin-top:.4rem;">
-        <div class="cap-bar-fill" style="width:${info.total?Math.round((info.deployed/info.total)*100):0}%;background:#e65100;"></div>
-      </div>
-    </div>`).join('');
-
-  if (entries.length > RES_TYPE_PAGE_SIZE) {
-    if (pagEl) pagEl.style.display = 'flex';
-    if (infoEl) infoEl.textContent = `Showing ${start+1}–${Math.min(start+RES_TYPE_PAGE_SIZE, entries.length)} of ${entries.length} types`;
-    if (numEl) numEl.textContent = `Page ${resTypePage} / ${totalPages}`;
-    if (prevBtn) prevBtn.disabled = resTypePage <= 1;
-    if (nextBtn) nextBtn.disabled = resTypePage >= totalPages;
-  } else {
-    if (pagEl) pagEl.style.display = 'none';
-  }
-}
-
-function changeResTypePage(delta) {
-  resTypePage += delta;
-  renderResTypeGrid(null, false);
-}
 
 function renderDeployedTable(deployed, resetPage = true) {
   if (deployed) deployedData = deployed;
@@ -939,7 +872,6 @@ function renderDeployedTable(deployed, resetPage = true) {
   tbody.innerHTML = pageItems.map(d => `
     <tr>
       <td>${d.resources?.name||'—'}</td>
-      <td>${RES_TYPE_LABEL[d.resources?.type]||'—'}</td>
       <td><strong>${d.quantity_dispatched}</strong></td>
       <td>${d.incidents?.title||'—'}</td>
     </tr>`).join('');
@@ -972,7 +904,7 @@ function renderDispatchLogTable(log, resetPage = true) {
   const nextBtn = document.getElementById('dispatch-log-btn-next');
 
   if (!dispatchLogData.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">No dispatch records.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No dispatch records.</td></tr>';
     if (pagEl) pagEl.style.display = 'none';
     return;
   }
@@ -987,7 +919,6 @@ function renderDispatchLogTable(log, resetPage = true) {
   tbody.innerHTML = pageItems.map(d => `
     <tr>
       <td>${d.resources?.name||'—'}</td>
-      <td>${RES_TYPE_LABEL[d.resources?.type]||'—'}</td>
       <td><strong>${d.quantity_dispatched}</strong></td>
       <td>${d.incidents?.title||'—'}</td>
       <td>${d.users?.full_name||'—'}</td>
@@ -1024,18 +955,14 @@ function openResourceModal(type) {
   const iconEl  = document.getElementById('resource-modal-icon');
   const theadEl = document.getElementById('resource-modal-thead');
 
-  if (type === 'type') {
-    titleEl.textContent = `Inventory by Type (${Object.keys(resTypeData).length} types)`;
-    iconEl.setAttribute('data-lucide', 'grid');
-    theadEl.innerHTML = `<tr><th>Resource Type</th><th>Total</th><th>Available</th><th>Deployed</th><th>Deploy %</th></tr>`;
-  } else if (type === 'deployed') {
+  if (type === 'deployed') {
     titleEl.textContent = `Currently Deployed (${deployedData.length})`;
     iconEl.setAttribute('data-lucide', 'send');
-    theadEl.innerHTML = `<tr><th>Resource</th><th>Type</th><th>Qty</th><th>Incident</th></tr>`;
+    theadEl.innerHTML = `<tr><th>Resource</th><th>Qty</th><th>Incident</th></tr>`;
   } else {
     titleEl.textContent = `Dispatch Log (${dispatchLogData.length})`;
     iconEl.setAttribute('data-lucide', 'list');
-    theadEl.innerHTML = `<tr><th>Resource</th><th>Type</th><th>Qty</th><th>Incident</th><th>Dispatched By</th><th>Dispatched At</th><th>Returned</th></tr>`;
+    theadEl.innerHTML = `<tr><th>Resource</th><th>Qty</th><th>Incident</th><th>Dispatched By</th><th>Dispatched At</th><th>Returned</th></tr>`;
   }
 
   renderResourceModalPage();
@@ -1050,14 +977,7 @@ function renderResourceModalPage() {
   const prevBtn = document.getElementById('resource-modal-btn-prev');
   const nextBtn = document.getElementById('resource-modal-btn-next');
 
-  let list;
-  if (currentResModalType === 'type') {
-    list = Object.entries(resTypeData);
-  } else if (currentResModalType === 'deployed') {
-    list = deployedData;
-  } else {
-    list = dispatchLogData;
-  }
+  const list = currentResModalType === 'deployed' ? deployedData : dispatchLogData;
 
   const total = list.length;
   const totalPages = Math.max(1, Math.ceil(total / RES_MODAL_PAGE_SIZE));
@@ -1068,24 +988,14 @@ function renderResourceModalPage() {
   const end   = Math.min(start + RES_MODAL_PAGE_SIZE, total);
   const pageItems = list.slice(start, end);
 
+  const colspan = currentResModalType === 'deployed' ? 3 : 6;
+
   if (!pageItems.length) {
-    tbodyEl.innerHTML = `<tr><td colspan="7" class="table-empty">No entries found.</td></tr>`;
-  } else if (currentResModalType === 'type') {
-    tbodyEl.innerHTML = pageItems.map(([type, info]) => {
-      const pct = info.total ? Math.round((info.deployed / info.total) * 100) : 0;
-      return `<tr>
-        <td><strong>${RES_TYPE_LABEL[type]||type}</strong></td>
-        <td>${info.total}</td>
-        <td style="color:var(--success);font-weight:600;">${info.available}</td>
-        <td style="color:#e65100;font-weight:600;">${info.deployed}</td>
-        <td>${pct}%</td>
-      </tr>`;
-    }).join('');
+    tbodyEl.innerHTML = `<tr><td colspan="${colspan}" class="table-empty">No entries found.</td></tr>`;
   } else if (currentResModalType === 'deployed') {
     tbodyEl.innerHTML = pageItems.map(d => `
       <tr>
         <td>${d.resources?.name||'—'}</td>
-        <td>${RES_TYPE_LABEL[d.resources?.type]||'—'}</td>
         <td><strong>${d.quantity_dispatched}</strong></td>
         <td>${d.incidents?.title||'—'}</td>
       </tr>`).join('');
@@ -1093,7 +1003,6 @@ function renderResourceModalPage() {
     tbodyEl.innerHTML = pageItems.map(d => `
       <tr>
         <td>${d.resources?.name||'—'}</td>
-        <td>${RES_TYPE_LABEL[d.resources?.type]||'—'}</td>
         <td><strong>${d.quantity_dispatched}</strong></td>
         <td>${d.incidents?.title||'—'}</td>
         <td>${d.users?.full_name||'—'}</td>
@@ -1146,7 +1055,7 @@ function renderAffectedMap(zones) {
     if (latlngs.length) {
       L.polygon(latlngs, { color:cfg.s, weight:1.5, fillColor:cfg.f, fillOpacity:.08 })
         .addTo(m)
-        .bindPopup(`<strong>${z.name}</strong><br>${z.type} · ${z.risk_level} risk`);
+        .bindPopup(`<strong>${z.name}</strong><br>${z.type} · Hazard Level: ${z.risk_level.toUpperCase()}`);
     }
   });
 
@@ -2201,9 +2110,8 @@ async function submitImport() {
 
 async function loadExecutiveDashboard() {
   try {
-    const [summary, trends, procurement] = await Promise.all([
+    const [summary, procurement] = await Promise.all([
       apiFetch('/reports/executive/summary'),
-      apiFetch('/reports/executive/trend-analysis'),
       apiFetch('/reports/executive/procurement-recommendations')
     ]);
 
@@ -2212,25 +2120,12 @@ async function loadExecutiveDashboard() {
     document.getElementById('exec-kpi-active-incidents').textContent = k.active_incidents_count;
     document.getElementById('exec-kpi-residents-impacted').textContent = k.total_residents_impacted;
     document.getElementById('exec-kpi-shelters-open').textContent = k.evacuation_facilities_open;
-    document.getElementById('exec-kpi-evacuees-active').textContent = k.evacuee_population_active;
-    // Occupancy is hidden in the client UI — show registered capacity if available
     const capEl = document.getElementById('exec-kpi-occupancy-rate');
-    if (capEl) capEl.textContent = k.total_registered_capacity !== undefined ? k.total_registered_capacity : '—';
+    if (capEl) capEl.textContent = k.overall_occupancy_rate_pct !== undefined ? `${k.overall_occupancy_rate_pct}%` : '—';
     document.getElementById('exec-kpi-assets-deployed').textContent = k.resources_deployed_count;
     document.getElementById('exec-readiness-rating').textContent = summary.executive_readiness_rating;
 
-    // Render Hotspot Sitios
-    const sitiosBody = document.getElementById('exec-trend-sitios-tbody');
-    if (sitiosBody && trends.hotspot_sitios) {
-      sitiosBody.innerHTML = trends.hotspot_sitios.map(s => `
-        <tr>
-          <td><strong>${esc(s.sitio)}</strong></td>
-          <td>${esc(s.risk_type)}</td>
-          <td>${s.incident_frequency_annual} Events</td>
-          <td><span class="badge ${s.vulnerability_rank === 'HIGH' ? 'badge-red' : 'badge-orange'}">${s.vulnerability_rank}</span></td>
-        </tr>
-      `).join('');
-    }
+    // Note: Trend analysis / hotspot sitios module removed from the UI; skip rendering.
 
     // Render Procurement Recommendations
     const procBody = document.getElementById('exec-procurement-tbody');
@@ -2294,14 +2189,7 @@ function shareExecutiveSummary() {
         <div class="kpi-card" style="border-top-color:#10b981;"><div class="kpi-num">142</div><div class="kpi-lbl">Active Evacuees</div></div>
       </div>
 
-      <div class="section-title">1. High-Risk Sitio Vulnerability &amp; Hotspots</div>
-      <table>
-        <tr><th>Sitio / Purok</th><th>Hazard Type</th><th>Risk Level</th></tr>
-        <tr><td>Sitio 2 Coastal</td><td>Flash Flood &amp; Storm Surge</td><td>HIGH (14 Events/Yr)</td></tr>
-        <tr><td>Purok 1 Riverside</td><td>Riverine Inundation</td><td>HIGH (9 Events/Yr)</td></tr>
-      </table>
-
-      <div class="section-title">2. COA-Compliant Equipment Deficit &amp; Budget Request</div>
+      <div class="section-title">1. COA-Compliant Equipment Deficit &amp; Budget Request</div>
       <table>
         <tr><th>Item</th><th>Deficit</th><th>Est. Budget</th></tr>
         <tr><td>Inflatable Rescue Boat (10-Pax)</td><td>+2 Units</td><td>₱240,000.00</td></tr>

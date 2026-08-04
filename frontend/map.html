@@ -506,13 +506,9 @@
         <button class="map-btn" onclick="openRoadClosureModal()">
           <i data-lucide="road"></i> Road Closure
         </button>
-        <button class="map-btn pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest danger.">
-          <i data-lucide="flame"></i> High-Risk Areas
+        <button class="map-btn pub-badge-tooltip" id="heatmap-btn" onclick="toggleHeatmap()" data-tooltip="Shows areas with the most emergency reports. Red glowing areas indicate highest incident density.">
+          <i data-lucide="flame"></i> Incident Heatmap
         </button>
-        <span id="risk-badge" style="display:none;align-items:center;gap:.3rem;padding:.35rem .75rem;background:#d93025;color:#fff;border-radius:6px;font-size:.75rem;font-weight:700;box-shadow:0 2px 8px rgba(217,48,37,.4);">
-          <i data-lucide="shield-alert" style="width:13px;height:13px;"></i>
-          <span></span>
-        </span>
       </div>
 
       <!-- Layer panel -->
@@ -525,7 +521,7 @@
             <span class="layer-panel-title-text" style="font-weight:700;color:var(--text-main);font-size:.78rem;letter-spacing:.04em;">MAP LEGEND</span>
           </div>
           <div style="display:flex;align-items:center;gap:.4rem;">
-            <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">8/8</span>
+            <span id="active-layer-count-admin" style="font-size:.65rem;font-weight:700;padding:.12rem .4rem;border-radius:99px;background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">7/7</span>
             <i data-lucide="chevron-up" id="layer-panel-chevron" style="width:14px;height:14px;transition:transform .2s ease;color:var(--text-muted);"></i>
           </div>
         </div>
@@ -554,7 +550,7 @@
 
           <!-- Section: Danger & Risk Areas -->
           <div class="layer-group-label">
-            <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Danger & Risk Areas
+            <i data-lucide="shield-alert" style="width:12px;height:12px;color:#0284c7;"></i> Hazard Areas
           </div>
           <label class="layer-toggle">
             <div class="layer-toggle-left">
@@ -569,13 +565,6 @@
               <span>Landslide Areas</span>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="toggle-landslide" checked onchange="toggleLayer('landslide')"><span class="toggle-slider"></span></label>
-          </label>
-          <label class="layer-toggle">
-            <div class="layer-toggle-left">
-              <span class="layer-dot" style="background:#ec4899;box-shadow:0 0 5px rgba(236,72,153,.4);"></span>
-              <span>High-Risk Zones</span>
-            </div>
-            <label class="toggle-switch"><input type="checkbox" id="toggle-risk" checked onchange="toggleLayer('risk')"><span class="toggle-slider"></span></label>
           </label>
 
           <div class="layer-group-sep"></div>

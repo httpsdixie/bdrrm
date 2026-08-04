@@ -16,8 +16,7 @@ const STATIC_ASSETS = [
   '/assets/js/api.js',
   '/assets/js/auth.js',
   '/assets/js/dashboard.js',
-  '/assets/js/i18n.js',
-  '/assets/js/manual-fallback.js'
+  '/assets/js/i18n.js'
 ];
 
 self.addEventListener('install', (event) => {

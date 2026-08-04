@@ -7,11 +7,9 @@ from .routes.resource_routes import router as resource_router
 from .routes.dashboard_routes import router as dashboard_router
 from .routes.map_routes import router as map_router
 from .routes.reports_routes import router as reports_router
-from .routes.risk_routes import router as risk_router
 from .routes.directory_routes import router as directory_router
 from .routes.evac_tracking_routes import router as evac_tracking_router
 from .routes.asset_routes import router as asset_router
-from .routes.manual_fallback_routes import router as manual_fallback_router
 from .routes.data_management_routes import router as data_management_router
 from .routes.validation_routes import router as validation_router
 from .routes.system_routes import router as system_router
@@ -39,11 +37,9 @@ app.include_router(resource_router)
 app.include_router(dashboard_router)
 app.include_router(map_router)
 app.include_router(reports_router)
-app.include_router(risk_router)
 app.include_router(directory_router)
 app.include_router(evac_tracking_router)
 app.include_router(asset_router)
-app.include_router(manual_fallback_router)
 app.include_router(data_management_router)
 app.include_router(validation_router)
 app.include_router(system_router)

@@ -20,10 +20,10 @@ async function apiFetch(endpoint, options = {}) {
   }
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization = "Bearer " + token;
   }
 
-  const isSilent = options.silent || ["/auth/login", "/auth/forgot-password", "/auth/verify-recovery-otp", "/auth/reset-password", "/system/", "/map/puroks", "/manual-fallback/", "/support/"].some(path => endpoint.includes(path));
+  const isSilent = options.silent || ["/auth/login", "/auth/forgot-password", "/auth/verify-recovery-otp", "/auth/reset-password", "/system/", "/map/puroks", "/support/"].some(path => endpoint.includes(path));
 
   let response;
   try {

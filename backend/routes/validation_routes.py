@@ -156,10 +156,5 @@ def get_sop_manual():
                 "title": "Evacuation Shelter Camp Management (JMC2 2021)",
                 "guidelines": "Verify 20-item JMC2 digital checklist, maintain 3.5m² floor area per IDP, and issue 2-hour pulse reports to CDRRMO."
             },
-            {
-                "code": "SOP-03",
-                "title": "Off-Grid Manual Fallback Protocol",
-                "guidelines": "During hardware/power blackout, log events in physical ledgers and encode into system within 24 hours of power restoration using actual occurrence timestamps."
-            }
         ]
     }

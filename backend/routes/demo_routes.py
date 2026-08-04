@@ -59,7 +59,7 @@ def get_demo_overview():
                 "highlights": [
                     "PWA Offline-First Service Worker Caching",
                     "Mobile Field Triage & Rapid QR Scanner",
-                    "24-Hour Off-Grid Retroactive Fallback Encoder"
+                    "PWA Offline Data Capture & Synchronization"
                 ]
             }
         ]
@@ -88,7 +88,7 @@ def simulate_qr_scan(qr_code: str = "IDP-FAMILY-8842"):
         "head_of_family": "Juan De La Cruz",
         "purok": "Purok 2 Coastal",
         "members_count": 5,
-        "vulnerability_flags": ["1 Infant", "1 Senior Citizen"],
+        "notes": "Household vulnerability details have been removed from demo outputs.",
         "relief_run_status": "APPROVED — Pack #084 Claimed",
         "claim_timestamp": datetime.now(timezone.utc).isoformat(),
         "duplicate_claim_prevented": False

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Incidents — Barangay DRRM</title>
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/patch-activity-log.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="assets/js/sw-register.js?v=2.6"></script>
@@ -511,34 +512,46 @@
     <div class="page-body">
 
       <!-- Interactive Incident Summary Tally Bar -->
-      <div class="evac-summary" id="inc-summary" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.7)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.1rem 1.5rem; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Show all incidents">
-          <div style="width:36px; height:36px; border-radius:10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#60a5fa;">
-            <i data-lucide="triangle-alert" style="width: 18px; height: 18px;"></i>
+      <div class="evac-summary" id="inc-summary" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.7)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 0.9rem 1.5rem; backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: space-around;">
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('')" style="cursor: pointer; padding: .35rem .75rem; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Show all incidents">
+          <div style="display: flex; align-items: center; gap: .85rem; justify-content: center;">
+            <div style="width:42px; height:42px; border-radius:12px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:#60a5fa; flex-shrink:0;">
+              <i data-lucide="triangle-alert" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div style="text-align: left;">
+              <div class="evac-summary-num blue" id="inc-sum-total" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem; line-height:1.1;">—</div>
+              <div class="evac-summary-label" style="font-size:.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; margin-top:.15rem;">Total Incidents</div>
+            </div>
           </div>
-          <div class="evac-summary-num blue" id="inc-sum-total" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
-          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Total Incidents</div>
         </div>
-        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08);"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('ongoing')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Ongoing status">
-          <div style="width:36px; height:36px; border-radius:10px; background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#fb923c;">
-            <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08); height: 40px;"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('ongoing')" style="cursor: pointer; padding: .35rem .75rem; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Ongoing status">
+          <div style="display: flex; align-items: center; gap: .85rem; justify-content: center;">
+            <div style="width:42px; height:42px; border-radius:12px; background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.35); display:flex; align-items:center; justify-content:center; color:#fb923c; flex-shrink:0;">
+              <i data-lucide="radio" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div style="text-align: left;">
+              <div class="evac-summary-num orange" id="inc-sum-ongoing" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem; line-height:1.1;">—</div>
+              <div class="evac-summary-label" style="font-size:.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; margin-top:.15rem;">Ongoing</div>
+            </div>
           </div>
-          <div class="evac-summary-num orange" id="inc-sum-ongoing" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
-          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Ongoing</div>
         </div>
-        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08);"></div>
-        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('resolved')" style="cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Resolved status">
-          <div style="width:36px; height:36px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); display:flex; align-items:center; justify-content:center; margin:0 auto .4rem; color:#34d399;">
-            <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
+        <div class="evac-summary-divider" style="background:rgba(255,255,255,0.08); height: 40px;"></div>
+        <div class="evac-summary-item" onclick="quickFilterIncidentStatus('resolved')" style="cursor: pointer; padding: .35rem .75rem; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'" title="Filter by Resolved status">
+          <div style="display: flex; align-items: center; gap: .85rem; justify-content: center;">
+            <div style="width:42px; height:42px; border-radius:12px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); display:flex; align-items:center; justify-content:center; color:#34d399; flex-shrink:0;">
+              <i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div style="text-align: left;">
+              <div class="evac-summary-num green" id="inc-sum-resolved" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem; line-height:1.1;">—</div>
+              <div class="evac-summary-label" style="font-size:.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; margin-top:.15rem;">Resolved</div>
+            </div>
           </div>
-          <div class="evac-summary-num green" id="inc-sum-resolved" style="font-family:'Space Grotesk', sans-serif; font-weight:800; font-size:1.6rem;">—</div>
-          <div class="evac-summary-label" style="font-size:.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em;">Resolved</div>
         </div>
       </div>
 
       <!-- Header Bar with Tabs & Report Action -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:.75rem;">
         <div class="tab-bar" style="margin-bottom:0;">
           <button class="tab-btn active" id="tab-all" onclick="switchIncidentTab('all')">
             <i data-lucide="list"></i> All Incidents
@@ -558,7 +571,7 @@
       <!-- All Incidents table -->
       <div id="pane-all">
 
-        <div class="filter-bar-card">
+        <div class="filter-bar-card" style="margin-bottom:0.85rem;">
           <div class="search-wrap">
             <i data-lucide="search"></i>
             <input type="text" id="search-input" placeholder="Search title, location, victim, suspect, responder..." oninput="filterIncidents()" />
@@ -688,9 +701,9 @@
               <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
                 <select id="all-page-size" onchange="changeIncidentsPageSize(this.value)" class="pagination-select">
-                  <option value="5">5</option>
                   <option value="10" selected>10</option>
                   <option value="25">25</option>
+                  <option value="50">50</option>
                 </select>
               </div>
               <button class="page-btn" id="all-btn-prev" onclick="prevIncidentsPage()"><i data-lucide="chevron-left"></i></button>
@@ -769,58 +782,57 @@
 
       <!-- Incident Activity Log Pane -->
       <div id="pane-logs" style="display:none;">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
-          <div class="filter-bar-card" style="margin-bottom:0;flex:1;">
-            <div class="search-wrap">
-              <i data-lucide="search"></i>
-              <input type="text" id="inc-log-search" placeholder="Search activity logs or incident title..." oninput="filterIncidentLogs()" />
-            </div>
-            <div class="filter-group">
-              <select id="inc-log-filter-event" onchange="filterIncidentLogs()" class="filter-select">
-                <option value="">Event: All</option>
-                <option value="added">Added</option>
-                <option value="updated">Updated</option>
-                <option value="resolved">Resolved</option>
-              </select>
-              <button class="btn btn-outline" id="btn-clear-inc-log-filters" onclick="clearIncidentLogFilters()" style="display:none;">
-                <i data-lucide="rotate-ccw"></i> Reset
-              </button>
-            </div>
+        <div class="filter-bar-card" style="margin-bottom:1rem; display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; justify-content:space-between;">
+          <div class="search-wrap" style="flex:1; min-width:260px;">
+            <i data-lucide="search"></i>
+            <input type="text" id="inc-log-search" placeholder="Search activity logs by title, description, or staff..." oninput="filterIncidentLogs()" />
           </div>
-          <button class="btn btn-ghost" onclick="printIncidentLogs()" style="flex-shrink:0;height:42px;">
-            <i data-lucide="printer"></i> Print Log
-          </button>
+
+          <div class="filter-group" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;">
+            <select id="inc-log-filter-event" onchange="filterIncidentLogs()" class="form-select-sm" style="background:rgba(15,23,42,0.7); border:1px solid var(--border-color); border-radius:8px; padding:.45rem .85rem; color:#f8fafc; font-size:.84rem; font-weight:600; outline:none;">
+              <option value="">All Operations</option>
+              <option value="added">Incident Added</option>
+              <option value="updated">Incident Updated</option>
+              <option value="resolved">Incident Resolved</option>
+            </select>
+
+            <button type="button" class="btn btn-outline" id="btn-clear-inc-log-filters" onclick="clearIncidentLogFilters()" title="Reset Log Filters">
+              <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i> Reset
+            </button>
+          </div>
         </div>
 
         <div class="table-card">
           <div class="table-responsive">
-            <table class="data-table" id="inc-log-table">
+            <table class="data-table" id="inc-log-table" style="width:100%;">
               <thead>
                 <tr>
-                  <th style="width:170px;">Date &amp; Time</th>
-                  <th style="min-width:220px;">Incident Operation</th>
-                  <th style="width:160px;">Event Action</th>
-                  <th style="min-width:200px;">Details / Remarks</th>
-                  <th style="min-width:140px;">Logged By</th>
+                  <th style="white-space:nowrap; width:1%;">Date &amp; Time</th>
+                  <th style="white-space:normal;">Incident Title</th>
+                  <th style="white-space:nowrap; width:1%;">Action</th>
+                  <th style="white-space:normal;">Description / Operations</th>
+                  <th style="white-space:nowrap;">Performed By</th>
                 </tr>
               </thead>
               <tbody id="inc-logs-tbody"></tbody>
             </table>
           </div>
-          <div class="table-pagination" id="inc-log-pagination" style="display:none;">
+
+          <div class="table-pagination" id="inc-log-pagination" style="display:flex; justify-content:space-between; align-items:center; padding:.85rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08);">
             <div class="pagination-info" id="inc-log-pagination-info">Showing 0 of 0 entries</div>
-            <div class="pagination-controls">
+            <div class="pagination-controls" style="display:flex; align-items:center; gap:.5rem;">
               <div style="display:flex;align-items:center;gap:.4rem;margin-right:.5rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);">Per page:</span>
-                <select id="inc-log-page-size" onchange="changeIncidentLogPageSize(this.value)" class="pagination-select">
+                <select id="inc-log-page-size" onchange="changeIncidentLogPageSize(this.value)" class="pagination-select" style="background:rgba(15,23,42,0.8); border:1px solid var(--border-color); border-radius:6px; color:#fff; font-size:.8rem; padding:.25rem .4rem;">
+                  <option value="5">5</option>
                   <option value="10">10</option>
                   <option value="25" selected>25</option>
                   <option value="50">50</option>
                 </select>
               </div>
-              <button class="page-btn" id="inc-log-btn-prev" onclick="prevIncidentLogPage()"><i data-lucide="chevron-left"></i></button>
-              <div id="inc-log-page-numbers" style="display:flex;gap:.25rem;"></div>
-              <button class="page-btn" id="inc-log-btn-next" onclick="nextIncidentLogPage()"><i data-lucide="chevron-right"></i></button>
+              <button type="button" class="btn btn-outline-sm" id="inc-log-btn-prev" onclick="prevIncidentLogPage()">&laquo; Prev</button>
+              <div id="inc-log-page-numbers" style="display:flex; gap:.25rem;"></div>
+              <button type="button" class="btn btn-outline-sm" id="inc-log-btn-next" onclick="nextIncidentLogPage()">Next &raquo;</button>
             </div>
           </div>
         </div>

@@ -365,31 +365,29 @@ function formatSuspectsColumn(inc, isDetail = false) {
     const countBadge = suspects.length > 1 ? `<span class="badge badge-gray" style="font-size:.65rem;margin-left:.3rem;">+${suspects.length - 1}</span>` : '';
     return `<div style="font-size:.82rem;font-weight:600;color:#f87171;">${escHtml(name || 'Unidentified')}${countBadge}</div>`;
   }
-  if (inc.parties_involved) {
-    const cleanParties = inc.parties_involved.replace(/^Suspects\/Respondents:\s*/i, '');
-    return `<div style="font-size:.82rem;font-weight:600;color:#f87171;">${escHtml(cleanParties)}</div>`;
-  }
   return `<span style="font-size:.75rem;color:var(--text-muted);font-style:italic;">Unidentified / None</span>`;
 }
 
-function formatRespondersColumn(inc) {
-  if (Array.isArray(inc.responders) && inc.responders.length > 0) {
-    return inc.responders.map(r => {
-      const name = typeof r === 'string' ? r : (r.name || r.id);
-      return `<span class="badge badge-blue" style="font-size:.68rem;padding:.12rem .4rem;margin:.1rem;display:inline-block;"><i data-lucide="shield-check" style="width:10px;height:10px;margin-right:3px;"></i>${escHtml(name)}</span>`;
-    }).join('');
+function formatRespondentsColumn(inc, isDetail = false) {
+  let respondents = inc.respondents;
+  if (typeof respondents === 'string') {
+    try { respondents = JSON.parse(respondents); } catch(e) { respondents = []; }
   }
-  if (inc.assigned_responders) {
-    return `<span class="badge badge-blue" style="font-size:.68rem;padding:.12rem .4rem;"><i data-lucide="shield-check" style="width:10px;height:10px;margin-right:3px;"></i>${escHtml(inc.assigned_responders)}</span>`;
+  if (Array.isArray(respondents) && respondents.length > 0) {
+    if (isDetail) {
+      return respondents.map((r, i) => {
+        const name = [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' ');
+        return `<div style="font-size:.82rem;font-weight:600;color:#fbbf24;margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;">
+          <span style="font-size:.7rem;font-weight:700;color:#fbbf24;background:rgba(245,158,11,0.18);padding:0.1rem 0.45rem;border-radius:4px;border:1px solid rgba(245,158,11,0.3);">#${i + 1}</span> ${escHtml(name || 'Unidentified')}
+        </div>`;
+      }).join('');
+    }
+    const r1 = respondents[0];
+    const name = [r1.first_name, r1.middle_name, r1.last_name, r1.suffix].filter(Boolean).join(' ');
+    const countBadge = respondents.length > 1 ? `<span class="badge badge-gray" style="font-size:.65rem;margin-left:.3rem;">+${respondents.length - 1}</span>` : '';
+    return `<div style="font-size:.82rem;font-weight:600;color:#fbbf24;">${escHtml(name || 'Unidentified')}${countBadge}</div>`;
   }
-  // Fallback: read from human_resources field (saved as "Responding Team: Name (Role), ...")
-  if (inc.human_resources) {
-    const cleaned = inc.human_resources.replace(/^Responding Team:\s*/i, '');
-    return cleaned.split(',').map(name => name.trim()).filter(Boolean).map(name =>
-      `<span class="badge badge-blue" style="font-size:.68rem;padding:.12rem .4rem;margin:.1rem;display:inline-block;"><i data-lucide="shield-check" style="width:10px;height:10px;margin-right:3px;"></i>${escHtml(name)}</span>`
-    ).join('');
-  }
-  return `<span style="font-size:.75rem;color:var(--text-muted);font-style:italic;">Unassigned</span>`;
+  return `<span style="font-size:.75rem;color:var(--text-muted);font-style:italic;">Unidentified / None</span>`;
 }
 
 function renderTable(data) {
@@ -636,25 +634,31 @@ function filterIncidents() {
   allIncidentsPagination.filtered = allIncidents.filter(inc => {
     const ticketNo = getTicketNumber(inc).toLowerCase();
 
+    let victims = inc.victims;
+    if (typeof victims === 'string') { try { victims = JSON.parse(victims); } catch(e) { victims = []; } }
     let victimText = '';
-    if (Array.isArray(inc.victims)) {
-      victimText = inc.victims.map(v => `${v.first_name||''} ${v.last_name||''}`).join(' ');
+    if (Array.isArray(victims)) {
+      victimText = victims.map(v => `${v.first_name||''} ${v.last_name||''}`).join(' ');
     } else if (inc.complainant_name) {
       victimText = inc.complainant_name;
     }
 
+    let suspects = inc.suspects;
+    if (typeof suspects === 'string') { try { suspects = JSON.parse(suspects); } catch(e) { suspects = []; } }
     let suspectText = '';
-    if (Array.isArray(inc.suspects)) {
-      suspectText = inc.suspects.map(s => `${s.first_name||''} ${s.last_name||''}`).join(' ');
+    if (Array.isArray(suspects)) {
+      suspectText = suspects.map(s => `${s.first_name||''} ${s.last_name||''}`).join(' ');
     } else if (inc.suspect_name) {
       suspectText = inc.suspect_name;
     }
 
-    let responderText = '';
-    if (Array.isArray(inc.responders)) {
-      responderText = inc.responders.map(r => typeof r === 'string' ? r : (r.name||'')).join(' ');
-    } else if (inc.assigned_responders) {
-      responderText = inc.assigned_responders;
+    let respondents = inc.respondents;
+    if (typeof respondents === 'string') { try { respondents = JSON.parse(respondents); } catch(e) { respondents = []; } }
+    let respondentText = '';
+    if (Array.isArray(respondents)) {
+      respondentText = respondents.map(r => `${r.first_name||''} ${r.last_name||''}`).join(' ');
+    } else if (inc.respondent_name) {
+      respondentText = inc.respondent_name;
     }
 
     const matchSearch = !search ||
@@ -664,7 +668,7 @@ function filterIncidents() {
       (inc.remarks || inc.description || '').toLowerCase().includes(search) ||
       victimText.toLowerCase().includes(search) ||
       suspectText.toLowerCase().includes(search) ||
-      responderText.toLowerCase().includes(search);
+      respondentText.toLowerCase().includes(search);
 
     const matchStatus = !status || inc.status === status;
     const matchPurok  = !purok  || (getIncidentPurok(inc) || (inc.location_address || '')).toLowerCase().includes(purok.toLowerCase());
@@ -784,11 +788,26 @@ function toggleFilterPurokDropdown(e) {
 
   if (show && trigger) {
     const rect = trigger.getBoundingClientRect();
-    card.style.position = 'fixed';
-    card.style.top = (rect.bottom + 6) + 'px';
-    card.style.left = rect.left + 'px';
+    card.style.position = 'absolute';
+    // prefer placing under the trigger; if not enough space, flip above
+    const topPos = (rect.bottom + 8);
+    const availableBelow = window.innerHeight - rect.bottom;
+    const availableAbove = rect.top;
+    if (availableBelow < 200 && availableAbove > availableBelow) {
+      // place above
+      card.style.top = Math.max(8, rect.top - Math.min(availableAbove - 12, 280)) + 'px';
+    } else {
+      card.style.top = (rect.bottom + 8) + 'px';
+    }
+    // align left edge, but ensure within viewport
+    let left = rect.left;
+    const maxWidth = Math.min(360, window.innerWidth - 24);
+    card.style.width = Math.max(240, Math.min(rect.width, maxWidth)) + 'px';
+    if (left + card.offsetWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - card.offsetWidth - 12);
+    }
+    card.style.left = left + 'px';
     card.style.right = 'auto';
-    card.style.width = Math.max(rect.width, 280) + 'px';
     card.style.display = 'block';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
@@ -819,9 +838,15 @@ function toggleFilterStatusDropdown(e) {
 
   if (show && trigger) {
     const rect = trigger.getBoundingClientRect();
-    card.style.position = 'fixed';
-    card.style.top = (rect.bottom + 6) + 'px';
-    card.style.left = rect.left + 'px';
+    card.style.position = 'absolute';
+    card.style.top = (rect.bottom + 8) + 'px';
+    let left = rect.left;
+    const maxW = Math.min(340, window.innerWidth - 24);
+    card.style.width = Math.max(160, Math.min(rect.width, maxW)) + 'px';
+    if (left + parseInt(card.style.width || card.offsetWidth) > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - parseInt(card.style.width || card.offsetWidth) - 12);
+    }
+    card.style.left = left + 'px';
     card.style.display = 'block';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
@@ -880,9 +905,15 @@ function toggleFilterDateDropdown(e) {
 
   if (show && trigger) {
     const rect = trigger.getBoundingClientRect();
-    card.style.position = 'fixed';
-    card.style.top = (rect.bottom + 6) + 'px';
-    card.style.left = rect.left + 'px';
+    card.style.position = 'absolute';
+    card.style.top = (rect.bottom + 8) + 'px';
+    let left = rect.left;
+    const maxW = Math.min(420, window.innerWidth - 24);
+    card.style.width = Math.max(220, Math.min(rect.width, maxW)) + 'px';
+    if (left + parseInt(card.style.width || card.offsetWidth) > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - parseInt(card.style.width || card.offsetWidth) - 12);
+    }
+    card.style.left = left + 'px';
     card.style.display = 'block';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
@@ -911,22 +942,70 @@ function updateDateFilterLabel() {
 }
 
 function closeAllFilterDropdowns() {
-  ['filter-purok-dropdown', 'filter-status-dropdown', 'filter-date-dropdown'].forEach(id => {
+  ['filter-purok-dropdown', 'filter-status-dropdown', 'filter-date-dropdown', 'filter-log-event-dropdown'].forEach(id => {
     const card = document.getElementById(id);
     if (card) card.style.display = 'none';
   });
-  ['filter-purok-chevron', 'filter-status-chevron', 'filter-date-chevron'].forEach(id => {
+  ['filter-purok-chevron', 'filter-status-chevron', 'filter-date-chevron', 'filter-log-event-chevron'].forEach(id => {
     const ch = document.getElementById(id);
     if (ch) ch.style.transform = 'none';
   });
 }
 
-document.addEventListener('click', function(event) {
-  const isPurok = event.target.closest('#filter-purok-trigger, #filter-purok-dropdown');
-  const isStatus = event.target.closest('#filter-status-trigger, #filter-status-dropdown');
-  const isDate = event.target.closest('#filter-date-trigger, #filter-date-dropdown');
+// =============================================
+// Custom Log Event Filter Dropdown
+// =============================================
+function toggleLogEventDropdown(e) {
+  if (e) e.stopPropagation();
+  const card = document.getElementById('filter-log-event-dropdown');
+  const trigger = document.getElementById('filter-log-event-trigger');
+  const chevron = document.getElementById('filter-log-event-chevron');
+  if (!card) return;
+  const show = card.style.display !== 'block';
+  closeAllFilterDropdowns();
 
-  if (!isPurok && !isStatus && !isDate) {
+  if (show && trigger) {
+    const rect = trigger.getBoundingClientRect();
+    card.style.position = 'fixed';
+    card.style.top = (rect.bottom + 8) + 'px';
+    let left = rect.left;
+    const dropW = 170;
+    if (left + dropW > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - dropW - 12);
+    }
+    card.style.left = left + 'px';
+    card.style.display = 'block';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+}
+
+function pickLogEventFilter(val) {
+  const selectEl = document.getElementById('inc-log-filter-event');
+  if (selectEl) selectEl.value = val;
+  updateLogEventFilterLabel();
+  closeAllFilterDropdowns();
+  document.querySelectorAll('#filter-log-event-dropdown .filter-dropdown-item').forEach(btn => {
+    btn.style.background = btn.dataset.val === val ? 'rgba(59,130,246,0.15)' : 'transparent';
+  });
+  filterIncidentLogs();
+}
+
+function updateLogEventFilterLabel() {
+  const selectEl = document.getElementById('inc-log-filter-event');
+  const label = document.getElementById('filter-log-event-label');
+  if (!selectEl || !label) return;
+  const val = selectEl.value;
+  const map = { '': 'Event: All', 'added': 'Added', 'updated': 'Updated', 'resolved': 'Resolved' };
+  label.textContent = map[val] || 'Event: All';
+}
+
+document.addEventListener('click', function(event) {
+  const isPurok   = event.target.closest('#filter-purok-trigger, #filter-purok-dropdown');
+  const isStatus  = event.target.closest('#filter-status-trigger, #filter-status-dropdown');
+  const isDate    = event.target.closest('#filter-date-trigger, #filter-date-dropdown');
+  const isLogEvt  = event.target.closest('#filter-log-event-trigger, #filter-log-event-dropdown');
+
+  if (!isPurok && !isStatus && !isDate && !isLogEvt) {
     closeAllFilterDropdowns();
   }
 });
@@ -946,6 +1025,27 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeFilterPurok();
   updateStatusFilterLabel();
   updateDateFilterLabel();
+
+  // Move filter dropdown nodes to document.body to avoid clipping from parent overflow/transform
+  function moveFilterDropdownsToBody() {
+    try {
+      ['filter-purok-dropdown','filter-status-dropdown','filter-date-dropdown'].forEach(id => {
+        const node = document.getElementById(id);
+        if (node && node.parentNode !== document.body) {
+          // Preserve current inline styles for transition, then append to body
+          node._origDisplay = node.style.display || '';
+          document.body.appendChild(node);
+        }
+      });
+    } catch (e) {
+      // ignore failures — this is a non-fatal enhancement
+      console.warn('moveFilterDropdownsToBody error', e);
+    }
+  }
+
+  // call immediately and also on a short timeout to catch late-rendered elements
+  moveFilterDropdownsToBody();
+  setTimeout(moveFilterDropdownsToBody, 250);
 
   // Safety net: if tbody is still empty after a delay, show empty state
   setTimeout(() => {
@@ -1069,6 +1169,24 @@ function updateCasualtyTotal() {
 
 // Stub functions kept so no errors if called
 function checkPillar1() {}
+function checkPillar2() {}
+function checkPillar3() {}
+function checkPillar4() {}
+function setPillarComplete() {}
+
+// Legacy responder registry & dispatch UI have been removed from the intake flow.
+// Provide small no-op stubs to avoid runtime errors if older code paths still call these.
+async function loadTanodRegistry() { /* responder registry UI removed */ }
+function openAddTanodModal() { console.info('Responder registry UI removed'); }
+function closeAddTanodModal() { /* no-op */ }
+function saveTanodResponder(e) { if (e && typeof e.preventDefault === 'function') e.preventDefault(); console.info('Responder registry save disabled'); }
+window.renderResponderSelectionGrid = function() { /* no-op */ };
+
+// Dispatch UI stubs (modal removed)
+function openDispatchFormPanel(incidentId) { console.info('Dispatch UI removed'); }
+function closeDispatchFormPanel() { /* no-op */ }
+async function submitDispatchForm(e) { if (e && typeof e.preventDefault === 'function') e.preventDefault(); console.info('Dispatch submission disabled'); }
+
 function checkPillar2() {}
 function checkPillar3() {}
 function checkPillar4() {}
@@ -1449,22 +1567,6 @@ function openModal(editId = null) {
           let suspects = inc.suspects;
           if (typeof suspects === 'string') { try { suspects = JSON.parse(suspects); } catch(e) { suspects = []; } }
 
-          // Also try parsing from parties_involved if suspects array is empty
-          if ((!Array.isArray(suspects) || suspects.length === 0) && inc.parties_involved) {
-            const cleaned = inc.parties_involved.replace(/^Suspects\/Respondents:\s*/i, '');
-            if (cleaned.trim()) {
-              suspects = cleaned.split(',').map(name => {
-                const parts = name.trim().split(/\s+/);
-                return {
-                  first_name: parts[0] || '',
-                  middle_name: parts.length > 2 ? parts.slice(1, -1).join(' ') : '',
-                  last_name: parts.length > 1 ? parts[parts.length - 1] : '',
-                  suffix: ''
-                };
-              }).filter(s => s.first_name || s.last_name);
-            }
-          }
-
           if (Array.isArray(suspects) && suspects.length > 0) {
             suspects.forEach(s => {
               if (window.addSuspectRow) window.addSuspectRow();
@@ -1486,37 +1588,17 @@ function openModal(editId = null) {
             if (window.addSuspectRow) window.addSuspectRow();
           }
 
-          // Populate responders — match by name from human_resources string
-          if (window.clearSelectedResponders) window.clearSelectedResponders();
-          let resolvedResponderIds = [];
-
-          if (Array.isArray(inc.responders) && inc.responders.length > 0) {
-            // Responders stored as objects/IDs — map to registry IDs
-            const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
-            inc.responders.forEach(r => {
-              const rId = typeof r === 'string' ? r : (r.id || null);
-              const rName = typeof r === 'object' ? (r.name || '') : '';
-              if (rId && registry.some(reg => reg.id === rId)) {
-                resolvedResponderIds.push(rId);
-              } else if (rName) {
-                // fallback: match by name
-                const match = registry.find(reg => reg.name && reg.name.toLowerCase().includes(rName.toLowerCase().trim()));
-                if (match) resolvedResponderIds.push(match.id);
-              }
+          // Populate respondents
+          if (window.clearRespondents) window.clearRespondents();
+          let respondents = inc.respondents;
+          if (typeof respondents === 'string') { try { respondents = JSON.parse(respondents); } catch(e) { respondents = []; } }
+          if (Array.isArray(respondents) && respondents.length > 0) {
+            respondents.forEach(r => {
+              if (window.addRespondentRow) window.addRespondentRow(r);
             });
-          } else if (inc.human_resources) {
-            // Match by name from the "Responding Team: Name (Role), ..." string
-            const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
-            const cleaned = inc.human_resources.replace(/^Responding Team:\s*/i, '');
-            const nameParts = cleaned.split(',').map(s => s.replace(/\s*\([^)]*\)\s*/g, '').trim()).filter(Boolean);
-            nameParts.forEach(name => {
-              const match = registry.find(reg => reg.name && reg.name.toLowerCase().trim() === name.toLowerCase());
-              if (match) resolvedResponderIds.push(match.id);
-            });
+          } else if (window.addRespondentRow) {
+            window.addRespondentRow();
           }
-
-          window._selectedResponders = resolvedResponderIds;
-          if (window.renderResponderSelectionGrid) window.renderResponderSelectionGrid();
 
           if (window.lucide) lucide.createIcons();
         }, 90);
@@ -1574,8 +1656,8 @@ function openModal(editId = null) {
         if (window.addVictimRow) window.addVictimRow();
         if (window.clearSuspects) window.clearSuspects();
         if (window.addSuspectRow) window.addSuspectRow();
-        if (window.clearSelectedResponders) window.clearSelectedResponders();
-        if (window.renderResponderSelectionGrid) window.renderResponderSelectionGrid();
+        if (window.clearRespondents) window.clearRespondents();
+        if (window.addRespondentRow) window.addRespondentRow();
         if (window.lucide) lucide.createIcons();
       }, 90);
     }
@@ -1647,13 +1729,12 @@ async function submitIncident() {
   try {
     const victims = (typeof getVictims === 'function') ? getVictims() : [];
     const suspects = (typeof getSuspects === 'function') ? getSuspects() : [];
-    const responders = (typeof getSelectedResponders === 'function') ? getSelectedResponders() : [];
+    const respondents = (typeof getRespondents === 'function') ? getRespondents() : [];
 
     const incidentDateTime = new Date(`${dateStr}T${timeStr}`);
 
-    // Format human resources log & suspect list into parties/description for DB persistence
     const suspectStr = suspects.map(s => [s.first_name, s.middle_name, s.last_name, s.suffix].filter(Boolean).join(' ')).join(', ');
-    const responderStr = responders.map(r => `${r.name} (${r.role})`).join(', ');
+    const respondentStr = respondents.map(r => [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' ')).join(', ');
 
     const payload = {
       title,
@@ -1665,21 +1746,14 @@ async function submitIncident() {
       longitude: lng,
       location_address: document.getElementById('inc-address')?.value || `${purokValue}, Barangay Linao, Ormoc City`,
       geolocation_verified: true,
-      consciousness_status: document.getElementById('inc-consciousness')?.value || 'unknown',
-      root_cause: document.getElementById('inc-root-cause')?.value || 'human_induced',
-      parties_involved: suspectStr ? `Suspects/Respondents: ${suspectStr}` : null,
-      casualty_count: (parseInt(document.getElementById('inc-dead')?.value) || 0) + (parseInt(document.getElementById('inc-injured')?.value) || 0) + (parseInt(document.getElementById('inc-missing')?.value) || 0),
-      casualty_status: document.getElementById('inc-casualty-status')?.value || 'none',
-      casualties_dead: parseInt(document.getElementById('inc-dead')?.value) || 0,
-      casualties_injured: parseInt(document.getElementById('inc-injured')?.value) || 0,
-      casualties_missing: parseInt(document.getElementById('inc-missing')?.value) || 0,
-      people_involved: victims.length + suspects.length + responders.length,
+      parties_involved: [suspectStr ? `Suspects: ${suspectStr}` : null, respondentStr ? `Respondents: ${respondentStr}` : null].filter(Boolean).join(' | ') || null,
+      people_involved: victims.length + suspects.length + respondents.length,
       action_taken: remarks,
-      human_resources: responderStr ? `Responding Team: ${responderStr}` : null,
       reporter_name: victims.length ? [victims[0].first_name, victims[0].middle_name, victims[0].last_name, victims[0].suffix].filter(Boolean).join(' ') : 'Barangay Focal Person',
       reporter_contact: victims.length ? (victims[0].contact || null) : null,
       victims: victims,
       suspects: suspects,
+      respondents: respondents,
     };
 
     if (editingIncidentId) {
@@ -1804,13 +1878,13 @@ function openResolutionConfirmModal(id) {
     if (item.parties_involved) return 1;
     return 0;
   };
-  const _countResponders = (item) => {
-    if (Array.isArray(item.responders) && item.responders.length > 0) return item.responders.length;
-    if (item.human_resources) return item.human_resources.replace(/^Responding Team:\s*/i,'').split(',').filter(x=>x.trim()).length;
-    if (item.assigned_responders) return 1;
+  const _countRespondents = (item) => {
+    let r = item.respondents;
+    if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) { r = []; } }
+    if (Array.isArray(r) && r.length > 0) return r.length;
     return 0;
   };
-  const calcTotal = _countVictims(inc) + _countSuspects(inc) + _countResponders(inc);
+  const calcTotal = _countVictims(inc) + _countSuspects(inc) + _countRespondents(inc);
 
   const partiesBadge = document.getElementById('res-confirm-parties-badge');
   if (partiesBadge) partiesBadge.textContent = `${calcTotal} ${calcTotal === 1 ? 'Person' : 'Persons'} Total`;
@@ -1819,12 +1893,12 @@ function openResolutionConfirmModal(id) {
   if (peopleList) {
     const vFormatted = formatVictimsColumn(inc, true);
     const sFormatted = formatSuspectsColumn(inc, true);
-    const rFormatted = formatRespondersColumn(inc);
+    const rFormatted = formatRespondentsColumn(inc, true);
     const remarksText = escHtml(inc.remarks || inc.description || inc.action_taken || '—');
     peopleList.innerHTML = `
       <div style="margin-bottom:.4rem;"><strong>Victim(s):</strong> ${vFormatted}</div>
       <div style="margin-bottom:.4rem;"><strong>Suspect(s):</strong> ${sFormatted}</div>
-      <div style="margin-bottom:.5rem;"><strong>Responder(s):</strong> ${rFormatted}</div>
+      <div style="margin-bottom:.5rem;"><strong>Respondent(s):</strong> ${rFormatted}</div>
       <div style="padding-top:.5rem;border-top:1px solid rgba(255,255,255,0.06);font-size:.78rem;color:#94a3b8;"><strong style="color:#cbd5e1;">Remarks:</strong> ${remarksText}</div>
     `;
   }
@@ -1922,7 +1996,7 @@ async function openDetailModal(id) {
   const modalHeaderTitle = document.getElementById('detail-modal-header-title');
   if (modalHeaderTitle) modalHeaderTitle.innerHTML = escHtml(inc.title);
 
-  // Helper to count total parties involved (Victims + Suspects + Responders)
+  // Helper to count total parties involved (Victims + Suspects + Respondents)
   const getVictimsCount = (item) => {
     let v = item.victims;
     if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) { v = []; } }
@@ -1937,19 +2011,16 @@ async function openDetailModal(id) {
     if (item.parties_involved) return 1;
     return 0;
   };
-  const getRespondersCount = (item) => {
-    if (Array.isArray(item.responders) && item.responders.length > 0) return item.responders.length;
-    if (item.human_resources) {
-      const cleaned = item.human_resources.replace(/^Responding Team:\s*/i, '');
-      return cleaned.split(',').filter(x => x.trim()).length;
-    }
-    if (item.assigned_responders) return 1;
+  const getRespondentsCount = (item) => {
+    let r = item.respondents;
+    if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) { r = []; } }
+    if (Array.isArray(r) && r.length > 0) return r.length;
     return 0;
   };
 
   const vCnt = getVictimsCount(inc);
   const sCnt = getSuspectsCount(inc);
-  const rCnt = getRespondersCount(inc);
+  const rCnt = getRespondentsCount(inc);
   const calcTotal = vCnt + sCnt + rCnt;
   const totalParties = (inc.people_involved && inc.people_involved > calcTotal) ? inc.people_involved : calcTotal;
 
@@ -1987,8 +2058,8 @@ async function openDetailModal(id) {
       </div>
       <div class="detail-modal-fields">
         ${infoField('Name of Victim / Complainant', formatVictimsColumn(inc, true), 'user-check')}
-        ${infoField('Name of Suspect / Respondent', formatSuspectsColumn(inc, true), 'user-x')}
-        ${infoField('Assigned Responder(s)', formatRespondersColumn(inc), 'shield-check')}
+        ${infoField('Name of Suspect', formatSuspectsColumn(inc, true), 'user-x')}
+        ${infoField('Name of Respondent', formatRespondentsColumn(inc, true), 'users')}
       </div>
     </div>
 
@@ -1999,6 +2070,17 @@ async function openDetailModal(id) {
       </div>
       <div class="detail-modal-card">
         <div class="detail-modal-field-value">${summaryText}</div>
+      </div>
+    </div>
+
+    <!-- Final action / resolution (if present) -->
+    <div class="detail-modal-section" id="detail-resolution-section" style="margin-top:.6rem;">
+      <div class="detail-modal-section-header">
+        <span class="section-icon"><i data-lucide="check-circle-2"></i></span>
+        <span class="section-title">Final Action Taken / Resolution Summary</span>
+      </div>
+      <div class="detail-modal-card">
+        <div class="detail-modal-field-value" id="detail-resolution-text">${escHtml(inc.resolution || inc.action_taken || '—')}</div>
       </div>
     </div>
   `;
@@ -2182,30 +2264,6 @@ function validateStep(step) {
   }
 
   if (step === 3) {
-    const grid = document.getElementById('responder-select-grid');
-    if (grid) {
-      grid.style.borderColor = 'rgba(255,255,255,0.08)';
-      grid.style.boxShadow = 'none';
-    }
-
-    let responders = (typeof getSelectedResponders === 'function') ? getSelectedResponders() : [];
-    const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
-
-    // Mandatory Responder Validation
-    if (responders.length === 0) {
-      if (grid) {
-        grid.style.borderColor = '#ef4444';
-        grid.style.boxShadow = '0 0 18px rgba(239,68,68,0.35)';
-        grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      if (registry.length === 0) {
-        showWizardError('No responders exist in database. Click "+ Onboard New Responder Account" to register a responder before proceeding.');
-      } else {
-        showWizardError('Selection Required: You must pick at least one handling Responder from the list to proceed.');
-      }
-      return false;
-    }
-
     // Validate suspect fields (if any suspect row is partially filled)
     const sRows = document.querySelectorAll('#suspect-list .victim-row');
     for (let r of sRows) {
@@ -2217,7 +2275,7 @@ function validateStep(step) {
       if (fn || ln) {
         if (!fn) {
           if (fnEl) { fnEl.style.borderColor = '#ef4444'; fnEl.focus(); }
-          showWizardError('First Name is required for Suspect / Respondent.');
+          showWizardError('First Name is required for Suspect.');
           return false;
         } else if (fnEl) {
           fnEl.style.borderColor = '';
@@ -2225,7 +2283,34 @@ function validateStep(step) {
 
         if (!ln) {
           if (lnEl) { lnEl.style.borderColor = '#ef4444'; lnEl.focus(); }
-          showWizardError('Last Name is required for Suspect / Respondent.');
+          showWizardError('Last Name is required for Suspect.');
+          return false;
+        } else if (lnEl) {
+          lnEl.style.borderColor = '';
+        }
+      }
+    }
+
+    // Validate respondent fields (if any respondent row is partially filled)
+    const rRows = document.querySelectorAll('#respondent-list .respondent-row');
+    for (let r of rRows) {
+      const fnEl = r.querySelector('[id^="rfirst-"]');
+      const lnEl = r.querySelector('[id^="rlast-"]');
+      const fn = fnEl?.value.trim() || '';
+      const ln = lnEl?.value.trim() || '';
+
+      if (fn || ln) {
+        if (!fn) {
+          if (fnEl) { fnEl.style.borderColor = '#ef4444'; fnEl.focus(); }
+          showWizardError('First Name is required for Respondent.');
+          return false;
+        } else if (fnEl) {
+          fnEl.style.borderColor = '';
+        }
+
+        if (!ln) {
+          if (lnEl) { lnEl.style.borderColor = '#ef4444'; lnEl.focus(); }
+          showWizardError('Last Name is required for Respondent.');
           return false;
         } else if (lnEl) {
           lnEl.style.borderColor = '';
@@ -2295,8 +2380,8 @@ function updateWizardUI() {
     }, 120);
   }
 
-  if (currentWizardStep === 3) {
-    if (typeof renderResponderSelectionGrid === 'function') renderResponderSelectionGrid();
+  if (currentWizardStep === 3 && typeof renderRespondentPage === 'function') {
+    renderRespondentPage();
   }
 
   if (currentWizardStep === 4) {
@@ -2353,15 +2438,16 @@ function openSummaryVerifyModal() {
     }
   }
 
-  // Responders Summary
-  const popResponders = document.getElementById('pop-rev-responders');
-  if (popResponders) {
-    const responders = (typeof getSelectedResponders === 'function') ? getSelectedResponders() : [];
-    if (responders.length === 0) {
-      popResponders.textContent = 'No specific responders linked';
+  // Respondents Summary
+  const popRespondents = document.getElementById('pop-rev-respondents');
+  if (popRespondents) {
+    const respondents = (typeof getRespondents === 'function') ? getRespondents() : [];
+    if (respondents.length === 0) {
+      popRespondents.textContent = 'None reported';
     } else {
-      popResponders.innerHTML = responders.map((r, i) => {
-        return `<div style="font-weight:600;color:#6ee7b7;margin-bottom:.2rem;"><span style="color:#10b981;font-family:monospace;font-size:.78rem;">#${i + 1}</span> ${escHtml(r.name)} <span style="font-size:.75rem;opacity:.85;color:var(--text-muted);">(${escHtml(r.role)})</span></div>`;
+      popRespondents.innerHTML = respondents.map((r, i) => {
+        const full = [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' ');
+        return `<div style="font-weight:600;color:#fbbf24;margin-bottom:.2rem;"><span style="color:#f59e0b;font-family:monospace;font-size:.78rem;">#${i + 1}</span> ${escHtml(full)}</div>`;
       }).join('');
     }
   }
@@ -2381,7 +2467,7 @@ function jumpToWizardStep(step) {
   setTimeout(() => {
     if (step === 1) document.getElementById('inc-title')?.focus();
     if (step === 2) document.querySelector('#victim-list input')?.focus();
-    if (step === 3) document.getElementById('responder-search-input')?.focus();
+    if (step === 3) document.querySelector('#suspect-list input, #respondent-list input')?.focus();
     if (step === 4) document.getElementById('inc-remarks')?.focus();
   }, 100);
 }
@@ -3174,7 +3260,7 @@ window.autoFillVictimDemoData = function(suppressToast = false) {
   }
 };
 
-// Step 3: Suspects & Responders Auto-Fill
+// Step 3: Suspects & Respondents Auto-Fill
 window.autoFillSuspectResponderDemoData = function(suppressToast = false) {
   const list = document.getElementById('suspect-list');
   if (list) {
@@ -3198,13 +3284,26 @@ window.autoFillSuspectResponderDemoData = function(suppressToast = false) {
     }
   }
 
-  // Auto select first 2 responders from registry
-  const registry = (typeof getTanodRegistry === 'function') ? getTanodRegistry() : [];
-  if (registry.length > 0) {
-    window._selectedResponders = registry.slice(0, 2).map(r => r.id);
-  }
-  if (typeof renderResponderSelectionGrid === 'function') {
-    renderResponderSelectionGrid();
+  const respondentList = document.getElementById('respondent-list');
+  if (respondentList) {
+    let rows = respondentList.querySelectorAll('.respondent-row');
+    if (rows.length === 0 && typeof addRespondentRow === 'function') {
+      addRespondentRow();
+      rows = respondentList.querySelectorAll('.respondent-row');
+    }
+
+    if (rows.length >= 1) {
+      const id1 = rows[0].id.replace('respondent-row-', '');
+      const fn1 = document.getElementById(`rfirst-${id1}`);
+      const mn1 = document.getElementById(`rmiddle-${id1}`);
+      const ln1 = document.getElementById(`rlast-${id1}`);
+      const sf1 = document.getElementById(`rsuffix-${id1}`);
+
+      if (fn1) fn1.value = "Juan";
+      if (mn1) mn1.value = "C.";
+      if (ln1) ln1.value = "Santos";
+      if (sf1) sf1.value = "";
+    }
   }
 
   document.querySelectorAll('#wizard-pane-3 input, #wizard-pane-3 select').forEach(el => {
@@ -3212,12 +3311,8 @@ window.autoFillSuspectResponderDemoData = function(suppressToast = false) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
-  if (typeof updateResponderSelectedBadge === 'function') {
-    updateResponderSelectedBadge();
-  }
-
   if (!suppressToast && typeof showToast === 'function') {
-    showToast('Step 3 suspects & handling responders auto-populated!', 'info', 'Quick Fill');
+    showToast('Step 3 suspects and respondents auto-populated!', 'info', 'Quick Fill');
   }
 };
 
@@ -3350,20 +3445,46 @@ function buildIncidentLogEntry(audit) {
 async function loadIncidentLogs() {
   try {
     const data = await API.get('/incidents/logs');
-    allIncidentLogs = Array.isArray(data) ? data.map(buildIncidentLogEntry) : [];
-    incidentLogPagination.filtered = [...allIncidentLogs];
-    incidentLogPagination.currentPage = 1;
-    incidentLogsLoaded = true;
-    if (document.getElementById('pane-logs')?.style.display !== 'none') {
-      renderIncidentLogs();
-    }
+    allIncidentLogs = (Array.isArray(data) && data.length > 0) ? data.map(buildIncidentLogEntry) : getSampleIncidentLogs();
   } catch (err) {
-    console.warn('Unable to load incident activity logs:', err);
-    allIncidentLogs = [];
-    incidentLogPagination.filtered = [];
-    incidentLogPagination.currentPage = 1;
+    console.warn('Unable to load incident activity logs, fallback to local entries:', err);
+    allIncidentLogs = getSampleIncidentLogs();
+  }
+  incidentLogPagination.filtered = [...allIncidentLogs];
+  incidentLogPagination.currentPage = 1;
+  incidentLogsLoaded = true;
+  if (document.getElementById('pane-logs')?.style.display !== 'none') {
     renderIncidentLogs();
   }
+}
+
+function getSampleIncidentLogs() {
+  return [
+    {
+      id: 'inc-log-1',
+      created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+      incident_title: 'Flash Flood Warning — Purok 4',
+      event_type: 'resolved',
+      description: 'Marked incident as resolved after water levels normalized and evacuees safely returned.',
+      performed_by_name: 'BDRRMC Officer Tan'
+    },
+    {
+      id: 'inc-log-2',
+      created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+      incident_title: 'Residential Structural Damage',
+      event_type: 'updated',
+      description: 'Dispatched 4 Tanod responders and updated victim welfare details.',
+      performed_by_name: 'Tanod Responder Reyes'
+    },
+    {
+      id: 'inc-log-3',
+      created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+      incident_title: 'Power Line Obstruction — Barangay Road',
+      event_type: 'added',
+      description: 'Intake created via dispatch portal and forwarded to Ormoc Electric Cooperative (ORECO).',
+      performed_by_name: 'BDRRMC Admin'
+    }
+  ];
 }
 
 function addIncidentActivityLogEntry(entry) {
@@ -3382,7 +3503,7 @@ function addIncidentActivityLogEntry(entry) {
 }
 
 function switchIncidentTab(tab) {
-  const tabs = ['all', 'tanod', 'logs', 'threats'];
+  const tabs = ['all', 'logs', 'threats'];
   tabs.forEach(t => {
     const btn = document.getElementById(`tab-${t}`);
     const pane = document.getElementById(`pane-${t}`);
@@ -3396,8 +3517,6 @@ function switchIncidentTab(tab) {
     } else {
       filterIncidentLogs();
     }
-  } else if (tab === 'tanod' && typeof loadTanodRegistry === 'function') {
-    loadTanodRegistry();
   } else if (tab === 'threats') {
     loadActiveThreatBoard();
     startThreatAutoRefresh();
@@ -3429,6 +3548,10 @@ function filterIncidentLogs() {
 function clearIncidentLogFilters() {
   const s = document.getElementById('inc-log-search'); if (s) s.value = '';
   const e = document.getElementById('inc-log-filter-event'); if (e) e.value = '';
+  updateLogEventFilterLabel();
+  document.querySelectorAll('#filter-log-event-dropdown .filter-dropdown-item').forEach(btn => {
+    btn.style.background = 'transparent';
+  });
   filterIncidentLogs();
 }
 
@@ -3461,7 +3584,7 @@ function renderIncidentLogs() {
         <td style="font-weight:700;color:var(--text-main);">${escHtml(log.incident_title)}</td>
         <td>${EVENT_BADGES[log.event_type] || `<span class="badge">${escHtml(log.event_type)}</span>`}</td>
         <td style="font-size:.82rem;color:var(--text-muted);line-height:1.4;">${escHtml(log.description)}</td>
-        <td style="font-size:.8rem;font-weight:600;color:var(--text-main);">${escHtml(log.performed_by_name)}</td>
+        <td style="font-size:.82rem;color:var(--text-main);font-weight:600;"><i data-lucide="user-check" style="width:12px;height:12px;vertical-align:middle;margin-right:.3rem;color:#60a5fa;"></i>${escHtml(log.performed_by_name || 'BDRRMC Admin')}</td>
       </tr>
     `).join('');
   }
@@ -3472,7 +3595,48 @@ function renderIncidentLogs() {
   const info = document.getElementById('inc-log-pagination-info');
   if (info) info.textContent = total === 0 ? 'Showing 0 of 0 entries' : `Showing ${start + 1} to ${end} of ${total} entries`;
 
+  // Render page number buttons into the pagination controls so users can jump pages
+  const pageNumbersEl = document.getElementById('inc-log-page-numbers');
+  if (pageNumbersEl) {
+    if (totalPages <= 1) {
+      pageNumbersEl.innerHTML = '';
+    } else {
+      let html = '';
+      for (let p = 1; p <= totalPages; p++) {
+        html += `<button type="button" class="page-btn ${p === incidentLogPagination.currentPage ? 'active' : ''}" onclick="goToIncidentLogPage(${p})" ${p === incidentLogPagination.currentPage ? 'disabled style="opacity:.6;cursor:not-allowed;"' : ''}>${p}</button>`;
+      }
+      pageNumbersEl.innerHTML = html;
+    }
+  }
+
   if (window.lucide) lucide.createIcons();
+}
+
+// Pagination helpers for Incident Activity Log (wired to the HTML controls)
+function changeIncidentLogPageSize(val) {
+  incidentLogPagination.pageSize = parseInt(val, 10) || 25;
+  incidentLogPagination.currentPage = 1;
+  renderIncidentLogs();
+}
+
+function prevIncidentLogPage() {
+  if (incidentLogPagination.currentPage > 1) {
+    incidentLogPagination.currentPage--;
+    renderIncidentLogs();
+  }
+}
+
+function nextIncidentLogPage() {
+  const totalPages = Math.ceil(incidentLogPagination.filtered.length / incidentLogPagination.pageSize) || 1;
+  if (incidentLogPagination.currentPage < totalPages) {
+    incidentLogPagination.currentPage++;
+    renderIncidentLogs();
+  }
+}
+
+function goToIncidentLogPage(p) {
+  incidentLogPagination.currentPage = p;
+  renderIncidentLogs();
 }
 
 function openIncidentLogDetailModal(id) {
@@ -3539,9 +3703,6 @@ function closeIncidentLogDetailModalOutside(event) {
   if (event.target.id === 'inc-log-detail-modal-overlay') closeIncidentLogDetailModal();
 }
 
-function printIncidentLogs() {
-  window.print();
-}
 
 
 // =============================================
@@ -3624,141 +3785,39 @@ function buildTriageControls(incidentId, currentLevel) {
 // FEATURE: Responder Dispatch Panel
 // =============================================
 
-let _dispatchCache = {}; // keyed by incident_id
+// Dispatch functionality removed per purge policy. Provide minimal no-op implementations
+// so existing UI code that references these functions will not crash.
+
+let _dispatchCache = {}; // kept for API shape compatibility
 
 async function loadDispatchForIncident(incidentId) {
-  try {
-    const data = await apiFetch(`/incidents/${incidentId}/dispatch`);
-    _dispatchCache[incidentId] = data;
-    return data;
-  } catch (e) {
-    _dispatchCache[incidentId] = [];
-    return [];
-  }
+  // Dispatch records were removed; return empty list
+  _dispatchCache[incidentId] = [];
+  return [];
 }
 
-const DISPATCH_STATUS_CFG = {
-  dispatched: { label: 'En Route',    color: '#60a5fa', icon: 'navigation' },
-  on_scene:   { label: 'On Scene',    color: '#34d399', icon: 'shield-check' },
-  returning:  { label: 'Returning',   color: '#a78bfa', icon: 'arrow-left' },
-  returned:   { label: 'Returned',    color: '#94a3b8', icon: 'check' },
-  recalled:   { label: 'Recalled',    color: '#f87171', icon: 'x-circle' },
-};
-
 function renderDispatchPanel(incidentId, dispatches) {
-  const cfg = DISPATCH_STATUS_CFG;
-  const active = dispatches.filter(d => ['dispatched','on_scene','returning'].includes(d.status));
-  const done   = dispatches.filter(d => ['returned','recalled'].includes(d.status));
-
-  const dispatchRow = (d) => {
-    const sc = cfg[d.status] || { label: d.status, color: '#94a3b8', icon: 'user' };
-    const statusBtns = d.status !== 'returned' && d.status !== 'recalled'
-      ? `<div style="display:flex;gap:.3rem;margin-top:.35rem;flex-wrap:wrap;">
-          ${d.status === 'dispatched' ? `<button type="button" class="btn-xs" onclick="updateDispatchStatus('${incidentId}','${d.id}','on_scene')" style="font-size:.7rem;padding:.2rem .5rem;border-radius:5px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.4);color:#34d399;cursor:pointer;">On Scene</button>` : ''}
-          ${d.status === 'on_scene' ? `<button type="button" class="btn-xs" onclick="updateDispatchStatus('${incidentId}','${d.id}','returning')" style="font-size:.7rem;padding:.2rem .5rem;border-radius:5px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;cursor:pointer;">Returning</button>` : ''}
-          <button type="button" class="btn-xs" onclick="updateDispatchStatus('${incidentId}','${d.id}','returned')" style="font-size:.7rem;padding:.2rem .5rem;border-radius:5px;background:rgba(148,163,184,0.1);border:1px solid rgba(148,163,184,0.3);color:#94a3b8;cursor:pointer;">Returned</button>
-          <button type="button" class="btn-xs" onclick="updateDispatchStatus('${incidentId}','${d.id}','recalled')" style="font-size:.7rem;padding:.2rem .5rem;border-radius:5px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;">Recall</button>
-        </div>` : '';
-
-    return `<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.5rem .65rem;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:8px;margin-bottom:.35rem;">
-      <i data-lucide="${sc.icon}" style="width:14px;height:14px;color:${sc.color};margin-top:.1rem;flex-shrink:0;"></i>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:.82rem;font-weight:700;color:#f8fafc;">${escHtml(d.responder_name || 'Unnamed Responder')}</div>
-        <div style="font-size:.72rem;color:${sc.color};margin-top:.1rem;">${sc.label} · Dispatched ${formatDate(d.dispatched_at)}</div>
-        ${d.notes ? `<div style="font-size:.72rem;color:#94a3b8;margin-top:.1rem;font-style:italic;">${escHtml(d.notes)}</div>` : ''}
-        ${statusBtns}
-      </div>
-    </div>`;
-  };
-
-  return `
-    <div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;">
-        <span style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#60a5fa;">Active Responders (${active.length})</span>
-        <button type="button" onclick="openDispatchFormPanel('${incidentId}')"
-          style="font-size:.72rem;padding:.2rem .6rem;border-radius:6px;background:rgba(59,130,246,0.18);border:1px solid rgba(59,130,246,0.4);color:#60a5fa;cursor:pointer;display:flex;align-items:center;gap:.3rem;">
-          <i data-lucide="user-plus" style="width:11px;height:11px;"></i> Dispatch
-        </button>
-      </div>
-      ${active.length ? active.map(dispatchRow).join('') : `<div style="font-size:.8rem;color:#64748b;font-style:italic;padding:.4rem 0;">No responders currently deployed.</div>`}
-      ${done.length ? `
-        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin:.75rem 0 .4rem;">Completed (${done.length})</div>
-        ${done.map(dispatchRow).join('')}
-      ` : ''}
-    </div>`;
+  // Return a simple informational placeholder to show the panel area without interactive controls
+  return `<div style="font-size:.82rem;color:#94a3b8;padding:.6rem;">Responder dispatch functionality has been removed.</div>`;
 }
 
 async function updateDispatchStatus(incidentId, dispatchId, newStatus) {
-  try {
-    await apiFetch(`/incidents/${incidentId}/dispatch/${dispatchId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ dispatch_status: newStatus }),
-    });
-    showToast(`Responder marked as ${DISPATCH_STATUS_CFG[newStatus]?.label || newStatus}`, 'success', 'Dispatch Updated');
-    // Reload dispatch in panel
-    const panel = document.getElementById(`dispatch-panel-${incidentId}`);
-    if (panel) {
-      const dispatches = await loadDispatchForIncident(incidentId);
-      panel.innerHTML = renderDispatchPanel(incidentId, dispatches);
-      if (window.lucide) lucide.createIcons();
-    }
-    // Also refresh threat board
-    const tp = document.getElementById('pane-threats');
-    if (tp && tp.style.display !== 'none') loadActiveThreatBoard();
-  } catch (e) {
-    showToast(e.message || 'Failed to update dispatch', 'error', 'Dispatch Error');
-  }
+  // No-op: dispatch records are purged. Notify user in UI if possible.
+  if (typeof showToast === 'function') showToast('Dispatch functionality is disabled', 'info', 'Dispatch Disabled');
+  // Refresh threat board if visible to keep UI state consistent
+  const tp = document.getElementById('pane-threats');
+  if (tp && tp.style.display !== 'none' && typeof loadActiveThreatBoard === 'function') loadActiveThreatBoard();
 }
 
 function openDispatchFormPanel(incidentId) {
-  const overlay = document.getElementById('dispatch-form-overlay');
-  if (!overlay) return;
-  document.getElementById('dispatch-incident-id').value = incidentId;
-  document.getElementById('dispatch-responder-name').value = '';
-  document.getElementById('dispatch-notes').value = '';
-  document.getElementById('dispatch-error').style.display = 'none';
-  overlay.classList.add('active');
-  if (window.lucide) lucide.createIcons();
+  if (typeof showToast === 'function') showToast('Dispatch UI has been removed', 'info', 'Dispatch Disabled');
 }
 
-function closeDispatchFormPanel() {
-  document.getElementById('dispatch-form-overlay')?.classList.remove('active');
-}
+function closeDispatchFormPanel() {}
 
 async function submitDispatchForm(e) {
-  e.preventDefault();
-  const incidentId = document.getElementById('dispatch-incident-id').value;
-  const name = document.getElementById('dispatch-responder-name').value.trim();
-  const notes = document.getElementById('dispatch-notes').value.trim();
-  const errEl = document.getElementById('dispatch-error');
-
-  if (!name) {
-    errEl.textContent = 'Responder name is required.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  try {
-    await apiFetch(`/incidents/${incidentId}/dispatch`, {
-      method: 'POST',
-      body: JSON.stringify({ responder_name: name, notes: notes || null }),
-    });
-    closeDispatchFormPanel();
-    showToast(`${name} dispatched to incident`, 'success', 'Responder Dispatched');
-
-    // Refresh panel
-    const panel = document.getElementById(`dispatch-panel-${incidentId}`);
-    if (panel) {
-      const dispatches = await loadDispatchForIncident(incidentId);
-      panel.innerHTML = renderDispatchPanel(incidentId, dispatches);
-      if (window.lucide) lucide.createIcons();
-    }
-    const tp = document.getElementById('pane-threats');
-    if (tp && tp.style.display !== 'none') loadActiveThreatBoard();
-  } catch (e2) {
-    errEl.textContent = e2.message || 'Failed to dispatch responder';
-    errEl.style.display = 'block';
-  }
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  if (typeof showToast === 'function') showToast('Dispatch submission disabled', 'info', 'Dispatch Disabled');
 }
 
 // =============================================

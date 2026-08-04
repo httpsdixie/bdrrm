@@ -38,8 +38,36 @@ function rainAlert(rain, precipitation) {
 function toggleWeatherDropdown(evt) {
   if (evt && evt.stopPropagation) evt.stopPropagation();
   const card = document.getElementById('weather-dropdown-card');
-  if (card) card.classList.toggle('active');
+  const trigger = (evt && evt.currentTarget) ? evt.currentTarget : document.querySelector('.weather-pill');
+  if (!card) return;
+
+  // Position the card relative to the pill button for small screens where fixed placement may be awkward
+  try {
+    const rect = trigger.getBoundingClientRect();
+    card.style.position = 'absolute';
+    // place below pill; align right edge with pill's right edge
+    card.style.top = (rect.bottom + 8) + 'px';
+    card.style.left = 'auto';
+    card.style.right = (window.innerWidth - rect.right) + 'px';
+    card.style.minWidth = Math.max(260, rect.width) + 'px';
+    card.style.zIndex = 3000;
+  } catch (e) {
+    // fallback: keep existing layout
+  }
+
+  card.classList.toggle('active');
 }
+
+// Close weather dropdown on outside click
+document.addEventListener('click', function (e) {
+  const card = document.getElementById('weather-dropdown-card');
+  if (!card) return;
+  if (card.classList.contains('active')) {
+    if (!e.target.closest('.weather-pill') && !e.target.closest('#weather-dropdown-card')) {
+      card.classList.remove('active');
+    }
+  }
+});
 
 async function loadWeather(evt) {
   if (evt && evt.stopPropagation) evt.stopPropagation();

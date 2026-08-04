@@ -17,54 +17,68 @@ def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     # Ongoing incidents
     incidents_res = (
         supabase.table("incidents")
-        .select("id, status, severity, type, created_at")
+        .select("id, status, type, created_at")
         .in_("status", list(ONGOING_STATUSES))
         .execute()
     )
     active_incidents = incidents_res.data or []
 
-    # Critical incidents specifically
-    critical_count = sum(1 for i in active_incidents if i["severity"] == "critical")
+    # Total incidents ever recorded (all statuses)
+    total_res = (
+        supabase.table("incidents")
+        .select("id", count="exact")
+        .execute()
+    )
+    total_incidents = total_res.count if total_res.count is not None else len(total_res.data or [])
 
     # Evacuation centers
     evac_res = (
         supabase.table("evacuation_centers")
-        .select("id, status, capacity, current_occupancy")
+        .select("id, status, capacity, current_occupancy, facilities_checklist, personnel_directory")
         .execute()
     )
     centers = evac_res.data or []
-    total_evacuees  = sum(c["current_occupancy"] for c in centers)
-    total_capacity  = sum(c["capacity"] for c in centers)
-    available_centers = sum(1 for c in centers if c["status"] == "available")
-    full_centers      = sum(1 for c in centers if c["status"] == "full")
+    total_capacity = sum(c["capacity"] for c in centers)
+    # Facilities Evaluated = centers with a non-empty facilities_checklist (matches evacuation-monitoring.js logic)
+    facilities_evaluated = sum(
+        1 for c in centers
+        if c.get("facilities_checklist") and len(c["facilities_checklist"]) > 0
+    )
+    # Staffed Centers = centers with at least one personnel_directory entry with a name (matches evacuation-monitoring.js logic)
+    staffed_centers = sum(
+        1 for c in centers
+        if c.get("personnel_directory") and any(
+            p.get("first_name") or p.get("last_name")
+            for p in c["personnel_directory"]
+        )
+    )
 
-    # Resources deployed (out in the field)
-    resources_res = (
+    # Resources — total from resources table (matches Resource Tracking page)
+    assets_res = (
         supabase.table("resources")
-        .select("id, status, available_quantity, quantity")
+        .select("id, status")
         .execute()
     )
-    resources = resources_res.data or []
-    deployed_count    = sum(1 for r in resources if r["status"] == "deployed")
-    available_count   = sum(1 for r in resources if r["status"] == "available")
-    total_items       = len(resources)
+    assets = assets_res.data or []
+    total_assets     = len(assets)
+    deployed_assets  = sum(1 for a in assets if a.get("status") == "deployed")
+    available_assets = sum(1 for a in assets if a.get("status") == "available")
 
     return {
         "incidents": {
             "active_total": len(active_incidents),
-            "critical": critical_count,
+            "total": total_incidents,
         },
         "evacuation": {
             "total_centers": len(centers),
-            "available": available_centers,
-            "full": full_centers,
-            "total_evacuees": total_evacuees,
+            "facilities_evaluated": facilities_evaluated,
+            "staffed_centers": staffed_centers,
             "total_capacity": total_capacity,
         },
         "resources": {
-            "total_items": total_items,
-            "deployed": deployed_count,
-            "available": available_count,
+            "total_items": total_assets,
+            "deployed": deployed_assets,
+            "available": available_assets,
         },
     }
 
@@ -99,10 +113,16 @@ def get_dashboard_analytics(current_user: dict = Depends(get_current_user)):
     """
     Returns aggregated historical trend data and hazard type distribution for dashboard charts.
     """
-    # Incident category distribution from DB
-    incidents_res = supabase.table("incidents").select("id, type, severity").execute()
+    from datetime import datetime, timezone, timedelta
+    from collections import defaultdict
+
+    now = datetime.now(timezone.utc)
+
+    # Fetch all incidents with created_at, type, status
+    incidents_res = supabase.table("incidents").select("id, type, status, created_at").execute()
     incidents = incidents_res.data or []
 
+    # Hazard type distribution
     type_counts = {"flood": 0, "fire": 0, "landslide": 0, "typhoon": 0, "medical": 0, "other": 0}
     for inc in incidents:
         t = inc.get("type", "other")
@@ -111,30 +131,62 @@ def get_dashboard_analytics(current_user: dict = Depends(get_current_user)):
         else:
             type_counts["other"] += 1
 
-    # If DB is empty, return zeroes for historical charts and hazard distribution
-    if sum(type_counts.values()) == 0:
-        type_counts = {"flood": 0, "fire": 0, "landslide": 0, "typhoon": 0, "medical": 0, "other": 0}
-        return {
-            "periods": {
-                "6m": {
-                    "labels": ["Mar", "Apr", "May", "Jun", "Jul", "Aug"],
-                    "incidents": [0, 0, 0, 0, 0, 0],
-                    "resolved": [0, 0, 0, 0, 0, 0],
-                    "evacuees": [0, 0, 0, 0, 0, 0]
-                },
-                "30d": {
-                    "labels": ["Week 1", "Week 2", "Week 3", "Week 4"],
-                    "incidents": [0, 0, 0, 0],
-                    "resolved": [0, 0, 0, 0],
-                    "evacuees": [0, 0, 0, 0]
-                },
-                "7d": {
-                    "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-                    "incidents": [0, 0, 0, 0, 0, 0, 0],
-                    "resolved": [0, 0, 0, 0, 0, 0, 0],
-                    "evacuees": [0, 0, 0, 0, 0, 0, 0]
-                }
-            },
-            "hazard_distribution": type_counts
-        }
+    def is_resolved(inc):
+        return (inc.get("status") or "").lower() in ("resolved", "closed")
+
+    def parse_dt(s):
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    # ── 6 Months ──
+    labels_6m = []
+    data_6m = []
+    resolved_6m = []
+    for i in range(5, -1, -1):
+        month_dt = now - timedelta(days=i * 30)
+        label = month_dt.strftime("%b")
+        labels_6m.append(label)
+        month_start = (now - timedelta(days=(i + 1) * 30))
+        month_end   = (now - timedelta(days=i * 30))
+        bucket = [inc for inc in incidents if month_start <= (parse_dt(inc["created_at"]) or now) < month_end]
+        data_6m.append(len(bucket))
+        resolved_6m.append(sum(1 for inc in bucket if is_resolved(inc)))
+
+    # ── 30 Days (4 weeks) ──
+    labels_30d = ["Week 1", "Week 2", "Week 3", "Week 4"]
+    data_30d = []
+    resolved_30d = []
+    for i in range(4):
+        week_start = now - timedelta(days=(4 - i) * 7)
+        week_end   = now - timedelta(days=(3 - i) * 7)
+        bucket = [inc for inc in incidents if week_start <= (parse_dt(inc["created_at"]) or now) < week_end]
+        data_30d.append(len(bucket))
+        resolved_30d.append(sum(1 for inc in bucket if is_resolved(inc)))
+
+    # ── 7 Days ──
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    labels_7d = []
+    data_7d = []
+    resolved_7d = []
+    for i in range(6, -1, -1):
+        day_dt = now - timedelta(days=i)
+        labels_7d.append(day_names[day_dt.weekday()])
+        day_start = day_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end   = day_start + timedelta(days=1)
+        bucket = [inc for inc in incidents if day_start <= (parse_dt(inc["created_at"]) or now) < day_end]
+        data_7d.append(len(bucket))
+        resolved_7d.append(sum(1 for inc in bucket if is_resolved(inc)))
+
+    return {
+        "periods": {
+            "6m":  {"labels": labels_6m,  "incidents": data_6m,  "resolved": resolved_6m},
+            "30d": {"labels": labels_30d, "incidents": data_30d, "resolved": resolved_30d},
+            "7d":  {"labels": labels_7d,  "incidents": data_7d,  "resolved": resolved_7d},
+        },
+        "hazard_distribution": type_counts,
+    }
 

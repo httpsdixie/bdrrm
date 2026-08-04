@@ -19,7 +19,7 @@ def get_privacy_policy():
         "confidentiality": "Strictly Confidential — Encrypted Storage",
         "voluntary_participation": True,
         "right_to_withdraw": "Data subjects may request profile erasure or anonymization at any time via DRRM Officer.",
-        "policy_statement": "All demographic, vulnerability, and spatial intake collected across Barangay Linao DRRM modules are strictly used to coordinate emergency evacuation, relief logistics, and disaster risk reduction."
+        "policy_statement": "All demographic and spatial intake collected across Barangay Linao DRRM modules are strictly used to coordinate emergency evacuation, relief logistics, and disaster risk reduction."
     }
 
 

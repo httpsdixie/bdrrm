@@ -14,7 +14,6 @@ const layers = {
   hospitals:  L.layerGroup(),
   stations:   L.layerGroup(),
   roads:      L.layerGroup(),
-  risk:       L.layerGroup(),
 };
 
 // =============================================
@@ -205,11 +204,6 @@ async function initMap(authenticated = false) {
   try { renderStations(initialData.responder_stations || [], authenticated); } catch (e) { console.warn('Stations init notice:', e); }
   try { renderRoadClosures(initialData.road_closures || [], authenticated); } catch (e) { console.warn('Road closures init notice:', e); }
 
-  if (authenticated) {
-    try { loadRiskZones(); } catch (e) { console.warn('Risk zones init notice:', e); }
-  } else {
-    try { loadPublicRiskZones(); } catch (e) { console.warn('Public risk zones init notice:', e); }
-  }
 
   // Invalidate map size to force Leaflet to recalculate container viewport bounds immediately on open
   setTimeout(() => {
@@ -260,18 +254,79 @@ async function initMap(authenticated = false) {
   })();
 }
 
+// =============================================
+// Static fallback reference data for Barangay Linao
+// Shown immediately on load and when backend is unreachable
+// =============================================
+const STATIC_EVAC_CENTERS = [
+  { id: 'se-1', name: 'Linao Covered Basketball Court',    address: 'Purok 2, Barangay Linao, Ormoc City',            latitude: 11.0146, longitude: 124.5895, status: 'available',    capacity: 400, current_occupancy: 0 },
+  { id: 'se-2', name: 'Linao Elementary School Gymnasium', address: 'Purok 5, Barangay Linao, Ormoc City',            latitude: 11.0158, longitude: 124.5910, status: 'available',    capacity: 600, current_occupancy: 0 },
+  { id: 'se-3', name: 'Barangay Multi-Purpose Hall',       address: 'Purok 6, Barangay Linao, Ormoc City',            latitude: 11.0175, longitude: 124.5920, status: 'available',    capacity: 250, current_occupancy: 0 },
+  { id: 'se-4', name: 'Tambulilid Covered Court',          address: 'Tambulilid, Ormoc City (near Linao boundary)',   latitude: 11.0202, longitude: 124.5870, status: 'available',    capacity: 350, current_occupancy: 0 },
+  { id: 'se-5', name: 'Purok 11 Community Hall',           address: 'Purok 11, Barangay Linao, Ormoc City',           latitude: 11.0163, longitude: 124.5930, status: 'available',    capacity: 120, current_occupancy: 0 },
+];
+
+const STATIC_HAZARD_ZONES = [
+  {
+    id: 'shz-1', name: 'Linao Bao River Flood Zone', type: 'flood', risk_level: 'high',
+    description: 'Low-lying floodplain along the Bao River tributary. Inundates within 2–3 hours of heavy rainfall. Affects ~45 households in Puroks 1–3.',
+    coordinates: [[124.5845,11.0135],[124.5875,11.0155],[124.5895,11.0148],[124.5910,11.0130],[124.5895,11.0112],[124.5865,11.0108],[124.5842,11.0120]],
+  },
+  {
+    id: 'shz-2', name: 'Linao Barangay Center Flood Zone', type: 'flood', risk_level: 'medium',
+    description: 'Low-elevation area near the barangay center. Susceptible to flash flooding during typhoon events. Affects road access to evacuation centers.',
+    coordinates: [[124.5905,11.0175],[124.5935,11.0185],[124.5945,11.0165],[124.5925,11.0150],[124.5905,11.0158]],
+  },
+  {
+    id: 'shz-3', name: 'Linao Eastern Hillside Landslide Zone', type: 'landslide', risk_level: 'high',
+    description: 'Steep hillside terrain on the eastern boundary. History of soil erosion and debris flow during Typhoon Yolanda (2013). High risk during sustained rainfall > 50 mm.',
+    coordinates: [[124.5955,11.0220],[124.5985,11.0238],[124.6000,11.0225],[124.5990,11.0205],[124.5960,11.0200]],
+  },
+  {
+    id: 'shz-4', name: 'Linao Northern Slope Erosion Zone', type: 'landslide', risk_level: 'medium',
+    description: 'Moderate slope on the northern portion with loose soil composition. Secondary landslide risk after prolonged rainfall exceeding 30 mm.',
+    coordinates: [[124.5878,11.0250],[124.5910,11.0262],[124.5920,11.0248],[124.5900,11.0235],[124.5875,11.0238]],
+  },
+];
+
+const STATIC_HOSPITALS = [
+  { id: 'sh-1', name: 'Barangay Linao Health Station (BHS)', address: 'Purok 3, Barangay Linao, Ormoc City',  latitude: 11.0185, longitude: 124.5940, contact_number: '(053) 561-2244', services: 'First Aid, Triage, Maternal Care, Immunization, Dental' },
+  { id: 'sh-2', name: 'Ormoc District Hospital (OMVH)',       address: 'Brgy. Cogon, Ormoc City, Leyte',       latitude: 11.0048, longitude: 124.6078, contact_number: '(053) 255-2604', services: 'Emergency, Surgery, ICU, Pediatrics, Obstetrics, Radiology' },
+  { id: 'sh-3', name: 'Ormoc City Health Center',             address: 'City Hall Complex, Ormoc City',        latitude: 11.0062, longitude: 124.6070, contact_number: '(053) 255-3456', services: 'Primary Care, Maternal Health, TB-DOTS, Dental' },
+  { id: 'sh-4', name: 'Philippine Red Cross Ormoc Chapter',   address: 'Ormoc City, Leyte',                    latitude: 11.0055, longitude: 124.6065, contact_number: '(053) 561-1234', services: 'Blood Banking, First Aid, Disaster Response, Ambulance' },
+];
+
+const STATIC_STATIONS = [
+  { id: 'ss-1', name: 'Barangay Linao BDRRMC Command Center', type: 'bdrrmc',       address: 'Barangay Hall, Purok 6, Linao, Ormoc City', latitude: 11.0168, longitude: 124.5918, contact_number: '0917-123-4567' },
+  { id: 'ss-2', name: 'Linao Purok Police Outpost',            type: 'police',       address: 'Purok 4, Barangay Linao, Ormoc City',       latitude: 11.0157, longitude: 124.5907, contact_number: '(053) 561-3333' },
+  { id: 'ss-3', name: 'Ormoc City PNP Central Station',        type: 'police',       address: 'Lilia Ave, Ormoc City, Leyte',              latitude: 11.0058, longitude: 124.6068, contact_number: '(053) 255-2333' },
+  { id: 'ss-4', name: 'Ormoc City Fire Station (BFP)',          type: 'fire_station', address: 'Aunubing St., Ormoc City, Leyte',           latitude: 11.0060, longitude: 124.6060, contact_number: '(053) 255-2114' },
+  { id: 'ss-5', name: 'Philippine Coast Guard Ormoc',           type: 'coast_guard',  address: 'Port Area, Ormoc City, Leyte',              latitude: 11.0045, longitude: 124.6050, contact_number: '(053) 255-3524' },
+  { id: 'ss-6', name: 'Linao Barangay Health Station (BHS)',    type: 'bhs',          address: 'Purok 3, Barangay Linao, Ormoc City',       latitude: 11.0185, longitude: 124.5940, contact_number: '(053) 561-2244' },
+];
+
 // Safely construct map payload by merging database data with baseline reference points
 function getPublicMapPayload(raw) {
-  const empty = { incidents: [], evacuation_centers: [], hazard_zones: [], hospitals: [], responder_stations: [], road_closures: [] };
-  if (!raw || typeof raw !== 'object') return sanitizeLinaoData(empty);
+  // When no live data, return static fallback so map is always populated
+  if (!raw || typeof raw !== 'object') {
+    return sanitizeLinaoData({
+      incidents:          [],
+      evacuation_centers: STATIC_EVAC_CENTERS,
+      hazard_zones:       STATIC_HAZARD_ZONES,
+      hospitals:          STATIC_HOSPITALS,
+      responder_stations: STATIC_STATIONS,
+      road_closures:      [],
+    });
+  }
 
+  // Merge live data with static fallback — use DB data if available, else fall back to static
   return sanitizeLinaoData({
-    incidents: Array.isArray(raw.incidents) ? raw.incidents : [],
-    evacuation_centers: Array.isArray(raw.evacuation_centers) ? raw.evacuation_centers : [],
-    hazard_zones: Array.isArray(raw.hazard_zones) ? raw.hazard_zones : [],
-    hospitals: Array.isArray(raw.hospitals) ? raw.hospitals : [],
-    responder_stations: Array.isArray(raw.responder_stations) ? raw.responder_stations : [],
-    road_closures: Array.isArray(raw.road_closures) ? raw.road_closures : [],
+    incidents:          Array.isArray(raw.incidents)          && raw.incidents.length          ? raw.incidents          : [],
+    evacuation_centers: Array.isArray(raw.evacuation_centers) && raw.evacuation_centers.length ? raw.evacuation_centers : STATIC_EVAC_CENTERS,
+    hazard_zones:       Array.isArray(raw.hazard_zones)       && raw.hazard_zones.length       ? raw.hazard_zones       : STATIC_HAZARD_ZONES,
+    hospitals:          Array.isArray(raw.hospitals)          && raw.hospitals.length          ? raw.hospitals          : STATIC_HOSPITALS,
+    responder_stations: Array.isArray(raw.responder_stations) && raw.responder_stations.length ? raw.responder_stations : STATIC_STATIONS,
+    road_closures:      Array.isArray(raw.road_closures)      ? raw.road_closures              : [],
   });
 }
 
@@ -494,10 +549,10 @@ function toggleHeatmap() {
     buildHeatmap(allIncidentData);
     if (btn) {
       btn.classList.add('heatmap-on');
-      btn.innerHTML = '<i data-lucide="flame"></i> Hide High-Risk Overlay';
+      btn.innerHTML = '<i data-lucide="flame"></i> Hide Incident Heatmap';
     }
     if (typeof showToast === 'function') {
-      showToast('Red glowing areas show where most emergencies happen.', 'info', 'High-Risk Areas Shown');
+      showToast('Red glowing areas show where most emergency activity is concentrated.', 'info', 'Incident Heatmap Shown');
     }
   } else {
     if (heatmapLayer && typeof map !== 'undefined' && map) {
@@ -505,10 +560,10 @@ function toggleHeatmap() {
     }
     if (btn) {
       btn.classList.remove('heatmap-on');
-      btn.innerHTML = '<i data-lucide="flame"></i> High-Risk Areas';
+      btn.innerHTML = '<i data-lucide="flame"></i> Incident Heatmap';
     }
     if (typeof showToast === 'function') {
-      showToast('Returned to standard map view.', 'info', 'High-Risk Overlay Hidden');
+      showToast('Returned to standard map view.', 'info', 'Heatmap Hidden');
     }
   }
   if (window.lucide && lucide.createIcons) lucide.createIcons();
@@ -766,7 +821,7 @@ const MARKER_SUBTITLES = {
   road:       'A road closure marks a blocked or impassable road due to a disaster event, flooding, debris, or ongoing rescue operations. Use alternative routes.',
   flood:      'A flood hazard zone is an area identified by the CPDO as prone to flooding based on historical data, terrain, and proximity to rivers or the coast.',
   landslide:  'A landslide hazard zone is a slope area identified by the CPDO as susceptible to soil erosion or ground movement, especially during intense or prolonged rainfall.',
-  risk_zone:  'A risk zone is an area assessed to have elevated combined disaster risk based on local hazard mapping and population vulnerability data.'
+  risk_zone:  'A risk zone is an area identified from hazard mapping as having elevated disaster risk.'
 };
 
 function injectPanelSubtitle(text) {
@@ -1167,134 +1222,3 @@ async function resolveRoadClosure(id) {
   });
 }
 
-// =============================================
-// Proactive Risk Mapping
-// =============================================
-
-const RISK_COLORS = {
-  critical: { stroke: '#ec4899', fill: '#ec4899', bg: '#fce7f3' },
-  high:     { stroke: '#f43f5e', fill: '#f43f5e', bg: '#ffe4e6' },
-  medium:   { stroke: '#f9a825', fill: '#f9a825', bg: '#fff8e1' },
-  low:      { stroke: '#2e7d32', fill: '#2e7d32', bg: '#e6f4ea' },
-};
-
-const RISK_RADIUS = { critical: 280, high: 220, medium: 170, low: 130 };
-
-const TYPE_LABEL_RISK = {
-  flood: 'Flood', fire: 'Fire', landslide: 'Landslide',
-  typhoon: 'Typhoon', medical: 'Medical', other: 'Other',
-};
-
-async function loadRiskZones() {
-  try {
-    const data = await apiFetch('/risk/analysis');
-    renderRiskZones(data.risk_zones || [], true);
-    updateRiskBadge(data);
-  } catch (err) {
-    console.warn('Risk analysis unavailable:', err.message);
-  }
-}
-
-async function loadPublicRiskZones() {
-  // No static fallback risk zones: do not render demo markers. Start with empty set.
-  renderRiskZones([], false);
-  updateRiskBadge({});
-
-  // Fast background sync with backend to populate live risk zones
-  try {
-    const data = await apiFetch('/risk/public/summary');
-    if (data && data.risk_zones && data.risk_zones.length) {
-      renderRiskZones(data.risk_zones, false);
-      updateRiskBadge(data);
-    }
-  } catch (_) {
-    // keep empty state if backend unavailable
-  }
-}
-
-function renderRiskZones(zones, authenticated) {
-  layers.risk.clearLayers();
-
-  if (!Array.isArray(zones)) return;
-
-  zones.forEach(z => {
-    // Filter out any risk zone generated outside Barangay Linao bounds
-    if (z.latitude < 11.0100 || z.latitude > 11.0270 || z.longitude < 124.5820 || z.longitude > 124.5980) {
-      return;
-    }
-
-    const c = RISK_COLORS[z.risk_level] || RISK_COLORS.medium;
-    const r = RISK_RADIUS[z.risk_level] || 150;
-
-    // Pulsing circle for critical/high zones
-    const circle = L.circle([z.latitude, z.longitude], {
-      radius: r,
-      color: c.stroke,
-      weight: z.risk_level === 'critical' ? 2 : 1.5,
-      fillColor: c.fill,
-      fillOpacity: z.risk_level === 'critical' ? 0.18 : (z.risk_level === 'high' ? 0.12 : 0.08),
-      dashArray: '5,5',
-      className: 'hazard-moving-border',
-    });
-
-    circle.on('click', e => {
-      L.DomEvent.stopPropagation(e);
-
-      const RISK_COLOR_TEXT = {
-        critical: '#d93025', high: '#e65100', medium: '#f9a825', low: '#2e7d32'
-      };
-      const col = RISK_COLOR_TEXT[z.risk_level] || '#f9a825';
-
-      let bodyHtml = `
-        <div class="info-section">
-          <div class="info-section-header"><i data-lucide="shield-alert"></i> RISK & HAZARD METRICS</div>
-          ${field('Risk Level', `<span style="color:${col};font-weight:800;text-transform:uppercase;letter-spacing:0.04em;">${z.risk_level.toUpperCase()}</span>`)}
-          ${field('Risk Score', `<div style="display:flex;align-items:center;gap:.75rem;margin-top:.2rem;"><div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);"><div style="width:${z.risk_score}%;height:100%;background:${col};border-radius:99px;box-shadow:0 0 10px ${col}80;"></div></div><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:#fff;">${z.risk_score}/100</span></div>`)}
-          ${field('Dominant Hazard Type', `${TYPE_LABEL_RISK[z.dominant_type] || z.dominant_type}`)}
-        </div>
-
-        <div class="info-section">
-          <div class="info-section-header"><i data-lucide="map-pin"></i> LOCATION & COORDINATES</div>
-          ${field('Coordinates', `${z.latitude.toFixed(5)}, ${z.longitude.toFixed(5)}`)}
-        </div>
-`;
-
-      if (authenticated && z.recommended_resources?.length) {
-        bodyHtml += field('Recommended Pre-staged Resources', `<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;">${z.recommended_resources.map(r => `
-              <span style="display:inline-flex;align-items:center;gap:.2rem;background:#e8f0fe;color:#1558b0;border-radius:99px;padding:.15rem .55rem;font-size:.72rem;font-weight:600;">${r}</span>`).join('')}</div>`);
-      }
-
-      if (authenticated && z.recent_incidents?.length) {
-        bodyHtml += field('Recent Incidents in This Area', `<div>${z.recent_incidents.map(i => `
-              <div style="font-size:.78rem;padding:.3rem 0;border-bottom:1px solid #f1f3f4;"><span style="font-weight:600;">${i.title}</span><span style="color:var(--text-muted);margin-left:.3rem;">${TYPE_LABEL_RISK[i.type]||i.type}</span></div>`).join('')}</div>`);
-      }
-
-      const actions = authenticated ? `
-        <a href="resources.html" class="btn btn-primary" style="flex:1;">
-          <i data-lucide="send"></i> Pre-stage Resources
-        </a>` : '';
-
-      openInfoPanel(
-        `<i data-lucide="shield-alert"></i> Risk Zone`, col,
-        `${z.risk_level.charAt(0).toUpperCase() + z.risk_level.slice(1)} Risk Area`,
-        bodyHtml, actions
-      );
-      injectPanelSubtitle(MARKER_SUBTITLES.risk_zone);
-    });
-
-    circle.addTo(layers.risk);
-  });
-}
-
-// Update the risk badge in the map toolbar if it exists
-function updateRiskBadge(data) {
-  const badge = document.getElementById('risk-badge');
-  if (!badge) return;
-  const high = data.high_risk_count || 0;
-  if (high > 0) {
-    badge.textContent = high + ' high-risk';
-    badge.style.display = 'inline-flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}

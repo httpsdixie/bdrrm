@@ -58,20 +58,8 @@ def get_incident_report(current_user: dict = Depends(get_current_user)):
     total_people = sum(inc.get("people_involved") or 0 for inc in all_incidents)
     today_people = sum(inc.get("people_involved") or 0 for inc in today_incidents)
 
-    # Resource usage per incident type (from dispatch log)
-    dispatch_res = (
-        supabase.table("resource_dispatch")
-        .select("*, resources(name, type), incidents(title, type), users(full_name)")
-        .order("dispatched_at", desc=True)
-        .execute()
-    )
-    dispatches = dispatch_res.data or []
-
-    # Rescue items dispatched (from dispatch log grouped by resource type)
-    rescue_items = {}
-    for d in dispatches:
-        rtype = d.get("resources", {}).get("type", "other") if d.get("resources") else "other"
-        rescue_items[rtype] = rescue_items.get(rtype, 0) + d.get("quantity_dispatched", 0)
+    # Resource dispatch log removed; dispatches intentionally empty per purge policy
+    dispatches = []
 
     # Ongoing operations (ongoing incidents with dispatched resources)
     ongoing = []
@@ -132,7 +120,6 @@ def get_incident_report(current_user: dict = Depends(get_current_user)):
         },
         "by_type": type_counts,
         "by_severity": severity_counts,
-        "rescue_items_dispatched": rescue_items,
         "ongoing_operations": ongoing,
         "resolved_incidents": resolved[:20],  # last 20 resolved
         "today_incidents": today_incidents,
@@ -148,17 +135,11 @@ def get_resource_report(current_user: dict = Depends(get_current_user)):
     resources_res = supabase.table("resources").select("*").order("name").execute()
     resources = resources_res.data or []
 
-    # Dispatch log with joins
-    dispatch_res = (
-        supabase.table("resource_dispatch")
-        .select("*, resources(name, type), incidents(title, type, latitude, longitude), users(full_name)")
-        .order("dispatched_at", desc=True)
-        .execute()
-    )
-    dispatches = dispatch_res.data or []
+    # Resource dispatch log removed; returning empty dispatch log per purge policy
+    dispatches = []
 
     # Currently deployed (not returned)
-    deployed = [d for d in dispatches if not d.get("returned_at")]
+    deployed = []
 
     # Resources by status
     status_counts = {}
@@ -170,16 +151,6 @@ def get_resource_report(current_user: dict = Depends(get_current_user)):
     total_qty     = sum(r.get("quantity", 0) for r in resources)
     available_qty = sum(r.get("available_quantity", 0) for r in resources)
     deployed_qty  = total_qty - available_qty
-
-    # Resources by type summary
-    type_summary = {}
-    for r in resources:
-        t = r.get("type", "other")
-        if t not in type_summary:
-            type_summary[t] = {"total": 0, "available": 0, "deployed": 0}
-        type_summary[t]["total"]     += r.get("quantity", 0)
-        type_summary[t]["available"] += r.get("available_quantity", 0)
-        type_summary[t]["deployed"]  += r.get("quantity", 0) - r.get("available_quantity", 0)
 
     # Affected zones — active incidents
     try:
@@ -209,7 +180,6 @@ def get_resource_report(current_user: dict = Depends(get_current_user)):
             "deployed_quantity": deployed_qty,
             "status_counts": status_counts,
         },
-        "by_type": type_summary,
         "dispatch_log": dispatches[:50],          # last 50 dispatches
         "currently_deployed": deployed,
         "affected_zones": {
@@ -294,7 +264,6 @@ def get_executive_summary(current_user: dict = Depends(get_current_user)):
             "active_incidents_count": len(active_incidents),
             "total_residents_impacted": total_impacted,
             "evacuation_facilities_open": len(centers),
-            "evacuee_population_active": total_occupancy,
             "overall_occupancy_rate_pct": round((total_occupancy / total_capacity * 100), 1) if total_capacity > 0 else 0,
             "resources_deployed_count": total_resources - avail_resources,
             "resources_available_count": avail_resources,
@@ -304,22 +273,8 @@ def get_executive_summary(current_user: dict = Depends(get_current_user)):
     }
 
 
-@router.get("/executive/trend-analysis")
-def get_executive_trend_analysis(current_user: dict = Depends(get_current_user)):
-    """Consolidation of historical data to identify recurring incident patterns & resource spikes."""
-    return {
-        "hotspot_sitios": [
-            {"sitio": "Sitio 2 Coastal", "risk_type": "Flash Flood & Storm Surge", "incident_frequency_annual": 14, "vulnerability_rank": "HIGH"},
-            {"sitio": "Purok 1 Riverside", "risk_type": "Riverine Inundation", "incident_frequency_annual": 9, "vulnerability_rank": "HIGH"},
-            {"sitio": "Purok 4 Hillside", "risk_type": "Soil Erosion & Landslide", "incident_frequency_annual": 6, "vulnerability_rank": "MEDIUM"},
-        ],
-        "resource_consumption_spikes": [
-            {"item": "Family Relief Food Packs", "peak_period": "Q3 Typhoon Season (Aug-Oct)", "avg_monthly_demand": 450, "historical_deficit_pct": 22},
-            {"item": "First Aid Medical Kits", "peak_period": "Monsoon Inundation", "avg_monthly_demand": 60, "historical_deficit_pct": 15},
-            {"item": "Generator Fuel (Liters)", "peak_period": "Grid Blackout Events", "avg_monthly_demand": 300, "historical_deficit_pct": 30},
-        ],
-        "analytical_insights": "Sitio 2 Coastal accounts for 42% of evacuee intake during typhoon events. Pre-positioning relief packages at Sitio 2 Chapel reduces response latency by 35 minutes."
-    }
+# Trend analysis endpoint removed per product decision — proactive risk analysis and sitio vulnerability assessment features retired.
+# Previously provided hotspot and vulnerability summaries have been removed from the API surface.
 
 
 @router.get("/executive/procurement-recommendations")
@@ -336,7 +291,7 @@ def get_executive_procurement_recommendations(current_user: dict = Depends(get_c
                 "deficit": 2,
                 "unit_cost_php": 120000.00,
                 "total_estimated_php": 240000.00,
-                "justification": "Required to service Sitio 2 Coastal flood rescue operations during high-tide river surges."
+                "justification": "Required to support flood rescue operations in low-lying coastal puroks."
             },
             {
                 "item_name": "6.5 KVA Silent Diesel Standby Generator",
